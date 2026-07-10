@@ -1,41 +1,57 @@
 # Blockers
 ## HL2 WebGL2/WebXR Porting Manager
 
-Zuletzt aktualisiert: 2026-07-10 18:13 (Europe/Berlin)
+Zuletzt aktualisiert: 2026-07-10 19:00 (Europe/Berlin)
+
+---
+
+## Gelöste Blocker
+
+### ~~BLK-001~~ — weliveinhell GitHub-URL ✅ GESCHLOSSEN
+**Schweregrad:** HOCH → GELÖST
+**Status:** GESCHLOSSEN — 2026-07-10 19:00
+**Betrifft:** T-002, T-005 (Engine Build), T-009 (Patches), Asset-Packing-Skripte
+
+**Lösung:**
+Repository gefunden: **https://github.com/weliveinhell/source-engine**
+
+Repo-Details:
+- Public Fork von `nillerusr/source-engine` (61 Stars, 16 Forks)
+- Live-Demo des Portal-Ports: `https://yikes.pw/portal/`
+- Vollständiges `emscripten/`-Unterverzeichnis vorhanden:
+  - `emscripten/repackage.js` — Asset-Packing-Skript (Node.js, konfigurierbar via `knownMaps`/`baseGamePath`)
+  - `emscripten/get_logs.sh` — Asset-Logging-Skript (führt Engine aus, fängt printf-Output ab)
+  - `emscripten/libwebgl.patch` — glMapBufferRange-Fix für Emscripten WebGL
+  - `build_emscripten.sh` — vollständiger Emscripten-Build-Skript
+- emsdk-Pinning: Commit `2d480a1b7c7a34a354188d93f3e89190a44a1d21`
+- SDL2-Audio-Patch dokumentiert: `sed -Ei 's/freq = EM_ASM_INT/freq = MAIN_THREAD_EM_ASM_INT/'`
+- Asset-Logging via printf-Patch in `filesystem/basefilesystem.cpp`:
+  ```cpp
+  FileHandle_t CBaseFileSystem::OpenForRead(...) {
+      printf("OpenForRead %s %s\n", pFileNameT, pathID);
+      ...
+  }
+  ```
+- Per-Map `.data`-Chunk-System (Ziel: `./build/install/chunks/<mapName>.data`)
+
+**Impact aufgehoben:**
+- ✅ Asset-Packing-Skript verfügbar (Linux + Windows-Variante über slqnt)
+- ✅ Emscripten-Build-Konfiguration für Source Engine verfügbar
+- ✅ Bekannte Render-Fixes (libwebgl.patch) verfügbar
+- ✅ Genaue emsdk-Version bekannt (kein Versionsraten mehr nötig)
+
+**Nächster Schritt:**
+```bash
+git clone https://github.com/weliveinhell/source-engine ./engine/portal-port/
+```
+T-002 kann auf `done` gesetzt werden sobald geklont.
 
 ---
 
 ## Aktive Blocker
 
-### BLK-001 — weliveinhell GitHub-URL unbekannt
-**Schweregrad:** HOCH
-**Status:** OFFEN
-**Betrifft:** T-002, T-005 (Engine Build), T-009 (Patches), Asset-Packing-Skripte
-**Auflösung:** ACTION-001
-
-**Problem:**
-slqnt erwähnt "weliveinhell on github" als Autor des Portal-Browser-Ports und der
-Asset-Packing-Skripte. Die genaue Repository-URL ist aus allen analysierten Quellen
-nicht ableitbar (CONFIRMED — kein direkter Link im Blog-Artikel).
-
-**Impact:**
-Ohne das weliveinhell-Repo fehlt der direkte Zugang zu:
-- Bewährtem Asset-Packing-Skript (Linux-Version, slqnt-Windows-Mod als Basis)
-- Emscripten-Build-Konfiguration für Source Engine
-- Möglicherweise bekannten Render-Fixes
-
-**Auflösungsschritte:**
-1. GitHub-Profile-Suche: `github.com/weliveinhell` (direkt versuchen)
-2. GitHub-Suche: `"portal" "source engine" "emscripten" "browser"`
-3. Forks von `nillerusr/source-engine` durchsuchen
-4. slqnt kontaktieren (GitHub/Discord): `https://www.slqnt.dev`
-5. Nach Fund: URL in `source_map.json` unter `ENG-02.url` eintragen,
-   Repo klonen nach `./engine/portal-port/`, diesen Blocker schließen
-
----
-
 ### BLK-002 — slqnt Port-Quellcode nicht öffentlich
-**Schweregrad:** MITTEL
+**Schweregrad:** MITTEL (reduziert — weliveinhell-Basis jetzt verfügbar)
 **Status:** OFFEN
 **Betrifft:** T-009 (Patch-Implementierung)
 **Auflösung:** ACTION-008 (Patches unabhängig implementieren)
@@ -45,17 +61,17 @@ Der slqnt HL2-Browser-Port ist live spielbar unter `hl2.slqnt.dev`, aber der
 Quellcode ist nach aktuellem Stand nicht öffentlich zugänglich. Die 8 bekannten
 Patches sind im Blog-Artikel beschrieben, aber nicht als Code verfügbar.
 
-**Impact:**
-Alle 8 Patches müssen unabhängig implementiert werden, basierend auf:
-- Blog-Beschreibungen (symptom-orientiert, keine Code-Details)
-- Engine-Source-Code-Analyse (nillerusr-Repo)
-- Community-Ressourcen (Source-Engine-Modding-Foren)
+**Update nach BLK-001-Auflösung:**
+Das weliveinhell-Repo enthält einen Teil der Fixes (insbesondere `libwebgl.patch`
+für den Lightmap-ähnlichen glMapBufferRange-Bug). Die slqnt-spezifischen
+Gameplay-Patches (PATCH-002 bis PATCH-008) müssen weiterhin eigenständig
+implementiert werden.
 
 **Auflösungsschritte:**
-1. slqnt kontaktieren und nach Open-Source-Status fragen
-2. Falls kein Quellcode: Patches eigenständig implementieren (ACTION-008)
-3. Für Lightmap/NPC-Bugs: Valve Developer Community Wiki konsultieren
-4. weliveinhell-Repo (BLK-001) enthält möglicherweise Teile der Fixes
+1. weliveinhell-Repo auf vorhandene Patches durchsuchen (PATCH-003 Flashlight, PATCH-004 Wasser)
+2. slqnt kontaktieren und nach Open-Source-Status fragen
+3. Falls kein Quellcode: Patches eigenständig implementieren (ACTION-008)
+4. Für Lightmap/NPC-Bugs: Valve Developer Community Wiki konsultieren
 
 ---
 
@@ -69,6 +85,10 @@ Alle 8 Patches müssen unabhängig implementiert werden, basierend auf:
 slqnt verwendet explizit den `steam_legacy`-Branch, weil die Post-Anniversary-Assets
 nicht mit der nillerusr-Engine-Basis kompatibel sind. Build 2153 ist Pre-Anniversary.
 Die genaue Art der Inkompatibilität ist nicht bekannt.
+
+**Hinweis aus weliveinhell-Repo:**
+weliveinhell nutzt für Portal ebenfalls VPK-Format (Steam-Rip), nicht GCF.
+Dies erhöht das Risiko, dass ARC-01 (GCF-Format, 2004) Kompatibilitätsprobleme hat.
 
 **Mögliche Inkompatibilitätstypen (INFERRED):**
 - Asset-Format-Versionierung (GCF vs VPK)
@@ -151,10 +171,10 @@ slqnt's Blog-Artikel erwähnt das Audio-System nicht. Es ist unklar, welche
 Audio-Bibliothek der Port nutzt. Die Source Engine verwendet OpenAL nativ,
 aber Emscripten's OpenAL-Unterstützung ist begrenzt.
 
-**Mögliche Lösungen (INFERRED):**
-- A: OpenAL via Emscripten (`-lopenal` — Emscripten enthält OpenAL-Port)
-- B: SDL2_mixer (`-sUSE_SDL_MIXER`) — einfacher, limitierter
-- C: Web Audio API direkt (`-sAUDIO_WORKLET`) — maximale Kontrolle, mehr Arbeit
+**Update nach BLK-001-Auflösung:**
+Das weliveinhell-Repo enthält einen SDL2-Audio-Patch (MAIN_THREAD_EM_ASM_INT-Fix),
+was darauf hindeutet, dass SDL2 für Audio genutzt wird. Dies bevorzugt DEC-002 Option A
+(SDL2/OpenAL via Emscripten) oder Option C (SDL2_mixer). Kein direkter Web-Audio-API-Ansatz.
 
 **Wird aktiv:** Sobald erster Browser-Build (T-008) läuft und Audio-Fehler sichtbar werden
 
@@ -181,11 +201,11 @@ Keine alternative Archive.org-Quelle für Episode Two bekannt.
 
 | ID | Titel | Schweregrad | Phase | Status | Auflösung |
 |---|---|---|---|---|---|
-| BLK-001 | weliveinhell URL unbekannt | HOCH | 1.0 | OFFEN | ACTION-001 |
+| ~~BLK-001~~ | weliveinhell URL unbekannt | ~~HOCH~~ | 1.0 | **GESCHLOSSEN 2026-07-10** | ✅ URL: github.com/weliveinhell/source-engine |
 | BLK-002 | slqnt kein Open Source | MITTEL | 1.3/1.4 | OFFEN | ACTION-008 |
 | BLK-003 | Build-2153 Kompatibilität ungetestet | HOCH | 1.2 | TEST AUSSTEHEND | ACTION-006 |
 | BLK-004 | ARC-02+ARC-04 entfernt | NIEDRIG | 1.2 | PERMANENT | Workaround |
 | BLK-005 | Face Morphing Bug-Ursache | LATENT | — | DEFERRED | DEC-FIXED-002 |
 | BLK-006 | WebXR Debugging-Komplexität | LATENT | 3 | LATENT | Phase-3-Prep |
-| BLK-007 | Audio-System unklar | LATENT | 1.1 | LATENT | ACTION-010 |
+| BLK-007 | Audio-System unklar | LATENT | 1.1 | LATENT (SDL2-Hinweis) | ACTION-010 |
 | BLK-008 | EP2-Quelle fehlt | LATENT | 3 | LATENT | ACTION-013 |

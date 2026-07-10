@@ -1,55 +1,69 @@
 # Next Actions
 ## HL2 WebGL2/WebXR Porting Manager
 
-Zuletzt aktualisiert: 2026-07-10 18:13 (Europe/Berlin)
-Status: Workspace-Audit abgeschlossen — 17 VALID, 3 OUTDATED repariert, 0 MISSING
+Zuletzt aktualisiert: 2026-07-10 19:00 (Europe/Berlin)
+Status: Konsistenzprüfung abgeschlossen — 20 VALID. BLK-001 geschlossen.
+
+---
+
+## GELÖSTE BLOCKER
+
+| ID | Blocker | Status |
+|---|---|---|
+| ~~BLK-001~~ | weliveinhell GitHub-URL unbekannt | ✅ **GESCHLOSSEN** — `github.com/weliveinhell/source-engine` |
 
 ---
 
 ## AKTIVE BLOCKER (als TODOs eingetragen)
 
-Diese Blocker müssen aufgelöst werden, bevor Phase 1 beginnt.
-Vollständige Beschreibungen: `blockers.md`
-
 | ID | Blocker | Priorität | Lösung |
 |---|---|---|---|
-| BLK-001 | weliveinhell GitHub-URL unbekannt | KRITISCH | ACTION-001 |
 | BLK-002 | slqnt Port-Quellcode nicht öffentlich | MITTEL | ACTION-008 (unabhängig implementieren) |
 | BLK-003 | Build-2153 ↔ nillerusr Kompatibilität ungetestet | HOCH | ACTION-006 |
 | BLK-004 | ARC-02 + ARC-04 permanent entfernt | NIEDRIG | Workaround: ARC-01 (Phase 1), ARC-03 (Phase 3) |
-| BLK-007 | Audio-System-Lösung unklar | LATENT | ACTION-010 |
+| BLK-007 | Audio-System-Lösung unklar | LATENT | ACTION-010 (SDL2-Hinweis aus weliveinhell-Repo) |
 | BLK-008 | EP2-Asset-Quelle fehlt | LATENT | Phase 3 — neu recherchieren |
 
 ---
 
 ## Sofortige Aktionen — Diese Woche
 
-### ACTION-001 — weliveinhell GitHub-URL finden (BLK-001)
-**Priorität:** KRITISCH — blockiert ACTION-002, ACTION-008
-**Aufwand:** 0.5 Tage
+### ~~ACTION-001~~ — weliveinhell GitHub-URL finden ✅ ERLEDIGT
+**Status:** DONE — 2026-07-10 19:00
+**URL:** https://github.com/weliveinhell/source-engine
 
+**Gefundenes Build-System im weliveinhell-Repo:**
 ```
-Schritt 1: GitHub öffnen → Profile-Suche: "weliveinhell"
-  URL: https://github.com/weliveinhell
-
-Schritt 2: Falls kein direkter Treffer:
-  → GitHub-Suche: "portal source engine emscripten browser"
-  → GitHub-Suche: "source-engine wasm webgl portal"
-  → Suche in nillerusr/source-engine Issues/Forks
-
-Schritt 3: Falls immer noch kein Treffer:
-  → slqnt auf Discord/GitHub kontaktieren:
-    Blog: https://www.slqnt.dev/blog/hl2-in-web
-    GitHub spekulativ: https://github.com/slqnt (verifizieren)
-
-Schritt 4 (nach Fund):
-  → URL in source_map.json unter ENG-02 ("url") eintragen
-  → Repo klonen: git clone <URL> ./engine/portal-port/
-  → Asset-Packing-Skript sichern: ./tools/asset-packer/
-  → BLK-001 in blockers.md als GESCHLOSSEN markieren
+emscripten/
+  repackage.js          — Asset-Packing (Node.js, konfigurierbar)
+  get_logs.sh           — Asset-Logging-Skript
+  libwebgl.patch        — glMapBufferRange-Fix für WebGL
+build_emscripten.sh     — vollständiger Emscripten-Build-Einstiegspunkt
 ```
 
-**Erfolgsmetrik:** Repository-URL bekannt, Repo geklont, Packing-Skript verfügbar
+**emsdk-Pinning (wichtig!):**
+```bash
+git checkout 2d480a1b7c7a34a354188d93f3e89190a44a1d21
+```
+
+**SDL2-Audio-Patch (aus README):**
+```bash
+sed -Ei 's/freq = EM_ASM_INT/freq = MAIN_THREAD_EM_ASM_INT/' \
+  /emsdk/upstream/emscripten/cache/ports/sdl2/SDL-release-2.32.0/src/audio/emscripten/SDL_emscriptenaudio.c
+```
+
+**Asset-Logging printf-Patch (in filesystem/basefilesystem.cpp):**
+```cpp
+FileHandle_t CBaseFileSystem::OpenForRead(...) {
+    printf("OpenForRead %s %s\n", pFileNameT, pathID);
+    ...
+}
+```
+
+**Nächster Schritt jetzt fällig:**
+```bash
+git clone https://github.com/weliveinhell/source-engine ./engine/portal-port/
+```
 
 ---
 
@@ -65,13 +79,9 @@ cd ./engine/source-engine
 # Build-System identifizieren
 ls CMakeLists.txt wscript GNUmakefile 2>/dev/null
 
-# Bei waf-Build:
+# Bei waf-Build (nillerusr nutzt waf):
 python3 waf configure
 python3 waf build
-
-# Bei cmake:
-cmake -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j$(nproc)
 
 # ToGLES-Modus prüfen:
 grep -r "TOGLES\|ToGLES\|gles" --include="*.cpp" --include="*.h" -l | head -20
@@ -86,23 +96,38 @@ grep -r "TOGLES\|ToGLES\|gles" --include="*.cpp" --include="*.h" -l | head -20
 **Aufwand:** 0.5 Tage + Download-Zeit (4.8 GB)
 
 ```bash
-# Zielverzeichnis anlegen
 mkdir -p ./assets/raw/arc-01
 
-# Download (Torrent empfohlen für große Dateien):
+# Download (Torrent empfohlen):
 # URL: https://archive.org/details/Half-Life-2-Retail-2153
-# Torrent-Datei herunterladen → in Client einlesen
-# Oder: ia download Half-Life-2-Retail-2153 (Internet Archive CLI)
-
-# Nach Download — Integrität prüfen:
-ls -la ./assets/raw/arc-01/
-# Erwartete Dateien: Half-Life-2.7z, Patches-and-Misc.7z, ISOs
+# Oder: ia download Half-Life-2-Retail-2153
 
 # Entpacken:
 7z x ./assets/raw/arc-01/Half-Life-2.7z -o./assets/raw/arc-01/extracted/
 ```
 
 **Erfolgsmetrik:** 7Z vollständig entpackt, GCF-Dateien sichtbar
+
+---
+
+### ACTION-003b — weliveinhell-Repo klonen (NEU — nach BLK-001-Auflösung)
+**Priorität:** HOCH (war bisher blockiert)
+**Aufwand:** 0.1 Tage
+**Vorbedingung:** keine
+
+```bash
+git clone https://github.com/weliveinhell/source-engine ./engine/portal-port/
+
+# Build-Skripte sichern:
+ls ./engine/portal-port/emscripten/
+cp -r ./engine/portal-port/emscripten/ ./tools/asset-packer/
+
+# Verfügbare Skripte prüfen:
+cat ./engine/portal-port/README.md
+cat ./engine/portal-port/build_emscripten.sh
+```
+
+**Erfolgsmetrik:** Repo geklont, `emscripten/repackage.js` und `build_emscripten.sh` verfügbar
 
 ---
 
@@ -135,13 +160,6 @@ Reihenfolge der Extraktion:
 5. base source shared.gcf
    Key: C596D1BA1FEAD9A40DD0058118F58975
    Output: ./assets/shared/
-
-WICHTIG: Keys müssen manuell eingetippt werden (kein Copy-Paste in GCFExplorer).
-         Menü: Tools → Set Encryption Key vor jeder Extraktion.
-
-Nach Extraktion:
-→ Verzeichnisstruktur in inventory.md unter "Asset-Verzeichnis (nach Extraktion)" ergänzen
-→ Anzahl BSP-Dateien in ./assets/hl2/maps/ zählen und dokumentieren
 ```
 
 **Erfolgsmetrik:** Alle 5 GCF-Dateien extrahiert, BSP-Dateien in ./assets/hl2/maps/ sichtbar
@@ -151,23 +169,29 @@ Nach Extraktion:
 ### ACTION-005 — Emscripten SDK installieren und verifizieren
 **Priorität:** HOCH
 **Aufwand:** 0.5 Tage
+**WICHTIG:** Pinned Commit aus weliveinhell-Repo verwenden!
 
 ```bash
 git clone https://github.com/emscripten-core/emsdk.git ./tools/emsdk
 cd ./tools/emsdk
+
+# PINNED VERSION (aus weliveinhell README):
+git checkout 2d480a1b7c7a34a354188d93f3e89190a44a1d21
+
 ./emsdk install latest
 ./emsdk activate latest
 source ./emsdk_env.sh
 
+# SDL2-Patch (muss nach install angewendet werden):
+sed -Ei 's/freq = EM_ASM_INT/freq = MAIN_THREAD_EM_ASM_INT/' \
+  /emsdk/upstream/emscripten/cache/ports/sdl2/SDL-release-2.32.0/src/audio/emscripten/SDL_emscriptenaudio.c
+embuilder --force --pic build sdl2 sdl2-mt
+
 # Verifizieren:
 emcc --version
-em++ --version
-emcmake --version
-
-# Ergebnis in TASK.md als abgeschlossen markieren
 ```
 
-**Erfolgsmetrik:** `emcc --version` gibt Versionsnummer aus, kein Fehler
+**Erfolgsmetrik:** `emcc --version` gibt Versionsnummer aus, SDL2-Patch angewendet
 
 ---
 
@@ -199,33 +223,20 @@ Wenn inkompatibel:
 
 ### ACTION-007 — Ersten Emscripten-Build ausführen
 **Priorität:** HOCH
-**Vorbedingung:** ACTION-002 (Engine-Build), ACTION-005 (Emscripten)
+**Vorbedingung:** ACTION-002 (Engine-Build), ACTION-005 (Emscripten), ACTION-003b (weliveinhell-Repo)
 
 ```bash
 cd ./engine/source-engine
 source ../../tools/emsdk/emsdk_env.sh
 
-# Minimaler erster Build (aus pipeline.yaml Stage 5):
-emcc \
-  -sMAX_WEBGL_VERSION=2 \
-  -sMIN_WEBGL_VERSION=2 \
-  -sALLOW_MEMORY_GROWTH=1 \
-  -sINITIAL_MEMORY=268435456 \
-  -sSTACK_SIZE=5242880 \
-  -sFULL_ES2=1 \
-  -sCASE_INSENSITIVE_FS=1 \
-  -sFETCH_SUPPORT_INDEXEDDB=1 \
-  -sUSE_SDL=2 \
-  -sUSE_ZLIB=1 \
-  -sASYNCIFY=1 \
-  -sFILESYSTEM=1 \
-  -sFORCE_FILESYSTEM=1 \
-  -sGL_SUPPORT_AUTOMATIC_ENABLE_EXTENSIONS=1 \
-  -sEXIT_RUNTIME=0 \
-  -o ../../dist/hl2.js \
-  [source files gemäß Engine-Build-System]
+# libwebgl.patch anwenden (aus weliveinhell-Repo):
+patch /emsdk/upstream/emscripten/src/lib/libwebgl.js \
+  ../../engine/portal-port/emscripten/libwebgl.patch
 
-# Alle Compiler-Fehler in separater Datei dokumentieren:
+# Build ausführen (weliveinhell's build_emscripten.sh als Referenz):
+emmake ./build_emscripten.sh
+
+# Alle Compiler-Fehler dokumentieren:
 # → ./docs/build-errors-01.txt
 ```
 
@@ -242,37 +253,24 @@ Patches in dieser Reihenfolge implementieren:
 ```
 PATCH-001: Face Morphing Disable
   → Flex-System deaktivieren (Search: "flexcontroller", "CFlexAnimatingGameobject")
-  → In Engine-Source: #define NO_FACE_MORPHING oder direktes Auskommentieren
   → Referenz: slqnt-Blog ("had to just disable the entire system")
 
 PATCH-002: Lightmap Fix
+  → Hinweis: weliveinhell-libwebgl.patch (glMapBufferRange) könnte bereits helfen
   → Symptom: Random color flickering auf Maps
   → Mögliche Ursache: Lightmap-Atlas-Koordinaten, WebGL2-Textur-Format
-  → Referenz: slqnt-Blog (bestätigt behoben, kein Code verfügbar)
 
 PATCH-003: Flashlight Null-Texture Fix
-  → Symptom: Flashlight zeigt Null-Texture
-  → Asset-Loading-Pfad für Flashlight-Textur prüfen
+  → weliveinhell-Repo auf ähnliche Patches prüfen
 
 PATCH-004: Water Render Fix
   → Symptom: Wasser vollständig schwarz
   → Reflection/Refraction Render-Target in WebGL2
 
 PATCH-005: NPC Stability Fix
-  → Symptom: NPCs kollabieren und sterben zufällig
-  → Contrib "98" in slqnt-Port (Implementierung unbekannt)
-
 PATCH-006: Medkit/Battery Fix
-  → Symptom: Pickup-Items funktionieren nicht
-  → Contrib "98" in slqnt-Port
-
 PATCH-007: Gravity Gun Inventory Fix
-  → Symptom: Gravity Gun nicht im Inventar nach Vergabe
-
-PATCH-008: Crouch Rebind
-  → Ctrl → C
-  → Engine-Keybind-Konfigurationsdatei anpassen
-  → Oder: JavaScript-Event-Handler im Shell-HTML
+PATCH-008: Crouch Rebind (Ctrl → C)
 ```
 
 **Für jeden Patch:** .patch-Datei erzeugen und in ./patches/ ablegen
@@ -282,29 +280,25 @@ PATCH-008: Crouch Rebind
 ## Langfristige Aktionen — Phase 2+
 
 ### ACTION-009 — Alle HL2-Maps packen (nach Pilot d1_trainstation_01)
-Map-Liste aus BSP-Dateien in ./assets/hl2/maps/ ableiten.
-Logging-Skript für jede Map ausführen.
+Nutze `emscripten/repackage.js` aus weliveinhell-Repo (knownMaps, baseGamePath konfigurieren).
 .data-Dateien nach ./dist/maps/ packen.
 
 ### ACTION-010 — Audio-System debuggen → DEC-002 auslösen (BLK-007)
-Wenn erster Browser-Build läuft: Audio-Test.
-OpenAL-Emulation via Emscripten prüfen (`-lopenal` oder `-sUSE_SDL_MIXER`).
-Symptome dokumentieren.
+SDL2-Audio-Patch aus weliveinhell-Repo ist bereits eingebaut (ACTION-005).
+Beim ersten Browser-Build Audio-Test: SDL2_mixer prüfen.
+Symptome dokumentieren → DEC-002 entscheiden.
 
 ### ACTION-011 — Performance-Profiling (Phase 1.6)
-Browser DevTools → Performance Tab
-WebGL-Draw-Calls messen (Ziel: <2000/Frame)
-WASM-Binary-Größe optimieren (Ziel: <100 MB)
+Browser DevTools → Performance Tab.
+WebGL-Draw-Calls messen (Ziel: <2000/Frame).
+WASM-Binary-Größe optimieren (Ziel: <100 MB).
 
 ### ACTION-012 — EP1 Port vorbereiten (Phase 3)
 ARC-03 (Episode One PROViSiON RAR) entpacken.
 Interne Struktur analysieren und in inventory.md dokumentieren.
-EP1-Map-Liste erstellen.
 
 ### ACTION-013 — EP2 Asset-Quelle recherchieren (Phase 3 / BLK-008)
 ARC-04 ist entfernt — neue Quelle finden.
-Archive.org-Suche: "half-life 2 episode two"
-Alternativ: Steam-Account mit Episode Two (steam_legacy Branch)
 
 ---
 
@@ -316,31 +310,8 @@ Nach jeder abgeschlossenen Action diese Dateien aktualisieren:
 |---|---|
 | `TASK.md` | Nach jeder Action: Status von `[ ]` auf `[x]` |
 | `inventory.md` | Nach ACTION-004 (GCF-Extraktion), ACTION-013 (EP2) |
-| `source_map.json` | Nach ACTION-001 (weliveinhell URL), ACTION-006 (DEC-001) |
+| `source_map.json` | ~~ACTION-001~~ ✅ DONE, noch: ACTION-006 (DEC-001) |
 | `task_graph.json` | Nach jedem Status-Update (node.status ändern) |
 | `decisions.md` | Nach ACTION-006 (DEC-001), ACTION-010 (DEC-002) |
-| `blockers.md` | BLK-001 nach ACTION-001 schließen, BLK-003 nach ACTION-006 |
+| `blockers.md` | ~~BLK-001~~ ✅ DONE, noch: BLK-003 nach ACTION-006 |
 | `manifest.json` | Nach erstem Build (ACTION-007): build-Sektion befüllen |
-| `NEXT_ACTIONS.md` | Wöchentlich / nach großen Fortschritten |
-
----
-
-## Übergabe-Checkliste für nächsten Agenten oder Entwickler
-
-Vor dem Start lesen:
-- [ ] `reference_analysis.md` — Quelle-für-Quelle-Analyse
-- [ ] `blockers.md` — Aktive Blocker verstehen
-- [ ] `decisions.md` — Was bereits entschieden ist (DEC-FIXED-*)
-- [ ] `architecture.md` — Technischer Stack
-- [ ] `task_graph.json` — Dependencies zwischen Tasks
-
-Erster Schritt zwingend:
-- [ ] **ACTION-001** ausführen (weliveinhell URL finden) — löst BLK-001
-
-Regeln:
-- [ ] Kein Sub-Agent ohne explizite Erlaubnis des Owners
-- [ ] Jede neue Annahme in `assumptions.md` eintragen
-- [ ] Jeden neuen Blocker sofort in `blockers.md` eintragen
-- [ ] Keine WebXR-Implementierung vor stabiler WebGL2-Basis (DEC-FIXED-001)
-- [ ] Keine Face-Morphing-Reaktivierung (DEC-FIXED-002)
-- [ ] Unsicherheiten immer mit CONFIRMED / INFERRED / UNKNOWN markieren

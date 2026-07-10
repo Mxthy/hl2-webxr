@@ -1,7 +1,7 @@
 # TASK
 ## HL2 WebGL2/WebXR Porting Manager — Aktuelle Aufgabenliste
 
-Zuletzt aktualisiert: 2026-07-10 18:13 (Europe/Berlin)
+Zuletzt aktualisiert: 2026-07-10 19:00 (Europe/Berlin)
 Format: Flat-List, nach Priorität sortiert.
 Detailbeschreibungen aller Actions → NEXT_ACTIONS.md
 
@@ -9,7 +9,7 @@ Detailbeschreibungen aller Actions → NEXT_ACTIONS.md
 
 ## KRITISCH — Sofort (Phase 1.0)
 
-- [ ] **ACTION-001** — weliveinhell GitHub-Repo-URL herausfinden [BLK-001]
+- [x] **ACTION-001** — weliveinhell GitHub-Repo-URL herausfinden [BLK-001] ✅ DONE
   - GitHub: Suche nach Username "weliveinhell"
   - Fallback: slqnt kontaktieren (Discord/GitHub)
   - Nach Fund: URL in source_map.json (ENG-02) + BLK-001 schließen

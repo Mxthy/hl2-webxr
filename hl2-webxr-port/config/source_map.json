@@ -2,6 +2,7 @@
   "meta": {
     "project": "HL2 WebGL2/WebXR Porting Manager",
     "generated": "2026-07-10",
+    "updated": "2026-07-10T19:00:00+02:00",
     "agent_mode": "sequential_single"
   },
   "engine_sources": [
@@ -12,7 +13,7 @@
       "url": "https://github.com/nillerusr/source-engine",
       "base": "2020 TF2 Source Engine Leak",
       "features": ["ToGLES rendering mode", "GLES -> WebGL2 via Emscripten"],
-      "status": "INFERRED_AVAILABLE",
+      "status": "CONFIRMED_AVAILABLE",
       "priority": 1,
       "notes": "Primary engine base for browser port. Contains ToGLES mode critical for WebGL2 path."
     },
@@ -20,12 +21,24 @@
       "id": "ENG-02",
       "name": "weliveinhell Portal-Port",
       "type": "browser_port_reference",
-      "url": "UNKNOWN - github user: weliveinhell",
+      "url": "https://github.com/weliveinhell/source-engine",
       "base": "nillerusr/source-engine fork",
-      "features": ["Portal browser port", "Asset packing scripts", "Emscripten build system"],
-      "status": "INFERRED_AVAILABLE",
+      "live_demo": "https://yikes.pw/portal/",
+      "features": [
+        "Portal browser port (Emscripten/WASM)",
+        "Asset packing scripts (emscripten/repackage.js)",
+        "Asset logging via printf patch in basefilesystem.cpp",
+        "emscripten/get_logs.sh script",
+        "build_emscripten.sh build script",
+        "libwebgl.patch (glMapBufferRange fix)",
+        "SDL2 audio patch",
+        "emsdk pinned to commit 2d480a1b7c7a34a354188d93f3e89190a44a1d21",
+        "Per-map .data chunk system (yikes.pw/portal/chunks/)"
+      ],
+      "status": "CONFIRMED_AVAILABLE",
       "priority": 1,
-      "notes": "Direct predecessor to slqnt HL2 port. Asset packing scripts originated here."
+      "blk_001_resolved": "2026-07-10",
+      "notes": "BLK-001 GESCHLOSSEN. Repo ist public fork von nillerusr/source-engine mit 61 Stars, 16 Forks. Enthält vollständiges Emscripten-Build-System, Asset-Packing-Pipeline und bekannte Patches für Portal. Hosted live unter yikes.pw. Build-Anleitung im README dokumentiert (Docker + emsdk-Pinning + SDL2-Patch + libwebgl.patch)."
     },
     {
       "id": "ENG-03",
@@ -41,7 +54,7 @@
       ],
       "status": "CONFIRMED_LIVE",
       "priority": 1,
-      "notes": "Working HL2 browser port as of June 24, 2026. Source code status unknown."
+      "notes": "Working HL2 browser port as of June 24, 2026. Source code not public."
     },
     {
       "id": "ENG-04",
@@ -83,7 +96,7 @@
         {"name": "counterstrike source shared content.gcf", "key": "D1C6EA82416EF4053E0B7E4C242D770F"}
       ],
       "extraction_tool": "GCFExplorer",
-      "compatibility_warning": "Pre-Anniversary build. slqnt requires steam_legacy branch. Direct compatibility with nillerusr engine UNCERTAIN."
+      "compatibility_warning": "Pre-Anniversary build. slqnt requires steam_legacy branch. Direct compatibility with nillerusr engine UNCERTAIN. BLK-003 noch offen."
     },
     {
       "id": "ARC-02",

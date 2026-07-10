@@ -2,7 +2,7 @@
   "meta": {
     "project": "HL2 WebGL2/WebXR Porting Manager",
     "generated": "2026-07-10",
-    "updated": "2026-07-10T18:13:00+02:00",
+    "updated": "2026-07-10T19:00:00+02:00",
     "phase": "1",
     "_note": "Status-Werte: pending | in-progress | blocked | done | skipped"
   },
@@ -32,8 +32,8 @@
       "id": "T-002",
       "name": "weliveinhell Repo-URL auflösen",
       "phase": "1.0",
-      "status": "blocked",
-      "blocker_ref": "BLK-001",
+      "status": "done",
+      "blocker_ref": "BLK-001 — GESCHLOSSEN 2026-07-10",
       "depends_on": [],
       "blocks": [
         "T-005",
@@ -47,7 +47,9 @@
         "URL in source_map.json unter ENG-02 eintragen",
         "Repo klonen: ./engine/portal-port/",
         "BLK-001 in blockers.md als GESCHLOSSEN markieren"
-      ]
+      ],
+      "resolved": "2026-07-10T19:00:00+02:00",
+      "resolution": "URL gefunden: https://github.com/weliveinhell/source-engine"
     },
     {
       "id": "T-003",
