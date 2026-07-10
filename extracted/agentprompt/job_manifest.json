@@ -1,0 +1,17 @@
+{
+  "role": "Referenzanalyse-Agent",
+  "mission": "HL2-VR / HL2-WebGL2 infrastructure extraction",
+  "outputs": [
+    "inventory",
+    "tree",
+    "manifest.json",
+    "TASK.md",
+    "build guide",
+    "dependency list"
+  ],
+  "rules": [
+    "no 1:1 copy",
+    "no proprietary assets without rights",
+    "separate analysis from rebuild"
+  ]
+}

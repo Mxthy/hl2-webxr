@@ -1,0 +1,21 @@
+{
+  "platform": "Base44",
+  "goal": "HL2 WebXR/WebGL2 Portierungsmanager",
+  "inputs": [
+    "README.md",
+    "CHANGELOG.md",
+    "HL2-VR-Mod reference",
+    "slqnt browser port reference",
+    "archive.org sources"
+  ],
+  "phases": [
+    "analysis",
+    "structuring",
+    "build",
+    "deploy"
+  ],
+  "constraints": [
+    "no 1:1 copy",
+    "no proprietary assets without rights"
+  ]
+}
