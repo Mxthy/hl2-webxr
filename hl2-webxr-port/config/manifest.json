@@ -1,0 +1,604 @@
+{
+  "$schema": "https://hl2-webxr-port.dev/schema/manifest.v1.json",
+  "version": "1.0.0",
+  "project": {
+    "name": "HL2 WebXR Port",
+    "displayName": "Half-Life 2 — WebXR Edition",
+    "engine": "custom-webgl2",
+    "renderer": "webgl2",
+    "xrMode": "immersive-vr",
+    "minWebGLVersion": 2,
+    "description": "Source Engine (HL2) architecture ported to WebGL2/WebXR with WebAssembly asset pipeline"
+  },
+
+  "engine": {
+    "target": "webgl2",
+    "glslVersion": "300 es",
+    "colorSpace": "srgb",
+    "hdrSupport": true,
+    "vr": {
+      "enabled": true,
+      "sessionMode": "immersive-vr",
+      "features": ["local-floor", "bounded-floor"],
+      "optionalFeatures": ["hand-tracking", "layers"],
+      "fallbackToDesktop": true,
+      "renderScale": 1.0,
+      "foveationLevel": "medium"
+    },
+    "rendering": {
+      "maxTextureSize": 4096,
+      "lightmapAtlasSize": 2048,
+      "shadowMapSize": 2048,
+      "anisotropy": 16,
+      "msaaSamples": 4
+    },
+    "streaming": {
+      "strategy": "pvs-driven",
+      "initialBudget": 50,
+      "textureBudgetMB": 256,
+      "lazyLoadDistance": 2000,
+      "preloadVisibleLeaves": true
+    }
+  },
+
+  "wasmModules": {
+    "loadOrder": [
+      "bsp_parser",
+      "mdl_parser",
+      "vtf_decoder",
+      "vpk_reader",
+      "vmt_parser",
+      "physics"
+    ],
+    "modules": {
+      "bsp_parser": {
+        "path": "wasm/bsp_parser.wasm",
+        "typesPath": "wasm/bsp_parser.d.ts",
+        "initPriority": 1,
+        "description": "BSP format parser — vertices, faces, lightmaps, PVS"
+      },
+      "mdl_parser": {
+        "path": "wasm/mdl_parser.wasm",
+        "typesPath": "wasm/mdl_parser.d.ts",
+        "initPriority": 2,
+        "description": "Studio model parser — MDL+VVD+VTX to glTF"
+      },
+      "vtf_decoder": {
+        "path": "wasm/vtf_decoder.wasm",
+        "typesPath": "wasm/vtf_decoder.d.ts",
+        "initPriority": 2,
+        "description": "VTF texture decoder — DXT/RGBA to KTX2"
+      },
+      "vpk_reader": {
+        "path": "wasm/vpk_reader.wasm",
+        "typesPath": "wasm/vpk_reader.d.ts",
+        "initPriority": 1,
+        "description": "VPK archive reader for streaming"
+      },
+      "vmt_parser": {
+        "path": "wasm/vmt_parser.wasm",
+        "typesPath": "wasm/vmt_parser.d.ts",
+        "initPriority": 3,
+        "description": "VMT KeyValues parser to shader parameters"
+      },
+      "physics": {
+        "path": "wasm/physics.wasm",
+        "typesPath": "wasm/physics.d.ts",
+        "initPriority": 4,
+        "description": "Simplified physics & collision (convex hull)"
+      }
+    }
+  },
+
+  "dependencies": {
+    "js": [
+      { "name": "gl-matrix", "version": "^4.0.0", "purpose": "Vector/Matrix math" },
+      { "name": "webxr-polyfill", "version": "^2.0.0", "purpose": "WebXR API polyfill (desktop fallback)" },
+      { "name": "pako", "version": "^2.1.0", "purpose": "gzip/deflate decompression (BSP PAKFILE, VPK)" },
+      { "name": "msgpack-lite", "version": "^1.0.0", "purpose": "Binary serialization for converted assets" },
+      { "name": "howler", "version": "^2.2.4", "purpose": "WebAudio 3D sound engine" }
+    ],
+    "build": [
+      { "name": "typescript", "version": "^5.3.0", "purpose": "TypeScript compiler" },
+      { "name": "vite", "version": "^5.0.0", "purpose": "Dev server + HMR + production build" },
+      { "name": "esbuild", "version": "^0.20.0", "purpose": "JS/TS bundling & minification" },
+      { "name": "sharp", "version": "^0.33.0", "purpose": "Image conversion (intermediate)" },
+      { "name": "ktx2-encoder", "version": "^0.4.0", "purpose": "KTX2/BasisU GPU texture encoding" },
+      { "name": "@webxr-input-profiles", "version": "latest", "purpose": "VR controller profiles" }
+    ],
+    "wasm": [
+      { "name": "rust", "version": ">=1.75", "purpose": "Systems language for WASM modules" },
+      { "name": "wasm-pack", "version": ">=0.12", "purpose": "Rust to WASM build + JS bindings" },
+      { "name": "wasm-bindgen", "version": ">=0.7", "purpose": "Rust <-> JS interop" },
+      { "name": "wasm-opt", "version": ">=116", "purpose": "WASM optimization (binaryen)" },
+      { "name": "emscripten", "version": ">=3.1", "purpose": "Fallback C/C++ WASM toolchain", "optional": true }
+    ],
+    "assetTools": [
+      { "name": "vpk.exe / VPKEdit", "purpose": "Extract VPK archives (Source SDK)" },
+      { "name": "Crowbar", "purpose": "Decompile MDL to SMD" },
+      { "name": "VTFEdit / vtfcmd", "purpose": "Batch VTF to PNG/TGA conversion" },
+      { "name": "BSPSource", "purpose": "Decompile BSP to VMF" },
+      { "name": "GCFScape", "purpose": "Browse GCF/VPK archives" },
+      { "name": "Source SDK Base 2013", "purpose": "VBSP/VVIS/VRAD if recompilation needed" }
+    ]
+  },
+
+  "assetGroups": [
+    {
+      "id": "engine-core",
+      "name": "Engine Core",
+      "type": "engine",
+      "priority": 0,
+      "loadOrder": 0,
+      "loadStrategy": "immediate",
+      "assets": [
+        { "type": "wasm", "path": "wasm/bsp_parser.wasm" },
+        { "type": "wasm", "path": "wasm/vpk_reader.wasm" },
+        { "type": "wasm", "path": "wasm/mdl_parser.wasm" },
+        { "type": "wasm", "path": "wasm/vtf_decoder.wasm" },
+        { "type": "wasm", "path": "wasm/vmt_parser.wasm" },
+        { "type": "wasm", "path": "wasm/physics.wasm" },
+        { "type": "shader", "path": "engine/shaders/glsl/common/" },
+        { "type": "shader", "path": "engine/shaders/glsl/lightmapped_generic/" },
+        { "type": "shader", "path": "engine/shaders/glsl/vertexlit_generic/" },
+        { "type": "shader", "path": "engine/shaders/glsl/unlit_generic/" },
+        { "type": "config", "path": "config/engine.json" },
+        { "type": "config", "path": "config/controls.json" },
+        { "type": "config", "path": "config/materials.json" }
+      ],
+      "sizeEstimateMB": 8
+    },
+    {
+      "id": "level-geometry",
+      "name": "Level Geometry & Lightmaps",
+      "type": "level",
+      "priority": 1,
+      "loadOrder": 1,
+      "loadStrategy": "on-demand",
+      "trigger": "level-load",
+      "streaming": {
+        "preloadVisible": true,
+        "progressiveLOD": true,
+        "lowLODFirst": true
+      },
+      "assets": [
+        { "type": "geometry", "path": "assets/maps/{level}/world.geom", "size": "medium" },
+        { "type": "lightmap", "path": "assets/maps/{level}/world.lightmap.webp", "size": "medium" },
+        { "type": "lightmap_hdr", "path": "assets/maps/{level}/world.lightmap_hdr.webp", "size": "medium", "optional": true },
+        { "type": "entities", "path": "assets/maps/{level}/entities.json", "size": "small" },
+        { "type": "pvs", "path": "assets/maps/{level}/pvs.bin", "size": "small" },
+        { "type": "metadata", "path": "assets/maps/{level}/meta.json", "size": "small" }
+      ],
+      "sizeEstimateMB": 15
+    },
+    {
+      "id": "level-textures",
+      "name": "Level Textures (PVS-streamed)",
+      "type": "texture",
+      "priority": 2,
+      "loadOrder": 2,
+      "loadStrategy": "pvs-streamed",
+      "trigger": "level-load + visible-leaves",
+      "streaming": {
+        "pvsDriven": true,
+        "format": "ktx2",
+        "fallback": "webp",
+        "maxConcurrentLoads": 8,
+        "priorityQueue": true,
+        "evictionPolicy": "lru",
+        "vramBudgetMB": 256
+      },
+      "assetPattern": "assets/textures/materials/**/*.{ktx2,webp}",
+      "sizeEstimateMB": 150
+    },
+    {
+      "id": "level-models",
+      "name": "Static & Dynamic Props",
+      "type": "model",
+      "priority": 3,
+      "loadOrder": 3,
+      "loadStrategy": "lazy",
+      "trigger": "entity-reference",
+      "streaming": {
+        "cacheModels": true,
+        "maxCached": 500,
+        "evictionPolicy": "lru"
+      },
+      "assetPattern": "assets/models/**/*.glb",
+      "sizeEstimateMB": 80
+    },
+    {
+      "id": "cubemaps",
+      "name": "Environment Cubemaps",
+      "type": "cubemap",
+      "priority": 4,
+      "loadOrder": 4,
+      "loadStrategy": "proximity",
+      "trigger": "near-cubemap-entity",
+      "streaming": {
+        "radius": 1500,
+        "preloadNearest": 2
+      },
+      "assetPattern": "assets/maps/{level}/cubemaps/*.ktx2",
+      "sizeEstimateMB": 20
+    },
+    {
+      "id": "audio-ambient",
+      "name": "Ambient Audio",
+      "type": "audio",
+      "priority": 5,
+      "loadOrder": 5,
+      "loadStrategy": "level-preload",
+      "trigger": "level-load",
+      "assets": [
+        { "type": "audio", "path": "assets/audio/ambient/", "format": "opus" }
+      ],
+      "sizeEstimateMB": 5
+    },
+    {
+      "id": "audio-vo",
+      "name": "Voice-Over Lines",
+      "type": "audio",
+      "priority": 6,
+      "loadOrder": 6,
+      "loadStrategy": "dialogue-triggered",
+      "trigger": "entity-io",
+      "streaming": {
+        "preloadChapter": true,
+        "format": "opus"
+      },
+      "assetPattern": "assets/audio/vo/**/*.opus",
+      "sizeEstimateMB": 30
+    },
+    {
+      "id": "audio-effects",
+      "name": "Sound Effects",
+      "type": "audio",
+      "priority": 7,
+      "loadOrder": 7,
+      "loadStrategy": "lazy",
+      "trigger": "entity-reference",
+      "assetPattern": "assets/audio/{weapons,npc,ui}/**/*.opus",
+      "sizeEstimateMB": 15
+    },
+    {
+      "id": "particles",
+      "name": "Particle Systems",
+      "type": "particle",
+      "priority": 8,
+      "loadOrder": 8,
+      "loadStrategy": "lazy",
+      "trigger": "entity-reference",
+      "assets": [
+        { "type": "particle", "path": "assets/particles/particle_systems.json" }
+      ],
+      "sizeEstimateMB": 2
+    },
+    {
+      "id": "user-overrides",
+      "name": "User Overrides (Mod Content)",
+      "type": "override",
+      "priority": 100,
+      "loadOrder": -1,
+      "loadStrategy": "overlay",
+      "description": "User-supplied mod content — highest priority, overrides all base assets. Equivalent to Source engine custom/ folder.",
+      "assetPattern": "assets/overrides/**/*",
+      "sizeEstimateMB": 0
+    }
+  ],
+
+  "loadOrder": [
+    { "step": 0, "group": "engine-core", "blocking": true, "description": "WASM modules + shaders + config — must complete before anything else" },
+    { "step": 1, "group": "user-overrides", "blocking": false, "description": "Register override paths for path resolver (no assets loaded yet)" },
+    { "step": 2, "group": "level-geometry", "blocking": true, "description": "World geometry + lightmaps + PVS + entities — blocks level entry" },
+    { "step": 3, "group": "level-textures", "blocking": false, "description": "PVS-streamed textures — starts after geometry, non-blocking (low-LOD first)" },
+    { "step": 4, "group": "level-models", "blocking": false, "description": "Props loaded lazily as entities reference them" },
+    { "step": 5, "group": "cubemaps", "blocking": false, "description": "Cubemaps loaded by proximity to env_cubemap entities" },
+    { "step": 6, "group": "audio-ambient", "blocking": false, "description": "Ambient sounds preloaded with level" },
+    { "step": 7, "group": "audio-vo", "blocking": false, "description": "VO lines loaded on dialogue trigger" },
+    { "step": 8, "group": "audio-effects", "blocking": false, "description": "SFX loaded on entity reference" },
+    { "step": 9, "group": "particles", "blocking": false, "description": "Particle definitions loaded on entity reference" }
+  ],
+
+  "build": {
+    "toolchain": {
+      "node": ">=20.0.0",
+      "rust": ">=1.75",
+      "wasmPack": ">=0.12"
+    },
+    "steps": [
+      {
+        "id": "build-wasm",
+        "name": "Compile WASM Modules",
+        "script": "build/scripts/build_wasm.sh",
+        "input": "build/wasm-src/",
+        "output": "wasm/*.wasm + wasm/*.d.ts",
+        "parallel": true,
+        "required": true,
+        "dependsOn": []
+      },
+      {
+        "id": "extract-vpk",
+        "name": "Extract Source VPK Archives",
+        "script": "build/tools/extract_vpk.js",
+        "input": "source-assets/*.vpk",
+        "output": "build/staging/loose/",
+        "tool": "vpk.exe",
+        "parallel": false,
+        "required": true,
+        "dependsOn": []
+      },
+      {
+        "id": "convert-bsp",
+        "name": "Convert BSP Maps",
+        "script": "build/tools/convert_bsp.ts",
+        "input": "build/staging/loose/maps/*.bsp",
+        "output": "assets/maps/{level}/",
+        "wasmModule": "bsp_parser",
+        "parallel": true,
+        "required": true,
+        "dependsOn": ["extract-vpk", "build-wasm"],
+        "substeps": [
+          { "action": "parse-header", "description": "Read BSP header, version, lump index" },
+          { "action": "extract-geometry", "description": "Vertices, edges, faces → .geom binary" },
+          { "action": "extract-lightmaps", "description": "Lightmap lumps (8/53) → atlas .webp" },
+          { "action": "extract-visibility", "description": "PVS lump (4) → compressed .pvs.bin" },
+          { "action": "extract-entities", "description": "Entity lump (0) → .entities.json" },
+          { "action": "extract-cubemaps", "description": "Cubemap lump (42) → individual .ktx2" },
+          { "action": "extract-displacements", "description": "Disp lumps (26/33) → tessellated mesh in .geom" },
+          { "action": "extract-static-props", "description": "Game lump → prop list in .entities.json" }
+        ]
+      },
+      {
+        "id": "convert-vtf",
+        "name": "Convert VTF Textures",
+        "script": "build/tools/convert_vtf.ts",
+        "input": "build/staging/loose/materials/**/*.vtf",
+        "output": "assets/textures/materials/**/*.{ktx2,webp}",
+        "wasmModule": "vtf_decoder",
+        "parallel": true,
+        "required": true,
+        "dependsOn": ["extract-vpk", "build-wasm"],
+        "substeps": [
+          { "action": "decode-vtf", "description": "VTF header + DXT/RGBA decompression via WASM" },
+          { "action": "encode-ktx2", "description": "Re-encode to BC7 KTX2 (GPU optimal)" },
+          { "action": "encode-webp", "description": "Fallback WebP for non-BC7 devices" },
+          { "action": "extract-normal-maps", "description": "Separate _norm.ktx2 for bumpmaps" }
+        ]
+      },
+      {
+        "id": "convert-mdl",
+        "name": "Convert Studio Models",
+        "script": "build/tools/convert_mdl.ts",
+        "input": "build/staging/loose/models/**/*.mdl",
+        "output": "assets/models/**/*.glb",
+        "wasmModule": "mdl_parser",
+        "parallel": true,
+        "required": true,
+        "dependsOn": ["extract-vpk", "build-wasm"],
+        "substeps": [
+          { "action": "parse-mdl", "description": "MDL header, bones, sequences, attachments" },
+          { "action": "parse-vvd", "description": "Vertex data + LOD" },
+          { "action": "parse-vtx", "description": "Strip data + indices" },
+          { "action": "export-gltf", "description": "Merge → glTF 2.0 binary (.glb) with animations" }
+        ]
+      },
+      {
+        "id": "convert-vmt",
+        "name": "Convert Material Definitions",
+        "script": "build/tools/convert_vmt.ts",
+        "input": "build/staging/loose/materials/**/*.vmt",
+        "output": "assets/shaders/material_index.json",
+        "wasmModule": "vmt_parser",
+        "parallel": false,
+        "required": true,
+        "dependsOn": ["extract-vpk", "build-wasm"]
+      },
+      {
+        "id": "convert-audio",
+        "name": "Convert Audio",
+        "script": "build/tools/convert_audio.ts",
+        "input": "build/staging/loose/sound/**/*.wav",
+        "output": "assets/audio/**/*.opus",
+        "tool": "ffmpeg",
+        "parallel": true,
+        "required": true,
+        "dependsOn": ["extract-vpk"]
+      },
+      {
+        "id": "convert-pcf",
+        "name": "Convert Particle Systems",
+        "script": "build/tools/convert_pcf.ts",
+        "input": "build/staging/loose/particles/*.pcf",
+        "output": "assets/particles/particle_systems.json",
+        "parallel": false,
+        "required": false,
+        "dependsOn": ["extract-vpk"]
+      },
+      {
+        "id": "pack-wvpk",
+        "name": "Package Web-VPK Archives",
+        "script": "build/tools/pack_wvpk.ts",
+        "input": "assets/",
+        "output": "deploy/dist/assets/wvpk/",
+        "parallel": true,
+        "required": true,
+        "dependsOn": ["convert-bsp", "convert-vtf", "convert-mdl", "convert-vmt", "convert-audio"],
+        "config": {
+          "chunkSizeMB": 50,
+          "compression": "brotli",
+          "indexFile": "pak01.wvpk.dir"
+        }
+      },
+      {
+        "id": "validate-assets",
+        "name": "Validate Asset Integrity",
+        "script": "build/tools/validate_assets.ts",
+        "input": "assets/",
+        "output": "build/validation-report.json",
+        "parallel": false,
+        "required": true,
+        "dependsOn": ["pack-wvpk"],
+        "checks": [
+          "all-referenced-textures-exist",
+          "all-referenced-models-exist",
+          "lightmap-atlas-valid",
+          "pvs-data-consistent",
+          "material-shader-params-valid"
+        ]
+      },
+      {
+        "id": "build-js",
+        "name": "Bundle JavaScript/TypeScript",
+        "script": "build/scripts/build_js.sh",
+        "input": "src/ + engine/",
+        "output": "deploy/dist/assets/js/",
+        "tool": "vite",
+        "parallel": false,
+        "required": true,
+        "dependsOn": ["build-wasm"],
+        "config": {
+          "minify": true,
+          "target": "es2022",
+          "format": "esmodules",
+          "sourcemap": false
+        }
+      },
+      {
+        "id": "copy-config",
+        "name": "Copy Runtime Config",
+        "script": "build/tools/copy_config.ts",
+        "input": "config/manifest.json + config/*.json",
+        "output": "deploy/dist/",
+        "parallel": false,
+        "required": true,
+        "dependsOn": []
+      }
+    ],
+    "output": "deploy/dist/"
+  },
+
+  "deploy": {
+    "target": "static-cdn",
+    "steps": [
+      {
+        "id": "deploy-cdn",
+        "name": "Deploy to CDN",
+        "type": "static-hosting",
+        "provider": "configurable",
+        "input": "deploy/dist/",
+        "config": {
+          "cacheControl": {
+            "wasm": "public, max-age=31536000, immutable",
+            "wvpk": "public, max-age=31536000, immutable",
+            "js": "public, max-age=31536000, immutable",
+            "html": "public, max-age=300, must-revalidate",
+            "json": "public, max-age=3600"
+          },
+          "compression": ["brotli", "gzip"],
+          "cors": {
+            "enabled": true,
+            "origin": "*",
+            "methods": ["GET"]
+          },
+          "headers": {
+            "Cross-Origin-Opener-Policy": "same-origin",
+            "Cross-Origin-Embedder-Policy": "require-corp",
+            "Cross-Origin-Resource-Policy": "cross-origin"
+          }
+        }
+      },
+      {
+        "id": "deploy-service-worker",
+        "name": "Register Service Worker",
+        "type": "pwa",
+        "file": "deploy/service-worker.js",
+        "config": {
+          "precache": ["index.html", "manifest.json", "wasm/*.wasm"],
+          "runtimeCache": {
+            "wvpk": "cache-first",
+            "ktx2": "stale-while-revalidate",
+            "glb": "cache-first",
+            "opus": "cache-first"
+          },
+          "maxCacheSize": "2GB",
+          "maxAge": "30d"
+        }
+      },
+      {
+        "id": "deploy-webxr-manifest",
+        "name": "Deploy WebXR App Manifest",
+        "type": "webxr",
+        "file": "deploy/webxr.manifest.json",
+        "config": {
+          "name": "HL2 WebXR Port",
+          "short_name": "HL2 WebXR",
+          "icons": [
+            { "src": "assets/textures/ui/icon-192.png", "sizes": "192x192", "type": "image/png" },
+            { "src": "assets/textures/ui/icon-512.png", "sizes": "512x512", "type": "image/png" }
+          ],
+          "display": "fullscreen",
+          "orientation": "any",
+          "xr": {
+            "launch_mode": "immersive"
+          }
+        }
+      }
+    ]
+  },
+
+  "levels": {
+    "configFile": "config/levels.json",
+    "defaultLevel": "d1_trainstation_01",
+    "chapters": [
+      {
+        "id": "chapter-1",
+        "name": "Point Insertion",
+        "levels": ["d1_trainstation_01", "d1_trainstation_02", "d1_trainstation_03", "d1_trainstation_04", "d1_trainstation_05"]
+      },
+      {
+        "id": "chapter-2",
+        "name": "A Red Letter Day",
+        "levels": ["d1_eli_01", "d1_eli_02"]
+      },
+      {
+        "id": "chapter-3",
+        "name": "Route Kanal",
+        "levels": ["d1_canals_01", "d1_canals_02", "d1_canals_03", "d1_canals_05", "d1_canals_06", "d1_canals_07", "d1_canals_08", "d1_canals_09", "d1_canals_10", "d1_canals_11", "d1_canals_12", "d1_canals_13"]
+      },
+      {
+        "id": "chapter-4",
+        "name": "Water Hazard",
+        "levels": ["d1_eli_01", "d2_coast_01", "d2_coast_03", "d2_coast_04", "d2_coast_05", "d2_coast_06", "d2_coast_07", "d2_coast_08", "d2_coast_09", "d2_coast_10", "d2_coast_11", "d2_coast_12", "d2_coast_13"]
+      },
+      {
+        "id": "chapter-5",
+        "name": "Black Mesa East / Sandtraps / Nova Prospekt",
+        "levels": ["d2_prison_01", "d2_prison_02", "d2_prison_03", "d2_prison_04", "d2_prison_05", "d2_prison_06", "d2_prison_07", "d2_prison_08"]
+      },
+      {
+        "id": "chapter-6",
+        "name": "Entanglement / Anticitizen One / Follow Freeman!",
+        "levels": ["d3_c17_01", "d3_c17_02", "d3_c17_03", "d3_c17_04", "d3_c17_05", "d3_c17_06a", "d3_c17_06b", "d3_c17_07", "d3_c17_08", "d3_c17_09", "d3_c17_10", "d3_c17_11", "d3_c17_12", "d3_c17_12b", "d3_c17_13"]
+      },
+      {
+        "id": "chapter-7",
+        "name": "Our Benefactors / Dark Energy",
+        "levels": ["d3_citadel_01", "d3_citadel_02", "d3_citadel_03", "d3_citadel_04", "d3_citadel_05", "d3_breen_01", "d3_breen_02", "d3_breen_03"]
+      }
+    ]
+  },
+
+  "assumptions": [
+    "User legally owns HL2 assets on Steam — manifest references original VPKs for extraction only",
+    "WebGL2 is the minimum target; WebGPU is future-planned but not required",
+    "VR-first with desktop non-VR fallback (no VR headset required to play)",
+    "WASM modules are built from Rust source in build/wasm-src/",
+    "BSP maps are pre-converted at build time, not parsed at runtime in browser",
+    "Lightmap atlas packing is done at build time (per-face → atlas), not runtime",
+    "Texture coordinates (Source texture-matrix style) are pre-baked to direct UVs during BSP conversion",
+    "Physics is simplified (convex hull collision) — full Havok-equivalent not in scope",
+    "Multiplayer/networking is out of scope for v1.0 — singleplayer only",
+    "Choreography scenes (VCD) are simplified to audio + subtitle, no facial animation in v1.0"
+  ]
+}

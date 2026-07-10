@@ -1,0 +1,276 @@
+hl2-webxr-port/
+│
+├── README.md                          # Projekt-Überblick und Setup-Anleitung
+│
+├── docs/                              # Dokumentation
+│   ├── architecture.md                # Diese Architektur-Dokumentation
+│   ├── source-engine-analysis.md      # Detaillierte Source Engine Analyse
+│   ├── webgl2-porting-strategy.md     # Strategie für WebGL2/WebXR Portierung
+│   └── asset-conversion-guide.md      # Anleitung: Source → Web Asset Konvertierung
+│
+├── config/                            # Konfigurationsdateien (Runtime + Build)
+│   ├── manifest.json                  # HAUPT-Manifest: Asset-Gruppen, Load-Order, Build, Deploy
+│   ├── engine.json                    # Engine-Konfig: Render-Quality, VR-Settings, Limits
+│   ├── controls.json                  # Input-Mapping: Keyboard, Mouse, VR-Controller
+│   ├── materials.json                 # Shader-Parameter-Overrides (Runtime)
+│   └── levels.json                    # Level-Liste mit Asset-Referenzen & Streaming-Info
+│
+├── src/                               # TypeScript-Anwendungs-Code (Spiel-Logik)
+│   ├── main.ts                        # Einstiegspunkt: Boot-Sequenz, Engine-Init
+│   ├── game/
+│   │   ├── GameSession.ts             # Spiel-Sitzung, State-Machine (Menu → Loading → Play)
+│   │   ├── Player.ts                  # Spieler-Entity, VR-Avatar, Movement
+│   │   ├── EntityManager.ts           # Entity-Verwaltung (NPCs, Props, Triggers)
+│   │   └── LevelManager.ts            # Level-Lade-Logik, Streaming-Koordinator
+│   ├── input/
+│   │   ├── InputManager.ts            # Unified Input: KB/Mouse + VR-Controller
+│   │   ├── VRController.ts            # WebXR Gamepad-Buttons, Hand-Tracking
+│   │   └── KeyBindings.ts             # Tastenbelegung (aus controls.json)
+│   ├── audio/
+│   │   ├── AudioManager.ts            # WebAudio 3D-Sound, räumliches Hören
+│   │   └── AmbiencePlayer.ts          # Ambient-Sound-Loops pro Visleaf-Region
+│   ├── ui/
+│   │   ├── HUD.ts                     # HUD (Lebensenergie, Munition — im VR-Space)
+│   │   ├── MainMenu.ts               # Hauptmenü (2D-Canvas Overlay)
+│   │   ├── LoadingScreen.ts           # Lade-Fortschritt mit Asset-Gruppen-Status
+│   │   └── VRUIPanel.ts               # VR-UI-Panel (World-Space, Laser-Pointer)
+│   ├── physics/
+│   │   ├── PhysicsWorld.ts            # Kollision (vereinfacht Convex-Hull via WASM)
+│   │   └── CollisionShapes.ts         # BSP-Brush → Convex-Hull Konvertierung
+│   └── utils/
+│       ├── AssetPathResolver.ts       # Load-Order-Logik (gameinfo.txt-Äquivalent)
+│       ├── Logger.ts                  # Strukturiertes Logging (Console + Remote)
+│       └── PerformanceMonitor.ts      # FPS, Frame-Time, VR-Latency-Tracking
+│
+├── engine/                            # WebGL2 Render-Engine (framework-unabhängig)
+│   ├── core/
+│   │   ├── Engine.ts                  # Haupt-Engine-Klasse, Render-Loop, VR-Session
+│   │   ├── WebGL2Context.ts           # WebGL2 Context-Erstellung, Feature-Detection
+│   │   ├── WebXRSession.ts            # WebXR VR-Session-Management, XR-Frames
+│   │   ├── FrameLoop.ts               # RAF-Loop, Fixed-Timestep-Update, Interpolation
+│   │   └── Viewport.ts                # Canvas-Management, Resize, DPR-Handling
+│   ├── scene/
+│   │   ├── SceneGraph.ts              # Szene-Graph (Nodes, Transform-Hierarchie)
+│   │   ├── Camera.ts                  # Kamera: Perspective + VR-Stereo (left/right eye)
+│   │   ├── Mesh.ts                    # Mesh-Definition (VBO/IBO/VAO)
+│   │   ├── LightmapAtlas.ts          # Lightmap-Atlas-Packer (per-Face → GPU-Atlas)
+│   │   └── Skybox.ts                  # 3D-Skybox (Source-style, separater Render-Pass)
+│   ├── renderer/
+│   │   ├── Renderer.ts                # Haupt-Renderer: Draw-Calls, State-Management
+│   │   ├── RenderPass.ts              # Basis-Klasse für Render-Passes
+│   │   ├── GeometryPass.ts            # Weltgeometrie (BSP-Faces, Brush-Surfaces)
+│   │   ├── PropPass.ts                # Static/Dynamic Props (glTF-Modelle)
+│   │   ├── LightmapPass.ts            # Lightmap-Kompositing (baked + dynamic)
+│   │   ├── WaterPass.ts               # Wasser-Rendering (Reflexion/Refraktion)
+│   │   ├── DisplacementPass.ts        # Displacement-Surfaces (Terrain)
+│   │   ├── TransparentPass.ts         # Transparente Geometrie (sortiert, back-to-front)
+│   │   └── HDRPipeline.ts             # HDR Tone-Mapping (Source HDR → LDR)
+│   ├── shaders/                       # GLSL ES 3.00 Shader (Ubershader-Konzept)
+│   │   ├── ShaderManager.ts           # Shader-Caching, Hot-Reload (Dev), Kombination
+│   │   ├── ShaderGenerator.ts         # Dynamische Shader-Generierung aus VMT-Parametern
+│   │   ├── glsl/
+│   │   │   ├── common/
+│   │   │   │   ├── uniforms.glsl      # Globale Uniforms (MVP, Zeit, Fog)
+│   │   │   │   ├── lighting.glsl      # Lightmap-Sampling, Vertex-Lighting
+│   │   │   │   ├── fog.glsl           # Source-Fog (exponential, range-based)
+│   │   │   │   └── cubemap.glsl       # Cubemap-Reflections (Source envmap)
+│   │   │   ├── lightmapped_generic/   # LightmappedGeneric (Weltgeometrie)
+│   │   │   │   ├── vert.glsl          # Vertex-Shader: Lightmap-UVs, Tex-Matrix
+│   │   │   │   └── frag.glsl          # Fragment-Shader: BaseTex + BumpMap + Lightmap
+│   │   │   ├── vertexlit_generic/     # VertexLitGeneric (Props/Modelle)
+│   │   │   │   ├── vert.glsl          # Vertex-Shader: Bone-Skinning, Vertex-Lighting
+│   │   │   │   └── frag.glsl          # Fragment-Shader: BaseTex + BumpMap + Envmap
+│   │   │   ├── unlit_generic/         # UnlitGeneric (UI, HUD, Sprites)
+│   │   │   │   ├── vert.glsl
+│   │   │   │   └── frag.glsl
+│   │   │   ├── water/                 # Water Shader
+│   │   │   │   ├── vert.glsl          # Vertex: Wave-Deformation, Reflection-UV
+│   │   │   │   └── frag.glsl          # Fragment: Fresnel, Refraction, Reflection
+│   │   │   └── refract/               # Refract Shader (Glas, Heat-Haze)
+│   │   │       ├── vert.glsl
+│   │   │       └── frag.glsl
+│   │   └── ubershader.json            # Ubershader-Definition: Shader-Feature-Flags
+│   ├── materials/
+│   │   ├── Material.ts                # Material-Klasse (Shader + Parameter + Textures)
+│   │   ├── MaterialManager.ts         # Material-Caching, VMT → Material Konvertierung
+│   │   └── VMTLoader.ts              # VMT KeyValues Parser → Material-Objekt
+│   ├── textures/
+│   │   ├── TextureManager.ts          # Texture-Caching, LRU-Cache, VRAM-Budget
+│   │   ├── TextureLoader.ts           # KTX2/WebP Loader → WebGL2 Textures
+│   │   └── TextureAtlas.ts            # Sprite-Atlas (Detail-Props, UI)
+│   ├── models/
+│   │   ├── ModelManager.ts            # Modell-Caching, glTF-Loading
+│   │   ├── GLTFLoader.ts              # glTF 2.0 Loader (konvertierte Source-Modelle)
+│   │   └── AnimationSystem.ts         # Skelett-Animation, Blending (Source $sequence)
+│   └── world/
+│       ├── BSPWorld.ts                # BSP-Welt: Visleaf-Rendering, PVS-Culling
+│       ├── VisleafCuller.ts           # PVS-basiertes Culling (aus BSP Lump 4)
+│       ├── DisplacementSurface.ts     # Displacement-Geometrie (aus BSP Lumps 26/33)
+│       └── StaticPropManager.ts       # Static Props (aus BSP Game-Lump)
+│
+├── assets/                            # Konvertierte Web-Assets (Build-Output)
+│   ├── maps/                          # Konvertierte Level
+│   │   ├── d1_trainstation_01/
+│   │   │   ├── world.geom             # BSP → binäres WebGL2-Geometrie-Format
+│   │   │   ├── world.lightmap.webp    # Lightmap-Atlas (komprimiert)
+│   │   │   ├── world.lightmap_hdr.webp # HDR-Lightmap (falls verfügbar)
+│   │   │   ├── entities.json          # Entity-Definitionen (aus BSP Lump 0)
+│   │   │   ├── pvs.bin                # Pre-computed Visibility Sets (kompakt)
+│   │   │   ├── cubemaps/              # Konvertierte Cubemaps (BSP Lump 42)
+│   │   │   │   ├── cube_0.ktx2
+│   │   │   │   └── ...
+│   │   │   └── meta.json              # Level-Metadaten (Bounds, Asset-Liste, LO-LOD)
+│   │   └── ...                        # Weitere Level
+│   ├── textures/                      # Konvertierte Texturen (VTF → KTX2/WebP)
+│   │   ├── materials/                 # Welt-Texturen (thematisch nach Source-Pfaden)
+│   │   │   ├── brick/
+│   │   │   │   ├── brick_wall_001.ktx2      # BC7 komprimiert (GPU)
+│   │   │   │   ├── brick_wall_001.webp      # Fallback (nicht-VR Desktop)
+│   │   │   │   └── brick_wall_001_norm.ktx2 # Normal-Map
+│   │   │   ├── concrete/
+│   │   │   ├── metal/
+│   │   │   ├── nature/
+│   │   │   └── ...
+│   │   ├── models/                    # Modell-Texturen
+│   │   └── ui/                        # UI/HUD-Texturen
+│   ├── models/                        # Konvertierte Modelle (MDL+VVD+VTX → glTF)
+│   │   ├── props/
+│   │   │   ├── static/
+│   │   │   │   ├── furniture_001.glb  # glTF 2.0 Binary
+│   │   │   │   └── ...
+│   │   │   └── dynamic/
+│   │   ├── characters/
+│   │   │   ├── gordon.glb             # Spieler-Modell (VR-Hands als Fallback)
+│   │   │   ├── citizens/
+│   │   │   └── ...
+│   │   ├── weapons/
+│   │   └── vehicles/
+│   ├── audio/                         # Konvertierte Sounds (WAV → Opus/WebM)
+│   │   ├── ambient/
+│   │   ├── npc/
+│   │   ├── weapons/
+│   │   ├── vo/                        # Voice-Over (English)
+│   │   └── ui/
+│   ├── particles/                     # Konvertierte Partikel (PCF → JSON + Sprite-Atlas)
+│   │   └── particle_systems.json
+│   └── shaders/                       # Vorberechnete Material-Definitionen
+│       └── material_index.json        # VMT → Shader-Parameter-Mapping
+│
+├── wasm/                              # WebAssembly-Module (Build-Output)
+│   ├── bsp_parser.wasm                # BSP-Format Parser (Rust → WASM)
+│   ├── bsp_parser.d.ts                # TypeScript-Definitionen
+│   ├── mdl_parser.wasm                # MDL+VVD+VTX Parser (Rust → WASM)
+│   ├── mdl_parser.d.ts
+│   ├── vtf_decoder.wasm               # VTF → RGBA/KTX2 Decoder (Rust → WASM)
+│   ├── vtf_decoder.d.ts
+│   ├── vpk_reader.wasm                # VPK-Archiv-Leser (Rust → WASM)
+│   ├── vpk_reader.d.ts
+│   ├── vmt_parser.wasm                # VMT KeyValues Parser (Rust → WASM)
+│   ├── vmt_parser.d.ts
+│   ├── physics.wasm                   # Physik/Kollision (Rust → WASM)
+│   ├── physics.d.ts
+│   └── package.json                   # WASM-Module-Package-Definition
+│
+├── build/                             # Build-System & Asset-Konvertierungs-Pipeline
+│   ├── tools/                         # Asset-Konvertierungs-Tools (Node.js)
+│   │   ├── convert_bsp.ts             # BSP → .geom + .lightmap + .entities + .pvs
+│   │   ├── convert_vtf.ts             # VTF → KTX2 (BC7) + WebP (Fallback)
+│   │   ├── convert_mdl.ts             # MDL+VVD+VTX → glTF 2.0 (.glb)
+│   │   ├── convert_vmt.ts             # VMT → material_index.json
+│   │   ├── convert_audio.ts           # WAV → Opus + WebM
+│   │   ├── convert_pcf.ts             # PCF → JSON Particle-Definition
+│   │   ├── pack_wvpk.ts               # Loose Files → .wvpk (Web-VPK Container)
+│   │   └── validate_assets.ts         # Asset-Integrität & Konsistenz-Check
+│   ├── scripts/                       # Build-Scripts
+│   │   ├── build_wasm.sh              # Rust → WASM Kompilierung (wasm-pack)
+│   │   ├── build_assets.sh            # Vollständige Asset-Konvertierungs-Pipeline
+│   │   ├── build_js.sh                # TypeScript → Bundled JS (esbuild/vite)
+│   │   ├── build_all.sh               # Alles: WASM + Assets + JS
+│   │   ├── watch_assets.sh            # Dev-Mode: Asset-Änderungen überwachen
+│   │   └── clean.sh                   # Build-Artefakte löschen
+│   ├── wasm-src/                      # Rust-Quellcode für WASM-Module
+│   │   ├── bsp-parser/
+│   │   │   ├── Cargo.toml
+│   │   │   └── src/
+│   │   │       ├── lib.rs             # WASM-Entry, JS-Bindings
+│   │   │       ├── bsp.rs             # BSP-Header + Lump-Parsing
+│   │   │       ├── lumps.rs           # Lump-spezifische Parser (Faces, Verts, etc.)
+│   │   │       ├── visibility.rs      # PVS-Dekompression
+│   │   │       ├── lightmap.rs        # Lightmap-Extraktion + Atlas-Packing
+│   │   │       └── entities.rs        # Entity KeyValues-Parser
+│   │   ├── mdl-parser/
+│   │   │   ├── Cargo.toml
+│   │   │   └── src/
+│   │   │       ├── lib.rs
+│   │   │       ├── mdl.rs             # MDL-Header, Bones, Sequences
+│   │   │       ├── vvd.rs             # VVD Vertex-Daten
+│   │   │       ├── vtx.rs             # VTX Strip/Indices
+│   │   │       └── gltf_export.rs     # → glTF 2.0 JSON + BinGLB
+│   │   ├── vtf-decoder/
+│   │   │   ├── Cargo.toml
+│   │   │   └── src/
+│   │   │       ├── lib.rs
+│   │   │       ├── vtf.rs             # VTF-Header + Format-Detection
+│   │   │       ├── dxt.rs             # DXT1/3/5 → RGBA Dekompression
+│   │   │       └── bc7.rs             # BC7 Encoding für KTX2-Output
+│   │   ├── vpk-reader/
+│   │   │   ├── Cargo.toml
+│   │   │   └── src/
+│   │   │       ├── lib.rs
+│   │   │       └── vpk.rs             # VPK-Index + Chunk-Leser
+│   │   ├── vmt-parser/
+│   │   │   ├── Cargo.toml
+│   │   │   └── src/
+│   │   │       ├── lib.rs
+│   │   │       └── keyvalues.rs       # VMT KeyValues Lexer + Parser
+│   │   └── physics/
+│   │       ├── Cargo.toml
+│   │       └── src/
+│   │           ├── lib.rs
+│   │           ├── convex_hull.rs     # BSP-Brush → Convex Hull
+│   │           └── broadphase.rs      # Broadphase-Collision
+│   ├── pipelines/                     # CI/CD Pipeline-Definitionen
+│   │   ├── github-actions.yml         # GitHub Actions: Build → Test → Deploy
+│   │   └── docker-build.Dockerfile    # Reproduzierbares Build-Environment
+│   └── vite.config.ts                 # Vite Build-Konfiguration (Dev + Prod)
+│
+├── deploy/                            # Deployment-Artefakte & Konfiguration
+│   ├── dist/                          # Build-Output (gitignored)
+│   │   ├── index.html                 # HTML-Einstiegspunkt
+│   │   ├── assets/
+│   │   │   ├── js/                    # Minified JS-Bundles (esbuild)
+│   │   │   ├── wasm/                  # WASM-Module (geparste/optimierte)
+│   │   │   └── wvpk/                  # Web-VPK Archive (komprimierte Assets)
+│   │   └── manifest.json              # Kopiert von config/ (für Runtime)
+│   ├── service-worker.js              # Service Worker: Offline-Cache, PWA
+│   ├── webxr.manifest.json            # WebXR-App-Manifest (für VR-Browser)
+│   ├── nginx.conf                     # Nginx-Konfig (gzip, CORS, WASM-MIME)
+│   ├── docker-compose.yml             # Local-Dev-Hosting (Nginx + SSL-Proxy)
+│   └── cdn-config.json               # CDN-Einstellungen (Cache-Keys, Regionen)
+│
+├── tests/                             # Test-Suite
+│   ├── unit/
+│   │   ├── engine/                    # Engine-Unit-Tests
+│   │   │   ├── renderer.test.ts
+│   │   │   ├── shader-manager.test.ts
+│   │   │   └── bsp-world.test.ts
+│   │   ├── wasm/                      # WASM-Module-Tests (Rust + WASM-Bindgen-Test)
+│   │   │   ├── bsp_parser.test.ts
+│   │   │   └── mdl_parser.test.ts
+│   │   └── utils/
+│   │       └── asset-path-resolver.test.ts
+│   ├── integration/
+│   │   ├── asset-loading.test.ts      # Full Asset-Pipeline Integration
+│   │   ├── render-frame.test.ts       # Single-Frame Rendering Verification
+│   │   └── vr-session.test.ts         # WebXR Session Init/Teardown
+│   ├── e2e/
+│   │   └── level-load.test.ts         # Playwright: Level lädt + rendert
+│   └── fixtures/
+│       └── sample-bsp/                # Minimal-BSP für Tests (eigenes, nicht HL2)
+│
+├── package.json                       # NPM-Paket-Definition
+├── tsconfig.json                      # TypeScript-Konfiguration
+├── .eslintrc.json                     # ESLint-Regeln
+├── .gitignore                         # Build-Outputs, node_modules, Original-Assets
+├── .editorconfig                      # Editor-Konventionen
+└── LICENSE                            # MIT (Code) — Assets bleiben Valve-Lizenz
