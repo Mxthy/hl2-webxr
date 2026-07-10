@@ -1,0 +1,99 @@
+{
+  "meta": {
+    "project": "HL2 WebGL2/WebXR Porting Manager",
+    "generated": "2026-07-10",
+    "source": "Derived from GCF structure (ARC-01) + slqnt blog analysis"
+  },
+  "asset_categories": {
+    "materials": {
+      "description": "Textures and material definitions",
+      "source_gcf": "base source shared materials.gcf",
+      "formats": ["VTF", "VMT"],
+      "web_equivalents": ["WebP", "PNG", "KTX2"],
+      "notes": "VMT = material shader scripts, VTF = texture data. Needs converter for WebGL.",
+      "status": "INFERRED"
+    },
+    "models": {
+      "description": "3D models, skeletal meshes, animations",
+      "source_gcf": "base source shared models.gcf",
+      "formats": ["MDL", "VVD", "VTX", "ANI"],
+      "web_equivalents": ["glTF", "custom binary"],
+      "notes": "MDL = model header, VVD = vertex data, VTX = optimized mesh strips. Complex multi-file format.",
+      "status": "INFERRED"
+    },
+    "sounds": {
+      "description": "Sound effects and ambient audio",
+      "source_gcf": "base source shared sounds.gcf",
+      "formats": ["WAV", "MP3"],
+      "web_equivalents": ["WebM/Opus", "OGG"],
+      "notes": "Web Audio API compatible. May need re-encoding for optimal web delivery.",
+      "status": "INFERRED"
+    },
+    "maps": {
+      "description": "Level data (BSP format)",
+      "source_gcf": "halflife 2 base content.gcf",
+      "formats": ["BSP"],
+      "web_equivalents": ["custom binary chunks"],
+      "notes": "Each map packed into separate .data file (per slqnt approach). One .data file per BSP.",
+      "status": "CONFIRMED (via slqnt blog)"
+    },
+    "face_morphing": {
+      "description": "Facial animation flex data",
+      "source_gcf": "halflife 2 base content.gcf",
+      "formats": ["VFE", "embedded in MDL"],
+      "web_equivalents": ["N/A"],
+      "notes": "DISABLED in slqnt port due to stability issues. Do not implement in Phase 1.",
+      "status": "CONFIRMED_DISABLED",
+      "phase": "excluded"
+    },
+    "scripts": {
+      "description": "Game logic scripts, entity definitions",
+      "source_gcf": "halflife 2 base content.gcf",
+      "formats": ["TXT", "CFG", "VDF", "RES"],
+      "web_equivalents": ["text/json"],
+      "notes": "Mostly text-based, compatible as-is.",
+      "status": "INFERRED"
+    },
+    "shaders": {
+      "description": "HLSL shaders compiled for Source Engine",
+      "source_gcf": "halflife 2 base content.gcf",
+      "formats": ["compiled VSHADER", "PSHADER"],
+      "web_equivalents": ["GLSL", "WGSL"],
+      "notes": "Handled by ToGLES rendering mode. nillerusr converts HLSL->GLSL at engine level.",
+      "status": "INFERRED"
+    },
+    "episodes": {
+      "ep1": {
+        "description": "Episode One assets",
+        "source": "ARC-03 (RAR format)",
+        "formats": ["UNKNOWN - likely GCF or installed structure"],
+        "status": "UNKNOWN",
+        "phase": "Phase 3"
+      },
+      "ep2": {
+        "description": "Episode Two assets",
+        "source": "UNKNOWN - ARC-04 removed",
+        "formats": ["UNKNOWN"],
+        "status": "UNKNOWN",
+        "phase": "Phase 3"
+      }
+    }
+  },
+  "data_file_packing": {
+    "method": "Per-map asset bundling",
+    "format": ".data (Emscripten preloaded filesystem)",
+    "pipeline": [
+      "Run game with asset-request logging enabled",
+      "Collect all logged asset paths",
+      "Extract referenced assets from GCF/VPK",
+      "Pack into .data file per map",
+      "Host .data files on CDN/server"
+    ],
+    "status": "CONFIRMED (via slqnt blog)"
+  },
+  "save_state_assets": {
+    "method": "IDBFS",
+    "description": "Emscripten IndexedDB Filesystem for persistent saves",
+    "status": "CONFIRMED (via slqnt blog)"
+  }
+}

@@ -1,0 +1,192 @@
+---
+# HL2 WebGL2/WebXR Port — Asset & Build Pipeline
+# Generated: 2026-07-10
+# Status: DRAFT (alle Werte INFERRED, soweit nicht anders markiert)
+
+meta:
+  project: hl2-webgl2-port
+  version: "0.1.0"
+  phase: 1
+
+# ============================================================
+# ENVIRONMENT
+# ============================================================
+environment:
+  emscripten:
+    sdk: emsdk
+    version: latest-stable  # pin auf spezifische Version sobald bekannt
+    activate: true
+  
+  engine:
+    repo: https://github.com/nillerusr/source-engine
+    branch: main
+    local_path: ./engine/source-engine
+    reference_port: https://github.com/weliveinhell/  # URL UNKNOWN — Platzhalter
+  
+  tools:
+    gcf_explorer:
+      source: ARC-01/Misc/GCFExplorer
+      platform: windows
+    vpk_tool:
+      source: INFERRED — Valve SDK oder community tool
+      status: UNKNOWN
+    asset_packer:
+      source: weliveinhell (Linux) + slqnt-Mod (Windows)
+      status: INFERRED
+
+# ============================================================
+# ASSET PIPELINE
+# ============================================================
+asset_pipeline:
+  
+  stage_1_extraction:
+    name: GCF Extraction
+    input: ARC-01 (Half-Life-2-Retail-2153.7z)
+    tool: GCFExplorer
+    gcf_files:
+      - name: base source shared.gcf
+        key: C596D1BA1FEAD9A40DD0058118F58975
+        output: ./assets/shared/materials/
+      - name: base source shared materials.gcf
+        key: 33648B73E732E0734E34FE3CDA09AB74
+        output: ./assets/shared/materials/
+      - name: base source shared models.gcf
+        key: D147FC333F1B2B18A8E0B9354B94AFF6
+        output: ./assets/shared/models/
+      - name: base source shared sounds.gcf
+        key: 9DC57C809A92196E2674ADA87AEA0FCE
+        output: ./assets/shared/sounds/
+      - name: halflife 2 base content.gcf
+        key: 187D516D65C617EB6FE90FB20211DEC6
+        output: ./assets/hl2/
+    status: PENDING
+    compatibility_warning: |
+      Build 2153 = Pre-Anniversary. slqnt nutzt steam_legacy.
+      Kompatibilität mit nillerusr-Engine UNSICHER. Test erforderlich.
+  
+  stage_2_logging:
+    name: Asset Request Logging
+    description: |
+      Engine im Logging-Modus starten, alle Asset-Requests erfassen.
+      (Print-Statement-Methode, CONFIRMED aus slqnt-Blog)
+    method: engine_print_logging
+    pilot_map: d1_trainstation_01
+    output: ./logs/asset_requests_{map}.log
+    status: PENDING
+  
+  stage_3_packing:
+    name: Per-Map .data Packing
+    description: |
+      Asset-Logs auswerten, referenzierte Assets extrahieren,
+      pro Map eine .data-Datei erzeugen.
+    tool: emscripten/tools/file_packager.py
+    input: ./logs/asset_requests_{map}.log + ./assets/
+    output: ./dist/maps/{map}.data + ./dist/maps/{map}.js
+    compression: lz4  # -sLZ4=1 optional
+    status: PENDING
+
+# ============================================================
+# BUILD PIPELINE
+# ============================================================
+build_pipeline:
+  
+  stage_4_patches:
+    name: Apply Engine Patches
+    patches:
+      - id: PATCH-001
+        name: Face Morphing Disable
+        status: REQUIRED
+        source: slqnt (CONFIRMED)
+      - id: PATCH-002
+        name: Lightmap Fix
+        status: REQUIRED
+        source: slqnt (CONFIRMED)
+      - id: PATCH-003
+        name: Flashlight Null-Texture Fix
+        status: REQUIRED
+        source: slqnt (CONFIRMED)
+      - id: PATCH-004
+        name: Water Render Fix
+        status: REQUIRED
+        source: slqnt (CONFIRMED)
+      - id: PATCH-005
+        name: NPC Stability Fix
+        status: REQUIRED
+        source: slqnt/contrib_98 (CONFIRMED)
+      - id: PATCH-006
+        name: Medkit Battery Fix
+        status: REQUIRED
+        source: slqnt/contrib_98 (CONFIRMED)
+      - id: PATCH-007
+        name: Gravity Gun Inventory Fix
+        status: REQUIRED
+        source: slqnt (CONFIRMED)
+      - id: PATCH-008
+        name: Crouch Rebind (Ctrl -> C)
+        status: REQUIRED
+        source: slqnt (CONFIRMED)
+  
+  stage_5_compile:
+    name: Emscripten Compilation
+    compiler: emcc
+    flags:
+      webgl:
+        - -sMAX_WEBGL_VERSION=2
+        - -sMIN_WEBGL_VERSION=2
+        - -sFULL_ES2=1
+        - -sGL_SUPPORT_AUTOMATIC_ENABLE_EXTENSIONS=1
+      memory:
+        - -sALLOW_MEMORY_GROWTH=1
+        - -sINITIAL_MEMORY=268435456
+        - -sSTACK_SIZE=5242880
+      filesystem:
+        - -sFILESYSTEM=1
+        - -sFORCE_FILESYSTEM=1
+        - -sCASE_INSENSITIVE_FS=1
+        - -sFETCH_SUPPORT_INDEXEDDB=1
+      runtime:
+        - -sEXIT_RUNTIME=0
+        - -sASYNCIFY=1
+      libraries:
+        - -sUSE_SDL=2
+        - -sUSE_ZLIB=1
+    output:
+      wasm: ./dist/hl2.wasm
+      js: ./dist/hl2.js
+    status: PENDING
+
+# ============================================================
+# DEPLOYMENT
+# ============================================================
+deployment:
+  
+  stage_6_deploy:
+    name: Server Deployment
+    required_headers:
+      Cross-Origin-Opener-Policy: same-origin
+      Cross-Origin-Embedder-Policy: require-corp
+    structure:
+      - dist/index.html
+      - dist/hl2.wasm
+      - dist/hl2.js
+      - dist/maps/*.data
+      - dist/maps/*.js
+      - dist/manifest.json
+    status: PENDING
+
+# ============================================================
+# QA
+# ============================================================
+qa:
+  
+  stage_7_qa:
+    name: Quality Assurance
+    checks:
+      - render_not_black
+      - no_crash_on_load
+      - save_load_works
+      - input_bindings_correct
+      - cross_browser: [chrome, firefox, edge]
+    pilot_map: d1_trainstation_01
+    tool: INFERRED (Playwright oder manuell)
+    status: PENDING

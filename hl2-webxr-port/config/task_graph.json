@@ -1,0 +1,223 @@
+{
+  "meta": {
+    "project": "HL2 WebGL2/WebXR Porting Manager",
+    "generated": "2026-07-10",
+    "phase": "1"
+  },
+  "nodes": [
+    {
+      "id": "T-001",
+      "name": "Environment Setup",
+      "phase": "1.0",
+      "status": "pending",
+      "depends_on": [],
+      "blocks": ["T-002", "T-003"],
+      "estimated_days": 2,
+      "owner": "TBD",
+      "tasks": [
+        "Install Emscripten SDK",
+        "Clone nillerusr/source-engine",
+        "Find and clone weliveinhell Portal-Port",
+        "Set up GCFExplorer",
+        "Set up Python/Node environment"
+      ]
+    },
+    {
+      "id": "T-002",
+      "name": "Resolve weliveinhell URL",
+      "phase": "1.0",
+      "status": "blocker",
+      "depends_on": [],
+      "blocks": ["T-005"],
+      "estimated_days": 1,
+      "owner": "TBD",
+      "note": "GitHub username 'weliveinhell' known, repo URL unknown. Search required."
+    },
+    {
+      "id": "T-003",
+      "name": "Download ARC-01",
+      "phase": "1.2",
+      "status": "pending",
+      "depends_on": ["T-001"],
+      "blocks": ["T-004"],
+      "estimated_days": 1,
+      "tasks": [
+        "Download archive.org/details/Half-Life-2-Retail-2153",
+        "Verify 7Z integrity",
+        "Extract to working directory"
+      ]
+    },
+    {
+      "id": "T-004",
+      "name": "GCF Extraction",
+      "phase": "1.2",
+      "status": "pending",
+      "depends_on": ["T-003"],
+      "blocks": ["T-006", "T-007"],
+      "estimated_days": 2,
+      "tasks": [
+        "Extract all GCF files with GCFExplorer",
+        "Use keys from ARC-01 README",
+        "Verify asset directory structure"
+      ]
+    },
+    {
+      "id": "T-005",
+      "name": "Engine Build (Native)",
+      "phase": "1.1",
+      "status": "pending",
+      "depends_on": ["T-001", "T-002"],
+      "blocks": ["T-008"],
+      "estimated_days": 3,
+      "tasks": [
+        "Build nillerusr/source-engine natively on Linux",
+        "Verify ToGLES mode compiles",
+        "Run basic render test"
+      ]
+    },
+    {
+      "id": "T-006",
+      "name": "Asset Compatibility Test",
+      "phase": "1.2",
+      "status": "pending",
+      "depends_on": ["T-004", "T-005"],
+      "blocks": ["T-007"],
+      "estimated_days": 2,
+      "critical": true,
+      "note": "CRITICAL: Build 2153 vs nillerusr-Engine compatibility unknown. If incompatible, need steam_legacy assets.",
+      "decision_required": "DEC-001"
+    },
+    {
+      "id": "T-007",
+      "name": "Asset Logging + Packing (Pilot Map)",
+      "phase": "1.2",
+      "status": "pending",
+      "depends_on": ["T-006"],
+      "blocks": ["T-009"],
+      "estimated_days": 3,
+      "tasks": [
+        "Enable print-statement logging in engine",
+        "Run d1_trainstation_01",
+        "Parse asset logs",
+        "Pack into .data file",
+        "Verify .data file loads"
+      ]
+    },
+    {
+      "id": "T-008",
+      "name": "Emscripten Build (First Pass)",
+      "phase": "1.1",
+      "status": "pending",
+      "depends_on": ["T-005"],
+      "blocks": ["T-009"],
+      "estimated_days": 5,
+      "tasks": [
+        "Configure emcc flags",
+        "Compile to WASM",
+        "Verify basic browser load",
+        "Fix compilation errors"
+      ]
+    },
+    {
+      "id": "T-009",
+      "name": "Apply Known Patches",
+      "phase": "1.3+1.4",
+      "status": "pending",
+      "depends_on": ["T-007", "T-008"],
+      "blocks": ["T-010"],
+      "estimated_days": 5,
+      "patches": [
+        "PATCH-001: Face Morphing Disable",
+        "PATCH-002: Lightmap Fix",
+        "PATCH-003: Flashlight Fix",
+        "PATCH-004: Water Render Fix",
+        "PATCH-005: NPC Stability",
+        "PATCH-006: Medkit/Battery Fix",
+        "PATCH-007: Gravity Gun Fix",
+        "PATCH-008: Crouch Rebind"
+      ]
+    },
+    {
+      "id": "T-010",
+      "name": "IDBFS Save System",
+      "phase": "1.5",
+      "status": "pending",
+      "depends_on": ["T-009"],
+      "blocks": ["T-011"],
+      "estimated_days": 2,
+      "tasks": [
+        "Add FETCH_SUPPORT_INDEXEDDB flag",
+        "Implement FS.syncfs() calls",
+        "Test save/load cycle",
+        "Test persistence across browser reload"
+      ]
+    },
+    {
+      "id": "T-011",
+      "name": "Full Map Pipeline",
+      "phase": "1.6",
+      "status": "pending",
+      "depends_on": ["T-010"],
+      "blocks": ["T-012"],
+      "estimated_days": 7,
+      "tasks": [
+        "Pack all HL2 maps into .data files",
+        "Test each map loads without crash",
+        "Fix per-map issues"
+      ]
+    },
+    {
+      "id": "T-012",
+      "name": "QA & Stabilization",
+      "phase": "1.6",
+      "status": "pending",
+      "depends_on": ["T-011"],
+      "blocks": [],
+      "estimated_days": 7,
+      "tasks": [
+        "Performance profiling",
+        "Memory leak check",
+        "Cross-browser testing",
+        "Complete campaign playthrough"
+      ]
+    }
+  ],
+  "decisions": [
+    {
+      "id": "DEC-001",
+      "name": "Asset Source: Build 2153 vs steam_legacy",
+      "depends_on": "T-006",
+      "options": [
+        "A: Build 2153 (ARC-01) — verfügbar, Pre-Anniversary",
+        "B: steam_legacy (Steam-Account) — benötigt Steam-Zugang"
+      ],
+      "status": "pending"
+    }
+  ],
+  "blockers": [
+    {
+      "id": "BLK-001",
+      "description": "weliveinhell GitHub URL unknown",
+      "blocks": ["T-002", "T-005"],
+      "resolution": "Web research required"
+    },
+    {
+      "id": "BLK-002",
+      "description": "slqnt Port source code not public",
+      "blocks": ["T-009"],
+      "resolution": "Implement patches independently based on slqnt blog descriptions"
+    },
+    {
+      "id": "BLK-003",
+      "description": "Build 2153 / nillerusr compatibility unknown",
+      "blocks": ["T-007"],
+      "resolution": "Test in T-006, fallback to steam_legacy if incompatible"
+    },
+    {
+      "id": "BLK-004",
+      "description": "ARC-02 (Collector's Edition) and ARC-04 (Complete Edition) removed from Archive.org",
+      "blocks": [],
+      "resolution": "Use ARC-01 as primary, ARC-03 for EP1"
+    }
+  ]
+}

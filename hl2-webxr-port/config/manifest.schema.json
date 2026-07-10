@@ -1,0 +1,205 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://hl2-webxr-port/manifest.schema.json",
+  "title": "HL2 WebGL2/WebXR Port Build Manifest",
+  "description": "Schema für Build- und Deployment-Manifeste des HL2 Browser-Ports",
+  "type": "object",
+  "required": ["meta", "build", "assets", "maps", "patches"],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["version", "generated", "project"],
+      "properties": {
+        "version": {
+          "type": "string",
+          "description": "Manifest schema version",
+          "example": "1.0.0"
+        },
+        "generated": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp of manifest generation"
+        },
+        "project": {
+          "type": "string",
+          "description": "Project name",
+          "const": "hl2-webgl2-port"
+        },
+        "phase": {
+          "type": "string",
+          "enum": ["1", "2", "3"],
+          "description": "Project phase (1=WebGL2, 2=Extended, 3=WebXR+Episodes)"
+        }
+      }
+    },
+    "build": {
+      "type": "object",
+      "required": ["engine_commit", "emscripten_version", "flags", "timestamp"],
+      "properties": {
+        "engine_commit": {
+          "type": "string",
+          "description": "Git commit hash of nillerusr/source-engine"
+        },
+        "emscripten_version": {
+          "type": "string",
+          "description": "Emscripten SDK version used"
+        },
+        "flags": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "All emcc flags used in this build"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "wasm_file": {
+          "type": "string",
+          "description": "Path to compiled .wasm file"
+        },
+        "js_file": {
+          "type": "string",
+          "description": "Path to compiled .js loader file"
+        },
+        "wasm_size_bytes": {
+          "type": "integer",
+          "description": "Size of WASM binary in bytes"
+        }
+      }
+    },
+    "assets": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string",
+          "enum": ["GCF_2153", "STEAM_LEGACY", "VPK_ANNIVERSARY"],
+          "description": "Asset source used in this build"
+        },
+        "extraction_date": {
+          "type": "string",
+          "format": "date"
+        },
+        "gcf_files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {"type": "string"},
+              "checksum": {"type": "string"},
+              "extracted": {"type": "boolean"}
+            }
+          }
+        },
+        "total_asset_count": {
+          "type": "integer"
+        },
+        "total_size_bytes": {
+          "type": "integer"
+        }
+      }
+    },
+    "maps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "data_file", "status"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "BSP map name without extension",
+            "examples": ["d1_trainstation_01", "d2_coast_01"]
+          },
+          "data_file": {
+            "type": "string",
+            "description": "Path to .data file for this map"
+          },
+          "data_size_bytes": {
+            "type": "integer"
+          },
+          "js_loader": {
+            "type": "string",
+            "description": "Path to .js loader file"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "extracted", "packed", "tested", "deployed"],
+            "description": "Current pipeline status of this map"
+          },
+          "asset_count": {
+            "type": "integer",
+            "description": "Number of assets in this map's .data bundle"
+          },
+          "chapter": {
+            "type": "string",
+            "description": "HL2 chapter this map belongs to"
+          },
+          "episode": {
+            "type": "string",
+            "enum": ["hl2", "ep1", "ep2"],
+            "default": "hl2"
+          },
+          "tested": {
+            "type": "boolean",
+            "default": false
+          },
+          "qa_notes": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "patches": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "applied"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique patch identifier"
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable patch name"
+          },
+          "description": {
+            "type": "string"
+          },
+          "applied": {
+            "type": "boolean"
+          },
+          "commit": {
+            "type": "string",
+            "description": "Patch commit hash if available"
+          },
+          "source": {
+            "type": "string",
+            "description": "Where this patch came from",
+            "examples": ["slqnt", "contrib_98", "internal"]
+          }
+        }
+      }
+    },
+    "deployment": {
+      "type": "object",
+      "properties": {
+        "host": {
+          "type": "string",
+          "description": "Deployment URL"
+        },
+        "cdn_base": {
+          "type": "string",
+          "description": "CDN base URL for .data files"
+        },
+        "headers": {
+          "type": "object",
+          "description": "Required HTTP headers",
+          "properties": {
+            "Cross-Origin-Opener-Policy": {"type": "string"},
+            "Cross-Origin-Embedder-Policy": {"type": "string"}
+          }
+        }
+      }
+    }
+  }
+}

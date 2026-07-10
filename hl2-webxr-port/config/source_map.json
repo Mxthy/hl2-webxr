@@ -1,0 +1,141 @@
+{
+  "meta": {
+    "project": "HL2 WebGL2/WebXR Porting Manager",
+    "generated": "2026-07-10",
+    "agent_mode": "sequential_single"
+  },
+  "engine_sources": [
+    {
+      "id": "ENG-01",
+      "name": "nillerusr/source-engine",
+      "type": "engine_fork",
+      "url": "https://github.com/nillerusr/source-engine",
+      "base": "2020 TF2 Source Engine Leak",
+      "features": ["ToGLES rendering mode", "GLES -> WebGL2 via Emscripten"],
+      "status": "INFERRED_AVAILABLE",
+      "priority": 1,
+      "notes": "Primary engine base for browser port. Contains ToGLES mode critical for WebGL2 path."
+    },
+    {
+      "id": "ENG-02",
+      "name": "weliveinhell Portal-Port",
+      "type": "browser_port_reference",
+      "url": "UNKNOWN - github user: weliveinhell",
+      "base": "nillerusr/source-engine fork",
+      "features": ["Portal browser port", "Asset packing scripts", "Emscripten build system"],
+      "status": "INFERRED_AVAILABLE",
+      "priority": 1,
+      "notes": "Direct predecessor to slqnt HL2 port. Asset packing scripts originated here."
+    },
+    {
+      "id": "ENG-03",
+      "name": "slqnt HL2 Browser Port",
+      "type": "live_reference",
+      "url": "https://hl2.slqnt.dev",
+      "base": "weliveinhell Portal-Port fork",
+      "features": [
+        "IDBFS save state",
+        "Face morphing disabled",
+        "Windows asset packing script",
+        "All gameplay bugs fixed"
+      ],
+      "status": "CONFIRMED_LIVE",
+      "priority": 1,
+      "notes": "Working HL2 browser port as of June 24, 2026. Source code status unknown."
+    },
+    {
+      "id": "ENG-04",
+      "name": "HL2VRU",
+      "type": "vr_mod_reference",
+      "url": "https://github.com/vittorioromeo/HL2VRU",
+      "base": "Half-Life 2: VR Mod (SourceVR Team)",
+      "features": [
+        "Universal Melee",
+        "Physical Jumping",
+        "Dual Wielding",
+        "Virtual Stock",
+        "Grip-Holster Mode",
+        "Weapon Weight Simulation",
+        "CVar configuration system"
+      ],
+      "status": "CONFIRMED",
+      "priority": 3,
+      "notes": "Desktop VR only (SteamVR/OpenVR). Relevant for WebXR interaction design phase only."
+    }
+  ],
+  "asset_sources": [
+    {
+      "id": "ARC-01",
+      "name": "HL2 Retail Build 2153",
+      "url": "https://archive.org/details/Half-Life-2-Retail-2153",
+      "format": "GCF",
+      "size_gb": 4.8,
+      "date": "2004-11-16",
+      "status": "CONFIRMED_AVAILABLE",
+      "priority": 1,
+      "gcf_files": [
+        {"name": "base source shared.gcf", "key": "C596D1BA1FEAD9A40DD0058118F58975"},
+        {"name": "base source shared materials.gcf", "key": "33648B73E732E0734E34FE3CDA09AB74"},
+        {"name": "base source shared models.gcf", "key": "D147FC333F1B2B18A8E0B9354B94AFF6"},
+        {"name": "base source shared sounds.gcf", "key": "9DC57C809A92196E2674ADA87AEA0FCE"},
+        {"name": "halflife 2 base content.gcf", "key": "187D516D65C617EB6FE90FB20211DEC6"},
+        {"name": "counterstrike source base content.gcf", "key": null},
+        {"name": "counterstrike source shared content.gcf", "key": "D1C6EA82416EF4053E0B7E4C242D770F"}
+      ],
+      "extraction_tool": "GCFExplorer",
+      "compatibility_warning": "Pre-Anniversary build. slqnt requires steam_legacy branch. Direct compatibility with nillerusr engine UNCERTAIN."
+    },
+    {
+      "id": "ARC-02",
+      "name": "HL2 Collector's Edition 2153",
+      "url": "https://archive.org/details/HalfLife2CollectorsEdition2153",
+      "format": "UNKNOWN",
+      "status": "UNAVAILABLE_REMOVED",
+      "priority": 0,
+      "notes": "Item removed from Archive.org. Cannot be used."
+    },
+    {
+      "id": "ARC-03",
+      "name": "HL2 Episode One PROViSiON",
+      "url": "https://archive.org/details/half-life-2-episode-one_202402",
+      "format": "RAR",
+      "size_gb": 1.4,
+      "date": "2006",
+      "status": "CONFIRMED_AVAILABLE",
+      "priority": 2,
+      "notes": "Scene release. Internal structure unknown. For EP1 porting phase.",
+      "internal_structure": "UNKNOWN"
+    },
+    {
+      "id": "ARC-04",
+      "name": "HL2 Complete Edition Linux Steam Rip",
+      "url": "https://archive.org/details/half-life-2-complete-edition-v-12694556-linux-steam-rip-linux-rule-z-goldberg-steam-emulator",
+      "format": "UNKNOWN",
+      "status": "UNAVAILABLE_REMOVED",
+      "priority": 0,
+      "notes": "Item removed from Archive.org. Cannot be used."
+    }
+  ],
+  "documentation": [
+    {
+      "id": "DOC-01",
+      "name": "Emscripten OpenGL Support",
+      "url": "https://emscripten.org/docs/porting/multimedia_and_graphics/OpenGL-support.html",
+      "status": "CONFIRMED",
+      "key_flags": ["-sMAX_WEBGL_VERSION=2", "-sMIN_WEBGL_VERSION=2", "-sFULL_ES2", "-sFULL_ES3", "-sLEGACY_GL_EMULATION"]
+    },
+    {
+      "id": "DOC-02",
+      "name": "Emscripten Settings Reference",
+      "url": "https://emscripten.org/docs/tools_reference/settings_reference.html",
+      "status": "CONFIRMED",
+      "key_settings": [
+        "ALLOW_MEMORY_GROWTH", "INITIAL_MEMORY", "MAXIMUM_MEMORY",
+        "STACK_SIZE", "CASE_INSENSITIVE_FS", "FETCH_SUPPORT_INDEXEDDB",
+        "ASYNCIFY", "JSPI", "SHARED_MEMORY", "PTHREAD_POOL_SIZE",
+        "USE_SDL", "USE_VORBIS", "USE_OGG", "USE_ZLIB",
+        "OFFSCREENCANVAS_SUPPORT", "AUDIO_WORKLET"
+      ]
+    }
+  ]
+}
