@@ -2,8 +2,11 @@
   "meta": {
     "project": "HL2 WebGL2/WebXR Porting Manager",
     "generated": "2026-07-10",
-    "phase": "1"
+    "updated": "2026-07-10T17:53:00+02:00",
+    "phase": "1",
+    "_note": "Status-Werte: pending | in-progress | blocked | done | skipped"
   },
+
   "nodes": [
     {
       "id": "T-001",
@@ -11,213 +14,360 @@
       "phase": "1.0",
       "status": "pending",
       "depends_on": [],
-      "blocks": ["T-002", "T-003"],
+      "blocks": ["T-002", "T-005"],
       "estimated_days": 2,
       "owner": "TBD",
+      "action_ref": "ACTION-001, ACTION-002, ACTION-005",
       "tasks": [
-        "Install Emscripten SDK",
-        "Clone nillerusr/source-engine",
-        "Find and clone weliveinhell Portal-Port",
-        "Set up GCFExplorer",
-        "Set up Python/Node environment"
+        "Emscripten SDK installieren (ACTION-005)",
+        "nillerusr/source-engine klonen (ACTION-002)",
+        "weliveinhell Portal-Port klonen — URL erst suchen (ACTION-001)",
+        "GCFExplorer aus ARC-01/Misc/ extrahieren",
+        "Python 3 / Node.js Build-Umgebung verifizieren"
       ]
     },
     {
       "id": "T-002",
-      "name": "Resolve weliveinhell URL",
+      "name": "weliveinhell Repo-URL auflösen",
       "phase": "1.0",
-      "status": "blocker",
+      "status": "blocked",
+      "blocker_ref": "BLK-001",
       "depends_on": [],
-      "blocks": ["T-005"],
+      "blocks": ["T-005", "T-009"],
       "estimated_days": 1,
-      "owner": "TBD",
-      "note": "GitHub username 'weliveinhell' known, repo URL unknown. Search required."
+      "action_ref": "ACTION-001",
+      "tasks": [
+        "GitHub-Suche: 'weliveinhell' als Username",
+        "Alternativ: slqnt via Discord/GitHub kontaktieren",
+        "URL in source_map.json unter ENG-02 eintragen",
+        "Repo klonen: ./engine/portal-port/",
+        "BLK-001 in blockers.md als GESCHLOSSEN markieren"
+      ]
     },
     {
       "id": "T-003",
-      "name": "Download ARC-01",
+      "name": "ARC-01 herunterladen",
       "phase": "1.2",
       "status": "pending",
-      "depends_on": ["T-001"],
+      "depends_on": [],
       "blocks": ["T-004"],
       "estimated_days": 1,
+      "action_ref": "ACTION-003",
       "tasks": [
-        "Download archive.org/details/Half-Life-2-Retail-2153",
-        "Verify 7Z integrity",
-        "Extract to working directory"
+        "Download: archive.org/details/Half-Life-2-Retail-2153",
+        "Format: 7Z oder Torrent (4.8 GB)",
+        "Ziel: ./assets/raw/arc-01/",
+        "Entpacken mit 7z",
+        "GCF-Dateien verifizieren (5 Stück erwartet)"
       ]
     },
     {
       "id": "T-004",
-      "name": "GCF Extraction",
+      "name": "GCF-Extraktion",
       "phase": "1.2",
       "status": "pending",
       "depends_on": ["T-003"],
-      "blocks": ["T-006", "T-007"],
+      "blocks": ["T-006"],
       "estimated_days": 2,
+      "action_ref": "ACTION-004",
       "tasks": [
-        "Extract all GCF files with GCFExplorer",
-        "Use keys from ARC-01 README",
-        "Verify asset directory structure"
+        "GCFExplorer starten (Windows erforderlich)",
+        "halflife 2 base content.gcf extrahieren (Key: 187D516D65C617EB6FE90FB20211DEC6)",
+        "base source shared materials.gcf extrahieren (Key: 33648B73E732E0734E34FE3CDA09AB74)",
+        "base source shared models.gcf extrahieren (Key: D147FC333F1B2B18A8E0B9354B94AFF6)",
+        "base source shared sounds.gcf extrahieren (Key: 9DC57C809A92196E2674ADA87AEA0FCE)",
+        "base source shared.gcf extrahieren (Key: C596D1BA1FEAD9A40DD0058118F58975)",
+        "Verzeichnisstruktur in inventory.md dokumentieren",
+        "BSP-Dateien in ./assets/hl2/maps/ zählen"
       ]
     },
     {
       "id": "T-005",
-      "name": "Engine Build (Native)",
+      "name": "Engine nativ bauen (Linux)",
       "phase": "1.1",
       "status": "pending",
-      "depends_on": ["T-001", "T-002"],
-      "blocks": ["T-008"],
+      "depends_on": ["T-001"],
+      "blocks": ["T-006", "T-008"],
       "estimated_days": 3,
+      "action_ref": "ACTION-002",
       "tasks": [
-        "Build nillerusr/source-engine natively on Linux",
-        "Verify ToGLES mode compiles",
-        "Run basic render test"
+        "nillerusr/source-engine klonen",
+        "Build-System identifizieren (waf / cmake / make)",
+        "Nativen Linux-Build ausführen",
+        "ToGLES-Modus-Dateien suchen und verifizieren",
+        "Basis-Render-Test nativ"
       ]
     },
     {
       "id": "T-006",
-      "name": "Asset Compatibility Test",
+      "name": "Asset-Kompatibilitätstest",
       "phase": "1.2",
       "status": "pending",
       "depends_on": ["T-004", "T-005"],
       "blocks": ["T-007"],
       "estimated_days": 2,
+      "action_ref": "ACTION-006",
+      "decision_trigger": "DEC-001",
       "critical": true,
-      "note": "CRITICAL: Build 2153 vs nillerusr-Engine compatibility unknown. If incompatible, need steam_legacy assets.",
-      "decision_required": "DEC-001"
+      "_note": "KRITISCH: Ergebnis entscheidet Asset-Quelle für gesamtes Projekt (DEC-001)",
+      "tasks": [
+        "ARC-01-Assets in Engine-Verzeichnis kopieren/symlinken",
+        "Engine starten: ./hl2_linux -game hl2 -novid",
+        "Beobachten: Hauptmenü ladbar?",
+        "Fehlertypen dokumentieren",
+        "DEC-001 entscheiden (A: Build 2153 oder B: steam_legacy)",
+        "Ergebnis in decisions.md, source_map.json, manifest.json eintragen",
+        "BLK-003 in blockers.md als GESCHLOSSEN oder ESKALIERT markieren"
+      ]
     },
     {
       "id": "T-007",
-      "name": "Asset Logging + Packing (Pilot Map)",
+      "name": "Asset-Logging + Pilot-Map packen",
       "phase": "1.2",
       "status": "pending",
       "depends_on": ["T-006"],
       "blocks": ["T-009"],
       "estimated_days": 3,
+      "action_ref": "ACTION-007 (Teilschritte)",
       "tasks": [
-        "Enable print-statement logging in engine",
-        "Run d1_trainstation_01",
-        "Parse asset logs",
-        "Pack into .data file",
-        "Verify .data file loads"
+        "Print-Statement-Logging in Engine-Code aktivieren",
+        "Engine mit Pilot-Map starten: d1_trainstation_01",
+        "Vollständigen Durchlauf für Asset-Log erzeugen",
+        "Log-Datei: ./logs/asset_requests_d1_trainstation_01.log",
+        "Asset-Packing-Skript (weliveinhell/slqnt) ausführen",
+        "Emscripten file_packager.py aufrufen",
+        ".data + .js Loader für d1_trainstation_01 erzeugen",
+        "Dateigröße in manifest.json unter maps[0] eintragen"
       ]
     },
     {
       "id": "T-008",
-      "name": "Emscripten Build (First Pass)",
+      "name": "Erster Emscripten-Build",
       "phase": "1.1",
       "status": "pending",
       "depends_on": ["T-005"],
       "blocks": ["T-009"],
       "estimated_days": 5,
+      "action_ref": "ACTION-007",
       "tasks": [
-        "Configure emcc flags",
-        "Compile to WASM",
-        "Verify basic browser load",
-        "Fix compilation errors"
+        "Emscripten-Build-System für Engine konfigurieren",
+        "Flags aus pipeline.yaml Stage 5 anwenden",
+        "Ersten emcc-Lauf ausführen",
+        "Alle Compiler-Fehler in ./docs/build-errors-01.txt dokumentieren",
+        "Fehler iterativ beheben",
+        "hl2.wasm + hl2.js in ./dist/ erzeugen",
+        "Browser-Ladetest: Seite öffnen, kein sofortiger Crash"
       ]
     },
     {
       "id": "T-009",
-      "name": "Apply Known Patches",
+      "name": "Patches implementieren",
       "phase": "1.3+1.4",
       "status": "pending",
       "depends_on": ["T-007", "T-008"],
       "blocks": ["T-010"],
-      "estimated_days": 5,
-      "patches": [
-        "PATCH-001: Face Morphing Disable",
+      "estimated_days": 7,
+      "action_ref": "ACTION-008",
+      "blocker_ref": "BLK-002 (teilweise — kein slqnt-Quellcode verfügbar)",
+      "tasks": [
+        "PATCH-001: Face Morphing Disable (Priorität 1 — Stabilität zuerst)",
         "PATCH-002: Lightmap Fix",
-        "PATCH-003: Flashlight Fix",
+        "PATCH-003: Flashlight Null-Texture Fix",
         "PATCH-004: Water Render Fix",
-        "PATCH-005: NPC Stability",
+        "PATCH-005: NPC Stability Fix",
         "PATCH-006: Medkit/Battery Fix",
-        "PATCH-007: Gravity Gun Fix",
-        "PATCH-008: Crouch Rebind"
+        "PATCH-007: Gravity Gun Inventory Fix",
+        "PATCH-008: Crouch Rebind (Ctrl → C)",
+        "Jeden Patch als .patch-Datei in ./patches/ ablegen",
+        "In manifest.json patches[].applied auf true setzen"
       ]
     },
     {
       "id": "T-010",
-      "name": "IDBFS Save System",
+      "name": "IDBFS Save System integrieren",
       "phase": "1.5",
       "status": "pending",
       "depends_on": ["T-009"],
       "blocks": ["T-011"],
       "estimated_days": 2,
       "tasks": [
-        "Add FETCH_SUPPORT_INDEXEDDB flag",
-        "Implement FS.syncfs() calls",
-        "Test save/load cycle",
-        "Test persistence across browser reload"
+        "Flag -sFETCH_SUPPORT_INDEXEDDB=1 im Build verifizieren",
+        "FS.syncfs(false, cb) nach Save-Events aufrufen",
+        "FS.syncfs(true, cb) beim Spielstart aufrufen",
+        "Save-Zyklus testen: Speichern → Browser-Reload → Laden",
+        "Persistenz-Test: IndexedDB via DevTools inspizieren"
       ]
     },
     {
       "id": "T-011",
-      "name": "Full Map Pipeline",
+      "name": "Alle Maps packen",
       "phase": "1.6",
       "status": "pending",
       "depends_on": ["T-010"],
       "blocks": ["T-012"],
       "estimated_days": 7,
+      "action_ref": "ACTION-009",
       "tasks": [
-        "Pack all HL2 maps into .data files",
-        "Test each map loads without crash",
-        "Fix per-map issues"
+        "BSP-Dateiliste aus ./assets/hl2/maps/ erzeugen",
+        "Für jede Map: Logging-Lauf + .data-Pack",
+        ".data/.js-Dateien nach ./dist/maps/ kopieren",
+        "manifest.json maps[].status auf 'packed' setzen",
+        "Jede Map im Browser laden (Basis-Test)"
       ]
     },
     {
       "id": "T-012",
-      "name": "QA & Stabilization",
+      "name": "QA & Stabilisierung",
       "phase": "1.6",
       "status": "pending",
       "depends_on": ["T-011"],
       "blocks": [],
       "estimated_days": 7,
+      "action_ref": "ACTION-011",
       "tasks": [
-        "Performance profiling",
-        "Memory leak check",
-        "Cross-browser testing",
-        "Complete campaign playthrough"
+        "Vollständige Hauptkampagne durchspielen",
+        "Performance-Profiling: Browser DevTools + WebGL Inspector",
+        "Memory-Leak-Check (Heap-Wachstum über mehrere Maps)",
+        "Cross-Browser-Test: Chrome, Firefox, Edge",
+        "Alle manifest.json maps[].tested auf true setzen",
+        "PROJECT_PLAN.md Phase-1-Erfolgskriterien abhaken"
       ]
     }
   ],
+
   "decisions": [
     {
       "id": "DEC-001",
-      "name": "Asset Source: Build 2153 vs steam_legacy",
-      "depends_on": "T-006",
+      "name": "Asset-Quelle: Build 2153 vs steam_legacy",
+      "depends_on_task": "T-006",
+      "status": "pending",
       "options": [
-        "A: Build 2153 (ARC-01) — verfügbar, Pre-Anniversary",
-        "B: steam_legacy (Steam-Account) — benötigt Steam-Zugang"
+        {
+          "label": "A",
+          "description": "Build 2153 (ARC-01) — sofort verfügbar, kein Steam-Account nötig",
+          "risk": "Kompatibilität mit nillerusr-Engine UNGETESTET"
+        },
+        {
+          "label": "B",
+          "description": "steam_legacy Branch (via Steam) — gesichert kompatibel (slqnt nutzt dies)",
+          "risk": "Erfordert Steam-Account + HL2-Kauf"
+        }
       ],
-      "status": "pending"
+      "trigger": "Ergebnis von T-006 (Asset-Kompatibilitätstest)",
+      "affects": ["source_map.json/ENG-01", "manifest.json/assets.source", "pipeline.yaml/stage_1_extraction"]
+    },
+    {
+      "id": "DEC-002",
+      "name": "Audio-System",
+      "depends_on_task": "T-008",
+      "status": "pending",
+      "options": [
+        {
+          "label": "A",
+          "description": "OpenAL via Emscripten (-lopenal oder SDL2_mixer)",
+          "risk": "Funktioniert, wenn Source Engine OpenAL nutzt"
+        },
+        {
+          "label": "B",
+          "description": "Web Audio API direkt (AUDIO_WORKLET)",
+          "risk": "Erfordert eigene Audio-Middleware"
+        },
+        {
+          "label": "C",
+          "description": "SDL2_mixer via -sUSE_SDL_MIXER",
+          "risk": "Einfacher, aber limitierter"
+        }
+      ],
+      "trigger": "Erster Browser-Build (T-008) — Audio-System sichtbar"
+    },
+    {
+      "id": "DEC-003",
+      "name": "Threading: Pthreads aktivieren?",
+      "depends_on_task": "T-012",
+      "status": "pending",
+      "options": [
+        {
+          "label": "A",
+          "description": "Single-threaded — kein SHARED_MEMORY, kein COOP/COEP-Header nötig",
+          "risk": "Möglicherweise langsamere Performance"
+        },
+        {
+          "label": "B",
+          "description": "Multi-threaded — SHARED_MEMORY + Pthreads, COOP/COEP auf Server erforderlich",
+          "risk": "Deployment-Komplexität steigt"
+        }
+      ],
+      "trigger": "Performance-Profiling in T-012"
+    },
+    {
+      "id": "DEC-004",
+      "name": "WebXR Runtime (Phase 3)",
+      "depends_on_task": null,
+      "status": "pending",
+      "phase": "3",
+      "options": [
+        {
+          "label": "A",
+          "description": "WebXR Device API (Browser-nativ)"
+        },
+        {
+          "label": "B",
+          "description": "WebXR Polyfill für breitere Unterstützung"
+        }
+      ],
+      "trigger": "Beginn Phase 3"
     }
   ],
+
   "blockers": [
     {
       "id": "BLK-001",
-      "description": "weliveinhell GitHub URL unknown",
-      "blocks": ["T-002", "T-005"],
-      "resolution": "Web research required"
+      "description": "weliveinhell GitHub-URL unbekannt",
+      "severity": "HIGH",
+      "status": "open",
+      "blocks_tasks": ["T-002", "T-005", "T-009"],
+      "resolution_action": "ACTION-001"
     },
     {
       "id": "BLK-002",
-      "description": "slqnt Port source code not public",
-      "blocks": ["T-009"],
-      "resolution": "Implement patches independently based on slqnt blog descriptions"
+      "description": "slqnt Port-Quellcode nicht öffentlich — Patches müssen unabhängig implementiert werden",
+      "severity": "MEDIUM",
+      "status": "open",
+      "blocks_tasks": ["T-009"],
+      "resolution_action": "ACTION-008 (unabhängige Implementierung)"
     },
     {
       "id": "BLK-003",
-      "description": "Build 2153 / nillerusr compatibility unknown",
-      "blocks": ["T-007"],
-      "resolution": "Test in T-006, fallback to steam_legacy if incompatible"
+      "description": "Build-2153 ↔ nillerusr-Engine Kompatibilität ungetestet",
+      "severity": "HIGH",
+      "status": "open",
+      "blocks_tasks": ["T-007"],
+      "resolution_action": "ACTION-006 (T-006 ausführen)"
     },
     {
       "id": "BLK-004",
-      "description": "ARC-02 (Collector's Edition) and ARC-04 (Complete Edition) removed from Archive.org",
-      "blocks": [],
-      "resolution": "Use ARC-01 as primary, ARC-03 for EP1"
+      "description": "ARC-02 (Collector's Edition) und ARC-04 (Complete Edition) von Archive.org entfernt",
+      "severity": "LOW",
+      "status": "permanent",
+      "blocks_tasks": [],
+      "workaround": "ARC-01 für Phase 1, ARC-03 für Phase 3 EP1, EP2-Quelle für Phase 3 suchen"
+    },
+    {
+      "id": "BLK-007",
+      "description": "Audio-System-Lösung unklar (OpenAL vs Web Audio vs SDL2_mixer)",
+      "severity": "LATENT",
+      "status": "latent",
+      "blocks_tasks": [],
+      "resolution_action": "ACTION-010 — nach erstem Browser-Build"
+    },
+    {
+      "id": "BLK-008",
+      "description": "EP2-Asset-Quelle fehlt (ARC-04 entfernt)",
+      "severity": "LATENT",
+      "status": "latent",
+      "phase": "3",
+      "blocks_tasks": [],
+      "resolution_action": "ACTION-013 — in Phase 3"
     }
   ]
 }

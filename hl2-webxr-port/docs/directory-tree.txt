@@ -1,46 +1,74 @@
+HL2 WebGL2/WebXR Port — Projektverzeichnis
+==========================================
+Zuletzt aktualisiert: 2026-07-10T17:53:00+02:00
+Stand: Analyse abgeschlossen, Build-Phase noch nicht begonnen
+
+LEGENDE
+  [✅ EXISTIERT]   Datei/Verzeichnis vorhanden und befüllt
+  [⏳ PENDING]     Verzeichnis angelegt, Inhalt noch nicht erstellt (nach Actions)
+  [🔒 UNKNOWN]     URL/Pfad noch nicht bekannt (BLK-001)
+  [❌ UNAVAILABLE] Externe Quelle nicht verfügbar
+
 hl2-webxr-port/
 │
-├── config/
-│   ├── asset_taxonomy.json          # Asset-Kategorien, Formate, Pipeline
-│   ├── manifest.json                # Aktueller Build-Manifest (leer bis Build)
-│   ├── manifest.schema.json         # JSON-Schema für Manifeste
-│   ├── pipeline.yaml                # Asset- und Build-Pipeline-Konfiguration
-│   ├── source_map.json              # Alle Quell-URLs, Statuses, Flags
-│   └── task_graph.json              # Aufgaben-Graph mit Dependencies
+├── config/                              [✅ EXISTIERT]
+│   ├── asset_taxonomy.json              [✅] Asset-Kategorien, Formate, Pipeline-Mapping
+│   ├── manifest.json                    [✅] Build-Manifest (DRAFT — kein Build erfolgt)
+│   ├── manifest.schema.json             [✅] JSON-Schema für Manifeste
+│   ├── pipeline.yaml                    [✅] Asset- und Build-Pipeline-Konfiguration
+│   ├── source_map.json                  [✅] Alle Quell-URLs, Statuses, Build-Flags
+│   └── task_graph.json                  [✅] Aufgaben-Graph mit Dependencies + Decisions + Blockers
 │
-├── docs/
-│   ├── PHASE_1_BUILDPLAN.md         # Phase-1-Bauplan (WebGL2-Basis)
-│   ├── PROJECT_PLAN.md              # Gesamt-Projektplan (alle Phasen)
-│   ├── TASK.md                      # Aktuelle Aufgabenliste (flat)
-│   ├── NEXT_ACTIONS.md              # Sofortige nächste Schritte
-│   ├── architecture.md              # Technische Architektur-Übersicht
-│   ├── assumptions.md               # Alle Projektannahmen mit Status
-│   ├── blockers.md                  # Aktive und latente Blocker
-│   ├── decisions.md                 # Getroffene und ausstehende Entscheidungen
-│   ├── directory-tree.txt           # Dieses Dokument
-│   ├── inventory.md                 # Asset- und Quellen-Inventar
-│   ├── porting_manager_spec.md      # Spec des Porting-Manager-Tools
-│   ├── reference_analysis.md        # Analyse aller Input-Quellen
-│   ├── runtime_matrix.md            # Runtime, Flags, Browser-Kompatibilität
-│   └── save_state_options.md        # Save-State-Strategien (Vergleich)
+├── docs/                                [✅ EXISTIERT]
+│   ├── NEXT_ACTIONS.md                  [✅] Sofortige Aktionen, aktive Blocker als TODOs
+│   ├── PHASE_1_BUILDPLAN.md             [✅] Phase-1-Bauplan (WebGL2-Basis, 6 Schritte)
+│   ├── PROJECT_PLAN.md                  [✅] Gesamt-Projektplan (Phase 1-3)
+│   ├── TASK.md                          [✅] Flache Aufgabenliste, nach Priorität
+│   ├── architecture.md                  [✅] Technische Architektur (Stack-Diagramme)
+│   ├── assumptions.md                   [✅] 21 Projektannahmen mit CONFIRMED/INFERRED/UNKNOWN
+│   ├── blockers.md                      [✅] 8 Blocker (4 aktiv, 4 latent)
+│   ├── decisions.md                     [✅] 5 festgelegte + 4 ausstehende Entscheidungen
+│   ├── directory-tree.txt               [✅] Dieses Dokument
+│   ├── inventory.md                     [✅] Asset- und Quellen-Inventar
+│   ├── porting_manager_spec.md          [✅] Spec des Porting-Manager-Tools
+│   ├── reference_analysis.md            [✅] Analyse aller 8 Input-Quellen
+│   ├── runtime_matrix.md                [✅] Runtime-Flags, Browser-Matrix, Known Bugs
+│   └── save_state_options.md            [✅] 5 Save-State-Optionen im Vergleich
 │
-├── engine/                          # (noch nicht befüllt — nach Clone)
-│   ├── source-engine/               # nillerusr/source-engine (klonen)
-│   └── portal-port/                 # weliveinhell Portal-Port (klonen, URL UNKNOWN)
+├── engine/                              [⏳ PENDING — nach ACTION-001, ACTION-002]
+│   ├── source-engine/                   [⏳] nillerusr/source-engine (ACTION-002: git clone)
+│   │   ├── ...                          Engine-Quellcode (C++, ToGLES-Modus)
+│   │   └── [Build-System: waf/cmake/make — noch unbekannt]
+│   └── portal-port/                     [🔒 UNKNOWN URL — ACTION-001: weliveinhell Repo finden]
+│       └── ...                          Asset-Packing-Skripte, Browser-Port-Fixes
 │
-├── assets/                          # (noch nicht befüllt — nach Extraktion)
+├── assets/                              [⏳ PENDING — nach ACTION-003, ACTION-004]
 │   ├── raw/
-│   │   └── arc-01/                  # ARC-01 7Z entpackt
-│   ├── shared/
-│   │   ├── materials/               # VTF, VMT aus shared materials.gcf
-│   │   ├── models/                  # MDL, VVD, VTX aus shared models.gcf
-│   │   └── sounds/                  # WAV, MP3 aus shared sounds.gcf
-│   └── hl2/                         # halflife 2 base content.gcf entpackt
-│       ├── maps/                    # BSP-Dateien
-│       ├── scripts/                 # Game-Skripte
+│   │   └── arc-01/                      [⏳ ACTION-003: ARC-01 (4.8 GB) herunterladen]
+│   │       ├── Half-Life-2.7z
+│   │       ├── Patches-and-Misc.7z
+│   │       ├── extracted/               [⏳ Nach 7z-Entpackung]
+│   │       │   ├── halflife 2 base content.gcf
+│   │       │   ├── base source shared materials.gcf
+│   │       │   ├── base source shared models.gcf
+│   │       │   ├── base source shared sounds.gcf
+│   │       │   └── base source shared.gcf
+│   │       └── Misc/
+│   │           └── GCFExplorer.exe      [Extraction-Tool — im Archiv enthalten]
+│   ├── shared/                          [⏳ ACTION-004: GCF-Extraktion]
+│   │   ├── materials/                   Texturen (VTF, VMT) aus shared materials.gcf
+│   │   ├── models/                      3D-Modelle (MDL, VVD, VTX) aus shared models.gcf
+│   │   └── sounds/                      Audio (WAV, MP3) aus shared sounds.gcf
+│   └── hl2/                             [⏳ ACTION-004: GCF-Extraktion]
+│       ├── maps/                        BSP-Dateien (39+ Maps erwartet)
+│       │   ├── d1_trainstation_01.bsp   PILOT MAP (zuerst packen)
+│       │   ├── d1_trainstation_02.bsp
+│       │   └── ... (alle HL2-Maps)
+│       ├── scripts/                     Game-Skripte (TXT, CFG, VDF)
+│       ├── resource/                    UI-Ressourcen
 │       └── ...
 │
-├── patches/                         # (noch nicht befüllt)
+├── patches/                             [⏳ PENDING — nach ACTION-008 / T-009]
 │   ├── PATCH-001-face-morphing-disable.patch
 │   ├── PATCH-002-lightmap-fix.patch
 │   ├── PATCH-003-flashlight-fix.patch
@@ -50,34 +78,49 @@ hl2-webxr-port/
 │   ├── PATCH-007-gravity-gun-inventory.patch
 │   └── PATCH-008-crouch-rebind.patch
 │
-├── logs/                            # (noch nicht befüllt)
-│   └── asset_requests_{map}.log     # Per-Map Asset-Request-Logs
+├── logs/                                [⏳ PENDING — nach T-007]
+│   ├── asset_requests_d1_trainstation_01.log   (Pilot-Map zuerst)
+│   ├── asset_requests_d1_trainstation_02.log
+│   └── ... (eine Log-Datei pro Map)
 │
-├── dist/                            # (noch nicht befüllt — Build-Output)
-│   ├── hl2.wasm
-│   ├── hl2.js
-│   ├── index.html
-│   └── maps/
-│       ├── d1_trainstation_01.data
+├── dist/                                [⏳ PENDING — nach ACTION-007 / T-008]
+│   ├── index.html                       Shell-HTML (mit COOP/COEP-Headers)
+│   ├── hl2.wasm                         Haupt-Engine-WASM-Binary
+│   ├── hl2.js                           Emscripten JS-Glue + Runtime
+│   └── maps/                            [⏳ PENDING — nach T-011]
+│       ├── d1_trainstation_01.data      (Pilot-Map, zuerst)
 │       ├── d1_trainstation_01.js
-│       └── ... (alle Maps)
+│       ├── d1_trainstation_02.data
+│       ├── d1_trainstation_02.js
+│       └── ... (alle Maps aus manifest.json)
 │
-└── tools/                           # (noch nicht befüllt)
-    ├── asset-packer/                # Asset-Packing-Skript (von weliveinhell/slqnt)
-    └── gcf-explorer/                # GCFExplorer (aus ARC-01/Misc)
+└── tools/                               [⏳ PENDING — nach ACTION-001, ACTION-005]
+    ├── emsdk/                           [⏳ ACTION-005: Emscripten SDK]
+    │   └── ...                          emsdk install latest; emsdk activate latest
+    ├── asset-packer/                    [🔒 UNKNOWN — aus weliveinhell-Repo (BLK-001)]
+    │   ├── pack_assets.sh               Linux-Version (weliveinhell original)
+    │   └── pack_assets.bat              Windows-Version (slqnt-Modifikation)
+    └── gcf-explorer/                    [⏳ ACTION-004: aus ARC-01/Misc/ extrahieren]
+        └── GCFExplorer.exe
 
----
-LEGENDE:
-  (noch nicht befüllt) = Verzeichnis existiert noch nicht, wird durch Actions gefüllt
-  (leer bis Build)     = Datei existiert, wird nach erstem Build befüllt
-  UNKNOWN              = URL/Pfad noch nicht bekannt
+─────────────────────────────────────────────────────────────────────
+EXTERNE QUELLEN (nicht im Verzeichnis — nur Referenz)
 
-STATUS: 2026-07-10
-  config/    → VOLLSTÄNDIG (alle Konfig-Dateien erstellt)
-  docs/      → VOLLSTÄNDIG (alle Analyse-Dokumente erstellt)
-  engine/    → PENDING (ACTION-002, ACTION-001)
-  assets/    → PENDING (ACTION-003, ACTION-004)
-  patches/   → PENDING (ACTION-008)
-  logs/      → PENDING (ACTION-007 Voraussetzung)
-  dist/      → PENDING (ACTION-007)
-  tools/     → PENDING (ACTION-001, ACTION-004)
+  [✅] ARC-01: archive.org/details/Half-Life-2-Retail-2153            (4.8 GB)
+  [❌] ARC-02: archive.org/details/HalfLife2CollectorsEdition2153     (ENTFERNT)
+  [✅] ARC-03: archive.org/details/half-life-2-episode-one_202402     (1.4 GB, für Phase 3)
+  [❌] ARC-04: archive.org/details/half-life-2-complete-edition-...   (ENTFERNT)
+  [🔒] ENG-02: github.com/weliveinhell/<repo-name>                    (URL UNKNOWN — BLK-001)
+  [✅] ENG-01: github.com/nillerusr/source-engine
+  [✅] ENG-04: github.com/vittorioromeo/HL2VRU                        (Phase-3-Referenz)
+
+─────────────────────────────────────────────────────────────────────
+STATUS-ZUSAMMENFASSUNG: 2026-07-10
+
+  Dokumentation (docs/, config/):  ✅ VOLLSTÄNDIG — 19 Dateien
+  Engine-Code (engine/):           ⏳ PENDING (ACTION-001, ACTION-002)
+  Assets (assets/):                ⏳ PENDING (ACTION-003, ACTION-004)
+  Patches (patches/):              ⏳ PENDING (ACTION-008)
+  Logs (logs/):                    ⏳ PENDING (T-007)
+  Build-Output (dist/):            ⏳ PENDING (ACTION-007)
+  Tools (tools/):                  ⏳ PENDING (ACTION-001, ACTION-005)
