@@ -77,7 +77,7 @@ Diese Inkompatibilität wurde nicht im Detail beschrieben.
 
 ### BLK-004 — Archive.org-Quellen entfernt (50%)
 **Schweregrad:** NIEDRIG (Workaround verfügbar)
-**Status:** OFFEN — permanent
+**Status:** PERMANENT
 **Betrifft:** ARC-02, ARC-04
 
 **Problem:**
@@ -95,22 +95,14 @@ Diese Inkompatibilität wurde nicht im Detail beschrieben.
 
 ---
 
-## Potenzielle zukünftige Blocker
+## Latente Blocker (zukünftige Phasen)
 
-### BLK-005 (Latent) — Face-Morphing-Fix für spätere Phasen
-Falls das Face-Morphing-System reaktiviert werden soll (ist es nicht geplant),
-ist der Bug-Cause unbekannt.
-**Status:** LATENT — kein Phase-1-Blocker
-
-### BLK-006 (Latent) — WebXR API Browser-Einschränkungen
-WebXR erfordert HTTPS und Nutzergeste. Debugging-Workflows im Browser
-sind komplexer als Desktop-VR.
-**Status:** LATENT — Phase-3-Blocker
-
-### BLK-007 (Latent) — Audio-System unklar
-slqnt-Artikel erwähnt Audio nicht. Unklar welche Audio-Bibliothek genutzt wird.
-OpenAL (Source Engine Standard) via Emscripten oder Web Audio API direkt?
-**Status:** LATENT — wird in Phase 1.1 sichtbar
+| ID | Beschreibung | Phase |
+|---|---|---|
+| BLK-005 | Face-Morphing-Fix — Bug-Ursache unbekannt | Indefinitely deferred |
+| BLK-006 | WebXR API: HTTPS-Pflicht, Debugging komplex | Phase 3 |
+| BLK-007 | Audio-System unklar (OpenAL vs Web Audio) | Phase 1.1 |
+| BLK-008 | EP2-Asset-Quelle fehlt (ARC-04 entfernt) | Phase 3 |
 
 ---
 
@@ -125,3 +117,4 @@ OpenAL (Source Engine Standard) via Emscripten oder Web Audio API direkt?
 | BLK-005 | LATENT | Später | — |
 | BLK-006 | LATENT | Phase 3 | — |
 | BLK-007 | LATENT | Phase 1.1 | — |
+| BLK-008 | LATENT | Phase 3 | — |
