@@ -1,0 +1,231 @@
+=== HL2 WebXR Build Fri Jul 10 23:18:30 UTC 2026 ===
+=== HL2 WebXR Build Fri Jul 10 23:18:30 UTC 2026 ===
+[STEP 1] apt deps
+[STEP 1] apt deps
+E: Unable to locate package pkg-config
+E: Unable to locate package cmake
+E: Unable to locate package ninja-build
+E: Unable to locate package xvfb
+E: Unable to locate package libgl1-mesa-dev
+E: Unable to locate package pkg-config
+E: Unable to locate package cmake
+E: Unable to locate package ninja-build
+E: Unable to locate package xvfb
+E: Unable to locate package libgl1-mesa-dev
+[CHECKPOINT] apt_deps done at Fri Jul 10 23:18:31 UTC 2026
+[CHECKPOINT] apt_deps done at Fri Jul 10 23:18:31 UTC 2026
+[STEP 2] emsdk clone
+[STEP 2] emsdk clone
+Cloning into '/app/hl2-webxr-port/tools/emsdk'...
+Cloning into '/app/hl2-webxr-port/tools/emsdk'...
+Note: switching to '2d480a1b7c7a34a354188d93f3e89190a44a1d21'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+HEAD is now at 2d480a1 Update Node.js to LTS 22.16.0. (#1563)
+Note: switching to '2d480a1b7c7a34a354188d93f3e89190a44a1d21'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+HEAD is now at 2d480a1 Update Node.js to LTS 22.16.0. (#1563)
+[CHECKPOINT] emsdk_clone done at Fri Jul 10 23:18:31 UTC 2026
+[CHECKPOINT] emsdk_clone done at Fri Jul 10 23:18:31 UTC 2026
+[STEP 3] emsdk install+activate
+[STEP 3] emsdk install+activate
+Resolving SDK alias 'latest' to '4.0.9'
+Resolving SDK version '4.0.9' to 'sdk-releases-cb2a69bce627bd2247624c71fc12907cb8785d2f-64bit'
+Installing SDK 'sdk-releases-cb2a69bce627bd2247624c71fc12907cb8785d2f-64bit'..
+Installing tool 'node-22.16.0-64bit'..
+Downloading: /app/hl2-webxr-port/tools/emsdk/downloads/node-v22.16.0-linux-x64.tar.xz from https://storage.googleapis.com/webassembly/emscripten-releases-builds/deps/node-v22.16.0-linux-x64.tar.xz, 30425588 Bytes
+ [-Resolving SDK alias 'latest' to '4.0.9'
+Resolving SDK version '4.0.9' to 'sdk-releases-cb2a69bce627bd2247624c71fc12907cb8785d2f-64bit'
+Installing SDK 'sdk-releases-cb2a69bce627bd2247624c71fc12907cb8785d2f-64bit'..
+Installing tool 'node-22.16.0-64bit'..
+Downloading: /app/hl2-webxr-port/tools/emsdk/downloads/node-v22.16.0-linux-x64.tar.xz from https://storage.googleapis.com/webassembly/emscripten-releases-builds/deps/node-v22.16.0-linux-x64.tar.xz, 30425588 Bytes
+ [-------------------------------------------------------------------------------------------------------------------------------------------------------]
+]
+Unpacking '/app/hl2-webxr-port/tools/emsdk/downloads/node-v22.16.0-linux-x64.tar.xz' to '/app/hl2-webxr-port/tools/emsdk/node/22.16.0_64bit'
+Done installing tool 'node-22.16.0-64bit'.
+Installing tool 'releases-cb2a69bce627bd2247624c71fc12907cb8785d2f-64bit'..
+Downloading: /app/hl2-webxr-port/tools/emsdk/downloads/cb2a69bce627bd2247624c71fc12907cb8785d2f-wasm-binaries.tar.xz from https://storage.googleapis.com/webassembly/emscripten-releases-builds/linux/cb2a69bce627bd2247624c71fc12907cb8785d2f/wasm-binaries.tar.xz, 301247292 Bytes
+ [-Unpacking '/app/hl2-webxr-port/tools/emsdk/downloads/node-v22.16.0-linux-x64.tar.xz' to '/app/hl2-webxr-port/tools/emsdk/node/22.16.0_64bit'
+Done installing tool 'node-22.16.0-64bit'.
+Installing tool 'releases-cb2a69bce627bd2247624c71fc12907cb8785d2f-64bit'..
+Downloading: /app/hl2-webxr-port/tools/emsdk/downloads/cb2a69bce627bd2247624c71fc12907cb8785d2f-wasm-binaries.tar.xz from https://storage.googleapis.com/webassembly/emscripten-releases-builds/linux/cb2a69bce627bd2247624c71fc12907cb8785d2f/wasm-binaries.tar.xz, 301247292 Bytes
+ [-------------------------------------------------------------------------------------------------------------------------------------------------------]
+]
+Unpacking '/app/hl2-webxr-port/tools/emsdk/downloads/cb2a69bce627bd2247624c71fc12907cb8785d2f-wasm-binaries.tar.xz' to '/app/hl2-webxr-port/tools/emsdk/upstream'
+Done installing tool 'releases-cb2a69bce627bd2247624c71fc12907cb8785d2f-64bit'.
+Done installing SDK 'sdk-releases-cb2a69bce627bd2247624c71fc12907cb8785d2f-64bit'.
+Unpacking '/app/hl2-webxr-port/tools/emsdk/downloads/cb2a69bce627bd2247624c71fc12907cb8785d2f-wasm-binaries.tar.xz' to '/app/hl2-webxr-port/tools/emsdk/upstream'
+Done installing tool 'releases-cb2a69bce627bd2247624c71fc12907cb8785d2f-64bit'.
+Done installing SDK 'sdk-releases-cb2a69bce627bd2247624c71fc12907cb8785d2f-64bit'.
+Resolving SDK alias 'latest' to '4.0.9'
+Resolving SDK version '4.0.9' to 'sdk-releases-cb2a69bce627bd2247624c71fc12907cb8785d2f-64bit'
+Setting the following tools as active:
+   node-22.16.0-64bit
+   releases-cb2a69bce627bd2247624c71fc12907cb8785d2f-64bit
+
+Next steps:
+- To conveniently access emsdk tools from the command line,
+  consider adding the following directories to your PATH:
+    /app/hl2-webxr-port/tools/emsdk
+    /app/hl2-webxr-port/tools/emsdk/upstream/emscripten
+- This can be done for the current shell by running:
+    source "/app/hl2-webxr-port/tools/emsdk/emsdk_env.sh"
+- Configure emsdk in your shell startup scripts by running:
+    echo 'source "/app/hl2-webxr-port/tools/emsdk/emsdk_env.sh"' >> $HOME/.bash_profile
+Resolving SDK alias 'latest' to '4.0.9'
+Resolving SDK version '4.0.9' to 'sdk-releases-cb2a69bce627bd2247624c71fc12907cb8785d2f-64bit'
+Setting the following tools as active:
+   node-22.16.0-64bit
+   releases-cb2a69bce627bd2247624c71fc12907cb8785d2f-64bit
+
+Next steps:
+- To conveniently access emsdk tools from the command line,
+  consider adding the following directories to your PATH:
+    /app/hl2-webxr-port/tools/emsdk
+    /app/hl2-webxr-port/tools/emsdk/upstream/emscripten
+- This can be done for the current shell by running:
+    source "/app/hl2-webxr-port/tools/emsdk/emsdk_env.sh"
+- Configure emsdk in your shell startup scripts by running:
+    echo 'source "/app/hl2-webxr-port/tools/emsdk/emsdk_env.sh"' >> $HOME/.bash_profile
+[CHECKPOINT] emsdk_install done at Fri Jul 10 23:19:02 UTC 2026
+[CHECKPOINT] emsdk_install done at Fri Jul 10 23:19:02 UTC 2026
+[STEP 4] embuilder sdl2
+[STEP 4] embuilder sdl2
+shared:INFO: (Emscripten: Running sanity checks)
+shared:INFO: (Emscripten: Running sanity checks)
+embuilder:INFO: building sdl2
+embuilder:INFO: building sdl2
+ports:INFO: retrieving port: sdl2 from https://github.com/libsdl-org/SDL/archive/release-2.32.0.zip
+ports:INFO: retrieving port: sdl2 from https://github.com/libsdl-org/SDL/archive/release-2.32.0.zip
+ports:INFO: unpacking port: sdl2
+ports:INFO: unpacking port: sdl2
+cache:INFO: generating port: sysroot/lib/wasm32-emscripten/pic/libSDL2.a... (this will be cached in "/app/hl2-webxr-port/tools/emsdk/upstream/emscripten/cache/sysroot/lib/wasm32-emscripten/pic/libSDL2.a" for subsequent builds)
+cache:INFO: generating port: sysroot/lib/wasm32-emscripten/pic/libSDL2.a... (this will be cached in "/app/hl2-webxr-port/tools/emsdk/upstream/emscripten/cache/sysroot/lib/wasm32-emscripten/pic/libSDL2.a" for subsequent builds)
+system_libs:INFO: compiled 118 inputs in 6.28s
+system_libs:INFO: compiled 118 inputs in 6.28s
+cache:INFO:  - ok
+cache:INFO:  - ok
+embuilder:INFO: ...success. Took (9.01s)
+embuilder:INFO: ...success. Took (9.01s)
+embuilder:INFO: building sdl2-mt
+embuilder:INFO: building sdl2-mt
+cache:INFO: generating port: sysroot/lib/wasm32-emscripten/pic/libSDL2-mt.a... (this will be cached in "/app/hl2-webxr-port/tools/emsdk/upstream/emscripten/cache/sysroot/lib/wasm32-emscripten/pic/libSDL2-mt.a" for subsequent builds)
+cache:INFO: generating port: sysroot/lib/wasm32-emscripten/pic/libSDL2-mt.a... (this will be cached in "/app/hl2-webxr-port/tools/emsdk/upstream/emscripten/cache/sysroot/lib/wasm32-emscripten/pic/libSDL2-mt.a" for subsequent builds)
+system_libs:INFO: compiled 118 inputs in 6.19s
+system_libs:INFO: compiled 118 inputs in 6.19s
+cache:INFO:  - ok
+cache:INFO:  - ok
+embuilder:INFO: ...success. Took (6.36s)
+embuilder:INFO: ...success. Took (6.36s)
+embuilder:INFO: Built 2 targets in (15.71s)
+embuilder:INFO: Built 2 targets in (15.71s)
+[STEP 4] SDL2 audio patch OK: /app/hl2-webxr-port/tools/emsdk/upstream/emscripten/cache/ports/sdl2/SDL-release-2.32.0/src/audio/emscripten/SDL_emscriptenaudio.c
+[STEP 4] SDL2 audio patch OK: /app/hl2-webxr-port/tools/emsdk/upstream/emscripten/cache/ports/sdl2/SDL-release-2.32.0/src/audio/emscripten/SDL_emscriptenaudio.c
+cache:INFO:  - ok
+embuilder:INFO: ...success. Took (6.57s)
+embuilder:INFO: Built 2 targets in (12.91s)
+cache:INFO:  - ok
+embuilder:INFO: ...success. Took (6.57s)
+embuilder:INFO: Built 2 targets in (12.91s)
+[CHECKPOINT] sdl2_build done at Fri Jul 10 23:19:31 UTC 2026
+[CHECKPOINT] sdl2_build done at Fri Jul 10 23:19:31 UTC 2026
+[STEP 5] libwebgl.patch
+[STEP 5] libwebgl.patch
+patch: **** Can't open patch file /app/hl2-webxr-port/engine/portal-port/emscripten/libwebgl.patch : No such file or directory
+patch: **** Can't open patch file /app/hl2-webxr-port/engine/portal-port/emscripten/libwebgl.patch : No such file or directory
+[STEP 5] libwebgl patch applied
+[STEP 5] libwebgl patch applied
+[CHECKPOINT] libwebgl_patch done at Fri Jul 10 23:19:31 UTC 2026
+[CHECKPOINT] libwebgl_patch done at Fri Jul 10 23:19:31 UTC 2026
+[STEP 6] clone portal-port
+[STEP 6] clone portal-port
+Cloning into '/app/hl2-webxr-port/engine/portal-port'...
+Cloning into '/app/hl2-webxr-port/engine/portal-port'...
+Updating files:  20% (2552/12386)Updating files:  20% (2552/12386)Updating files:  21% (2602/12386)Updating files:  21% (2602/12386)Updating files:  22% (2725/12386)Updating files:  22% (2725/12386)Updating files:  23% (2849/12386)Updating files:  23% (2849/12386)Updating files:  24% (2973/12386)Updating files:  24% (2973/12386)Updating files:  25% (3097/12386)Updating files:  25% (3097/12386)Updating files:  26% (3221/12386)Updating files:  26% (3221/12386)Updating files:  27% (3345/12386)Updating files:  27% (3345/12386)Updating files:  28% (3469/12386)Updating files:  28% (3469/12386)Updating files:  29% (3592/12386)Updating files:  29% (3592/12386)Updating files:  30% (3716/12386)Updating files:  30% (3716/12386)Updating files:  31% (3840/12386)Updating files:  31% (3840/12386)Updating files:  32% (3964/12386)Updating files:  32% (3964/12386)Updating files:  33% (4088/12386)Updating files:  33% (4088/12386)Updating files:  34% (4212/12386)Updating files:  34% (4212/12386)Updating files:  35% (4336/12386)Updating files:  35% (4336/12386)Updating files:  36% (4459/12386)Updating files:  36% (4459/12386)Updating files:  37% (4583/12386)Updating files:  37% (4583/12386)Updating files:  38% (4707/12386)Updating files:  38% (4707/12386)Updating files:  39% (4831/12386)Updating files:  39% (4831/12386)Updating files:  40% (4955/12386)Updating files:  40% (4955/12386)Updating files:  41% (5079/12386)Updating files:  41% (5079/12386)Updating files:  42% (5203/12386)Updating files:  42% (5203/12386)Updating files:  43% (5326/12386)Updating files:  43% (5326/12386)Updating files:  44% (5450/12386)Updating files:  44% (5450/12386)Updating files:  45% (5574/12386)Updating files:  45% (5574/12386)Updating files:  46% (5698/12386)Updating files:  46% (5698/12386)Updating files:  47% (5822/12386)Updating files:  47% (5822/12386)Updating files:  48% (5946/12386)Updating files:  48% (5946/12386)Updating files:  49% (6070/12386)Updating files:  49% (6070/12386)Updating files:  50% (6193/12386)Updating files:  50% (6193/12386)Updating files:  51% (6317/12386)Updating files:  51% (6317/12386)Updating files:  52% (6441/12386)Updating files:  52% (6441/12386)Updating files:  53% (6565/12386)Updating files:  53% (6565/12386)Updating files:  54% (6689/12386)Updating files:  54% (6689/12386)Updating files:  55% (6813/12386)Updating files:  55% (6813/12386)Updating files:  56% (6937/12386)Updating files:  56% (6937/12386)Updating files:  57% (7061/12386)Updating files:  57% (7061/12386)Updating files:  58% (7184/12386)Updating files:  58% (7184/12386)Updating files:  59% (7308/12386)Updating files:  59% (7308/12386)Updating files:  60% (7432/12386)Updating files:  60% (7432/12386)Updating files:  61% (7556/12386)Updating files:  61% (7556/12386)Updating files:  62% (7680/12386)Updating files:  62% (7680/12386)Updating files:  63% (7804/12386)Updating files:  63% (7804/12386)Updating files:  64% (7928/12386)Updating files:  64% (7928/12386)Updating files:  65% (8051/12386)Updating files:  65% (8051/12386)Updating files:  66% (8175/12386)Updating files:  66% (8175/12386)Updating files:  67% (8299/12386)Updating files:  67% (8299/12386)Updating files:  68% (8423/12386)Updating files:  68% (8423/12386)Updating files:  69% (8547/12386)Updating files:  69% (8547/12386)Updating files:  70% (8671/12386)Updating files:  70% (8671/12386)Updating files:  71% (8795/12386)Updating files:  71% (8795/12386)Updating files:  72% (8918/12386)Updating files:  72% (8918/12386)Updating files:  73% (9042/12386)Updating files:  73% (9042/12386)Updating files:  74% (9166/12386)Updating files:  74% (9166/12386)Updating files:  75% (9290/12386)Updating files:  75% (9290/12386)Updating files:  76% (9414/12386)Updating files:  76% (9414/12386)Updating files:  77% (9538/12386)Updating files:  77% (9538/12386)Updating files:  78% (9662/12386)Updating files:  78% (9662/12386)Updating files:  79% (9785/12386)Updating files:  79% (9785/12386)Updating files:  80% (9909/12386)Updating files:  80% (9909/12386)Updating files:  81% (10033/12386)Updating files:  81% (10033/12386)Updating files:  82% (10157/12386)Updating files:  82% (10157/12386)Updating files:  83% (10281/12386)Updating files:  83% (10281/12386)Updating files:  84% (10405/12386)Updating files:  84% (10405/12386)Updating files:  85% (10529/12386)Updating files:  85% (10529/12386)Updating files:  85% (10530/12386)Updating files:  85% (10530/12386)Updating files:  86% (10652/12386)Updating files:  86% (10652/12386)Updating files:  87% (10776/12386)Updating files:  87% (10776/12386)Updating files:  88% (10900/12386)Updating files:  88% (10900/12386)Updating files:  89% (11024/12386)Updating files:  89% (11024/12386)Updating files:  90% (11148/12386)Updating files:  90% (11148/12386)Updating files:  91% (11272/12386)Updating files:  91% (11272/12386)Updating files:  92% (11396/12386)Updating files:  92% (11396/12386)Updating files:  93% (11519/12386)Updating files:  93% (11519/12386)Updating files:  94% (11643/12386)Updating files:  94% (11643/12386)Updating files:  95% (11767/12386)Updating files:  95% (11767/12386)Updating files:  96% (11891/12386)Updating files:  96% (11891/12386)Updating files:  97% (12015/12386)Updating files:  97% (12015/12386)Updating files:  98% (12139/12386)Updating files:  98% (12139/12386)Updating files:  99% (12263/12386)Updating files:  99% (12263/12386)Updating files: 100% (12386/12386)Updating files: 100% (12386/12386)Updating files: 100% (12386/12386), done.
+Updating files: 100% (12386/12386), done.
+Submodule 'ivp' (https://github.com/nillerusr/source-physics) registered for path 'ivp'
+Submodule 'ivp' (https://github.com/nillerusr/source-physics) registered for path 'ivp'
+Submodule 'lib' (https://github.com/nillerusr/source-engine-libs.git) registered for path 'lib'
+Submodule 'lib' (https://github.com/nillerusr/source-engine-libs.git) registered for path 'lib'
+Submodule 'thirdparty' (https://github.com/nillerusr/source-thirdparty) registered for path 'thirdparty'
+Submodule 'thirdparty' (https://github.com/nillerusr/source-thirdparty) registered for path 'thirdparty'
+Cloning into '/app/hl2-webxr-port/engine/portal-port/ivp'...
+Cloning into '/app/hl2-webxr-port/engine/portal-port/ivp'...
+Cloning into '/app/hl2-webxr-port/engine/portal-port/lib'...
+Cloning into '/app/hl2-webxr-port/engine/portal-port/lib'...
+Cloning into '/app/hl2-webxr-port/engine/portal-port/thirdparty'...
+Cloning into '/app/hl2-webxr-port/engine/portal-port/thirdparty'...
+Submodule path 'ivp': checked out '47533475e01cbff05fbc3bbe8b4edc485f292cea'
+Submodule path 'ivp': checked out '47533475e01cbff05fbc3bbe8b4edc485f292cea'
+Submodule path 'lib': checked out '86a66ee92d9fda0a09f54a435e850faa7ab5d0fa'
+Submodule path 'lib': checked out '86a66ee92d9fda0a09f54a435e850faa7ab5d0fa'
+From https://github.com/nillerusr/source-thirdparty
+From https://github.com/nillerusr/source-thirdparty
+ * branch            c5b901ecef515ea068fa8b8a19ca5cd5353905cb -> FETCH_HEAD
+ * branch            c5b901ecef515ea068fa8b8a19ca5cd5353905cb -> FETCH_HEAD
+Submodule path 'thirdparty': checked out 'c5b901ecef515ea068fa8b8a19ca5cd5353905cb'
+Submodule path 'thirdparty': checked out 'c5b901ecef515ea068fa8b8a19ca5cd5353905cb'
+[CHECKPOINT] repo_clone done at Fri Jul 10 23:19:46 UTC 2026
+[CHECKPOINT] repo_clone done at Fri Jul 10 23:19:46 UTC 2026
+[STEP 7] source patches
+[STEP 7] source patches
+alloca ivp OK
+emscripten_stubs.cpp OK
+emscripten_stubs.cpp OK
+mindist guard OK
+printf patch OK
+native_stubs.cpp OK
+native_stubs.cpp OK
+engine wscript OK
+[CHECKPOINT] source_patches done at Fri Jul 10 23:19:46 UTC 2026
+[CHECKPOINT] source_patches done at Fri Jul 10 23:19:46 UTC 2026
+[STEP 8] native build
+[STEP 8] native build
+Setting top to                                          : Setting top to                                          : /app/hl2-webxr-port/engine/portal-port 
+/app/hl2-webxr-port/engine/portal-port 
+Setting out to                                          : Setting out to                                          : /app/hl2-webxr-port/engine/portal-port/build_native 
+/app/hl2-webxr-port/engine/portal-port/build_native 
+Build type                                              : Build type                                              : not set 
+not set 
+Set a build type, for example "-T release"
+(complete log in /app/hl2-webxr-port/engine/portal-port/build_native/config.log)
+Set a build type, for example "-T release"
+(complete log in /app/hl2-webxr-port/engine/portal-port/build_native/config.log)
+The project was not configured: run "waf configure" first!
+The project was not configured: run "waf configure" first!
+NATIVE_BUILD_EXIT:0
+NATIVE_BUILD_EXIT:0
+[CHECKPOINT] native_build done at Fri Jul 10 23:19:47 UTC 2026
+[CHECKPOINT] native_build done at Fri Jul 10 23:19:47 UTC 2026
+[STEP 9] get_logs.sh
+[STEP 9] get_logs.sh
+build_all.sh: line 180: cd: /app/hl2-webxr-port/engine/portal-port/build/install_native: No such file or directory
