@@ -1,7 +1,7 @@
 HL2 WebGL2/WebXR Port — Projektverzeichnis
 ==========================================
-Zuletzt aktualisiert: 2026-07-10 18:13 (Europe/Berlin)
-Stand: Analyse abgeschlossen, Build-Phase noch nicht begonnen
+Zuletzt aktualisiert: 2026-07-10 19:09 (Europe/Berlin)
+Stand: BLK-001 geschlossen, portal-port geklont, Build-Flags verifiziert
 
 LEGENDE
   [✅ EXISTIERT]   Datei/Verzeichnis vorhanden und befüllt
@@ -35,12 +35,21 @@ hl2-webxr-port/
 │   ├── runtime_matrix.md                [✅] Runtime-Flags, Browser-Matrix, Known Bugs
 │   └── save_state_options.md            [✅] 5 Save-State-Optionen im Vergleich
 │
-├── engine/                              [⏳ PENDING — nach ACTION-001, ACTION-002]
+├── engine/                              [✅ TEILWEISE — portal-port geklont]
 │   ├── source-engine/                   [⏳] nillerusr/source-engine (ACTION-002: git clone)
 │   │   ├── ...                          Engine-Quellcode (C++, ToGLES-Modus)
-│   │   └── [Build-System: waf/cmake/make — noch unbekannt]
-│   └── portal-port/                     [🔒 UNKNOWN URL — ACTION-001: weliveinhell Repo finden]
-│       └── ...                          Asset-Packing-Skripte, Browser-Port-Fixes
+│   │   └── [Build-System: waf — CONFIRMED von weliveinhell wscript]
+│   └── portal-port/                     [✅ GEKLONT — github.com/weliveinhell/source-engine]
+│       ├── emscripten/
+│       │   ├── build.sh                 [✅] Emscripten-Build-Skript (waf + emcc)
+│       │   ├── get_emscripten.sh        [✅] emsdk-Setup inkl. SDL2+libwebgl-Patch
+│       │   ├── get_logs.sh             [✅] Asset-Logging (alle HL2-Maps)
+│       │   ├── repackage.js            [✅] Asset-Packing (Node.js)
+│       │   ├── libwebgl.patch          [✅] glMapBufferRange-Fix
+│       │   ├── pre.js                  [✅] Module arguments + DataLoader
+│       │   ├── post.js                 [✅] Crouch-Rebind + Startup-Map
+│       │   └── shell.html              [✅] Browser-Shell
+│       └── ...                          Engine-Quellcode (C++, --togles --emscripten)
 │
 ├── assets/                              [⏳ PENDING — nach ACTION-003, ACTION-004]
 │   ├── raw/
@@ -94,12 +103,12 @@ hl2-webxr-port/
 │       ├── d1_trainstation_02.js
 │       └── ... (alle Maps aus manifest.json)
 │
-└── tools/                               [⏳ PENDING — nach ACTION-001, ACTION-005]
+└── tools/                               [⏳ PENDING — nach ACTION-005]
     ├── emsdk/                           [⏳ ACTION-005: Emscripten SDK]
-    │   └── ...                          emsdk install latest; emsdk activate latest
-    ├── asset-packer/                    [🔒 UNKNOWN — aus weliveinhell-Repo (BLK-001)]
-    │   ├── pack_assets.sh               Linux-Version (weliveinhell original)
-    │   └── pack_assets.bat              Windows-Version (slqnt-Modifikation)
+    │   └── ...                          Pinned: 2d480a1b7c7a34a354188d93f3e89190a44a1d21
+    ├── asset-packer/                    [⏳ PENDING — nach ACTION-003b (cp aus portal-port)]
+    │   ├── repackage.js                 Node.js Asset-Packer (weliveinhell, CONFIRMED)
+    │   └── get_logs.sh                  Asset-Logging-Skript (weliveinhell, CONFIRMED)
     └── gcf-explorer/                    [⏳ ACTION-004: aus ARC-01/Misc/ extrahieren]
         └── GCFExplorer.exe
 
@@ -117,8 +126,8 @@ EXTERNE QUELLEN (nicht im Verzeichnis — nur Referenz)
 ─────────────────────────────────────────────────────────────────────
 STATUS-ZUSAMMENFASSUNG: 2026-07-10 18:13 — Workspace-Audit
 
-  Dokumentation (docs/, config/):  ✅ VOLLSTÄNDIG — 20 Dateien (Audit: 17 VALID, 3 repariert)
-  Engine-Code (engine/):           ⏳ PENDING (ACTION-001, ACTION-002)
+  Dokumentation (docs/, config/):  ✅ VOLLSTÄNDIG — 20 Dateien VALID
+  Engine-Code (engine/):           ✅ portal-port geklont | ⏳ source-engine PENDING (ACTION-002)
   Assets (assets/):                ⏳ PENDING (ACTION-003, ACTION-004)
   Patches (patches/):              ⏳ PENDING (ACTION-008)
   Logs (logs/):                    ⏳ PENDING (T-007)

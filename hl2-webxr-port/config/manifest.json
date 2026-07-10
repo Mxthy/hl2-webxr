@@ -2,14 +2,13 @@
   "_comment": "Build Manifest — HL2 WebGL2 Browser Port. Validiert gegen manifest.schema.json.",
   "_status": "DRAFT — noch kein Build erfolgt. Werte sind Platzhalter oder INFERRED.",
   "_schema": "./manifest.schema.json",
-
   "meta": {
     "version": "0.1.0",
     "generated": "2026-07-10T17:53:00+02:00",
     "project": "hl2-webgl2-port",
-    "phase": "1"
+    "phase": "1",
+    "updated": "2026-07-10T19:09:00+02:00"
   },
-
   "build": {
     "engine_commit": "UNKNOWN — nillerusr/source-engine noch nicht geklont",
     "emscripten_version": "UNKNOWN — noch nicht installiert",
@@ -18,25 +17,32 @@
     "js_file": "dist/hl2.js",
     "wasm_size_bytes": null,
     "flags": [
-      "-sMAX_WEBGL_VERSION=2",
-      "-sMIN_WEBGL_VERSION=2",
-      "-sALLOW_MEMORY_GROWTH=1",
-      "-sINITIAL_MEMORY=268435456",
-      "-sSTACK_SIZE=5242880",
-      "-sFULL_ES2=1",
-      "-sCASE_INSENSITIVE_FS=1",
-      "-sFETCH_SUPPORT_INDEXEDDB=1",
-      "-sFILESYSTEM=1",
-      "-sFORCE_FILESYSTEM=1",
-      "-sGL_SUPPORT_AUTOMATIC_ENABLE_EXTENSIONS=1",
-      "-sEXIT_RUNTIME=0",
-      "-sASYNCIFY=1",
+      "-sFULL_ES3",
+      "-sINITIAL_MEMORY=2047mb",
+      "-sSHARED_MEMORY=1",
+      "-sSTACK_SIZE=4mb",
+      "-sUSE_PTHREADS=1",
+      "-sPTHREAD_POOL_SIZE=8",
+      "-sPTHREAD_POOL_SIZE_STRICT=2",
+      "-sPROXY_TO_PTHREAD=1",
+      "-sOFFSCREENCANVAS_SUPPORT=1",
+      "-sOFFSCREENCANVASES_TO_PTHREAD=#canvas",
       "-sUSE_SDL=2",
-      "-sUSE_ZLIB=1"
+      "-sUSE_BZIP2=1",
+      "-sUSE_FREETYPE=1",
+      "-sUSE_LIBJPEG=1",
+      "-sUSE_LIBPNG=1",
+      "-sMALLOC=mimalloc",
+      "-sMAIN_MODULE=1",
+      "--shell-file=emscripten/shell.html",
+      "--pre-js=emscripten/pre.js",
+      "--post-js=emscripten/post.js"
     ],
-    "_flags_note": "INFERRED aus Emscripten-Doku + slqnt-Architektur. Vor erstem Build verifizieren (ACTION-007)."
+    "_flags_note": "CONFIRMED from weliveinhell/source-engine emscripten/build.sh (BLK-001 resolved 2026-07-10). Pthreads+SharedMemory approach — ASYNCIFY NOT used. Requires COOP/COEP server headers.",
+    "emsdk_pinned_commit": "2d480a1b7c7a34a354188d93f3e89190a44a1d21",
+    "build_script": "emscripten/build.sh",
+    "waf_flags": "--togles --emscripten --notests -4 --disable-warns --build-games=portal"
   },
-
   "assets": {
     "source": "PENDING — DEC-001 noch nicht entschieden (ACTION-006)",
     "_source_options": {
@@ -79,7 +85,6 @@
     "total_asset_count": null,
     "total_size_bytes": null
   },
-
   "maps": [
     {
       "name": "d1_trainstation_01",
@@ -447,7 +452,6 @@
       "qa_notes": "Finaler Boss-Kampf — besondere Aufmerksamkeit bei QA"
     }
   ],
-
   "patches": [
     {
       "id": "PATCH-001",
@@ -530,7 +534,6 @@
       "file": "patches/PATCH-008-crouch-rebind.patch"
     }
   ],
-
   "deployment": {
     "host": "UNKNOWN — noch nicht festgelegt",
     "cdn_base": "UNKNOWN",

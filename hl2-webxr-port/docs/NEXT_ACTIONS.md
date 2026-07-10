@@ -1,8 +1,8 @@
 # Next Actions
 ## HL2 WebGL2/WebXR Porting Manager
 
-Zuletzt aktualisiert: 2026-07-10 19:00 (Europe/Berlin)
-Status: Konsistenzprüfung abgeschlossen — 20 VALID. BLK-001 geschlossen.
+Zuletzt aktualisiert: 2026-07-10 19:09 (Europe/Berlin)
+Status: BLK-001 geschlossen. Repo geklont. Build-Flags aus weliveinhell/build.sh korrigiert.
 
 ---
 
@@ -169,29 +169,34 @@ Reihenfolge der Extraktion:
 ### ACTION-005 — Emscripten SDK installieren und verifizieren
 **Priorität:** HOCH
 **Aufwand:** 0.5 Tage
-**WICHTIG:** Pinned Commit aus weliveinhell-Repo verwenden!
+**Quelle:** `emscripten/get_emscripten.sh` aus weliveinhell-Repo (CONFIRMED)
 
 ```bash
 git clone https://github.com/emscripten-core/emsdk.git ./tools/emsdk
 cd ./tools/emsdk
 
-# PINNED VERSION (aus weliveinhell README):
+# PINNED COMMIT (CONFIRMED aus emscripten/get_emscripten.sh):
 git checkout 2d480a1b7c7a34a354188d93f3e89190a44a1d21
 
 ./emsdk install latest
 ./emsdk activate latest
 source ./emsdk_env.sh
 
-# SDL2-Patch (muss nach install angewendet werden):
+# SDL2 erst bauen, dann patchen, dann neu bauen (Reihenfolge wichtig!):
+embuilder --pic build sdl2 sdl2-mt
 sed -Ei 's/freq = EM_ASM_INT/freq = MAIN_THREAD_EM_ASM_INT/' \
-  /emsdk/upstream/emscripten/cache/ports/sdl2/SDL-release-2.32.0/src/audio/emscripten/SDL_emscriptenaudio.c
+  $(dirname $(which emcc))/cache/ports/sdl2/SDL-release-2.32.0/src/audio/emscripten/SDL_emscriptenaudio.c
 embuilder --force --pic build sdl2 sdl2-mt
+
+# WebGL-Patch:
+patch $(dirname $(which emcc))/src/lib/libwebgl.js \
+  /app/hl2-webxr-port/engine/portal-port/emscripten/libwebgl.patch
 
 # Verifizieren:
 emcc --version
 ```
 
-**Erfolgsmetrik:** `emcc --version` gibt Versionsnummer aus, SDL2-Patch angewendet
+**Erfolgsmetrik:** `emcc --version` gibt Versionsnummer aus, SDL2-Patch angewendet, libwebgl.patch angewendet
 
 ---
 
@@ -223,24 +228,41 @@ Wenn inkompatibel:
 
 ### ACTION-007 — Ersten Emscripten-Build ausführen
 **Priorität:** HOCH
-**Vorbedingung:** ACTION-002 (Engine-Build), ACTION-005 (Emscripten), ACTION-003b (weliveinhell-Repo)
+**Vorbedingung:** ACTION-002 (Engine nativ gebaut), ACTION-005 (Emscripten + patches), ACTION-003b (weliveinhell-Repo geklont)
+**Quelle:** `emscripten/build.sh` aus weliveinhell/source-engine (CONFIRMED)
+**WICHTIG:** Build nutzt Pthreads+SharedMemory — NICHT ASYNCIFY. Server braucht COOP/COEP-Header.
 
 ```bash
-cd ./engine/source-engine
+# Aus weliveinhell-Repo bauen (Portal als Referenz, danach auf hl2 umstellen):
+cd ./engine/portal-port
 source ../../tools/emsdk/emsdk_env.sh
 
-# libwebgl.patch anwenden (aus weliveinhell-Repo):
-patch /emsdk/upstream/emscripten/src/lib/libwebgl.js \
-  ../../engine/portal-port/emscripten/libwebgl.patch
+# (libwebgl.patch wurde bereits in ACTION-005 angewendet)
 
-# Build ausführen (weliveinhell's build_emscripten.sh als Referenz):
-emmake ./build_emscripten.sh
+# waf konfigurieren:
+python3 waf configure -T release --notests -4 --togles --emscripten \
+  --disable-warns --build-games=portal --prefix=build/install
 
-# Alle Compiler-Fehler dokumentieren:
-# → ./docs/build-errors-01.txt
+# Bauen:
+python3 waf install
+
+# Linken (emcc mit Pthreads, SharedMemory, PROXY_TO_PTHREAD — aus build.sh):
+bash emscripten/build.sh release
+
+# Output: ./build/install/ + ./build/launcher_main/hl2_launcher.{html,wasm,js}
+# Compiler-Fehler dokumentieren: → ./docs/build-errors-01.txt
 ```
 
-**Erfolgsmetrik:** hl2.wasm + hl2.js erzeugt, Browser lädt die Seite ohne sofortigen Crash
+**Emscripten-Flags (CONFIRMED aus build.sh):**
+```
+-sFULL_ES3 -sINITIAL_MEMORY=2047mb -sSHARED_MEMORY=1
+-sUSE_PTHREADS=1 -sPTHREAD_POOL_SIZE=8 -sPTHREAD_POOL_SIZE_STRICT=2
+-sPROXY_TO_PTHREAD=1 -sOFFSCREENCANVAS_SUPPORT=1
+-sUSE_SDL=2 -sUSE_BZIP2=1 -sUSE_FREETYPE=1 -sUSE_LIBJPEG=1 -sUSE_LIBPNG=1
+-sMALLOC=mimalloc -sMAIN_MODULE=1
+```
+
+**Erfolgsmetrik:** hl2_launcher.wasm + hl2_launcher.js erzeugt, Browser lädt ohne sofortigen Crash
 
 ---
 

@@ -1,6 +1,7 @@
 ---
 # HL2 WebGL2/WebXR Port — Asset & Build Pipeline
 # Generated: 2026-07-10
+# Updated: 2026-07-10T19:09:00+02:00 — stage_5 flags corrected from weliveinhell/build.sh
 # Status: DRAFT (alle Werte INFERRED, soweit nicht anders markiert)
 
 meta:
@@ -21,7 +22,7 @@ environment:
     repo: https://github.com/nillerusr/source-engine
     branch: main
     local_path: ./engine/source-engine
-    reference_port: https://github.com/weliveinhell/  # URL UNKNOWN — Platzhalter
+    reference_port: https://github.com/weliveinhell/source-engine  # CONFIRMED — BLK-001 resolved 2026-07-10
   
   tools:
     gcf_explorer:
@@ -31,8 +32,10 @@ environment:
       source: INFERRED — Valve SDK oder community tool
       status: UNKNOWN
     asset_packer:
-      source: weliveinhell (Linux) + slqnt-Mod (Windows)
-      status: INFERRED
+      source: weliveinhell (Linux) — github.com/weliveinhell/source-engine
+      path: emscripten/repackage.js
+      get_logs: emscripten/get_logs.sh
+      status: CONFIRMED
 
 # ============================================================
 # ASSET PIPELINE
@@ -79,7 +82,7 @@ asset_pipeline:
     description: |
       Asset-Logs auswerten, referenzierte Assets extrahieren,
       pro Map eine .data-Datei erzeugen.
-    tool: emscripten/tools/file_packager.py
+    tool: emscripten/repackage.js  # CONFIRMED from weliveinhell repo
     input: ./logs/asset_requests_{map}.log + ./assets/
     output: ./dist/maps/{map}.data + ./dist/maps/{map}.js
     compression: lz4  # -sLZ4=1 optional
@@ -128,32 +131,67 @@ build_pipeline:
   
   stage_5_compile:
     name: Emscripten Compilation
+    # CONFIRMED from weliveinhell/source-engine emscripten/build.sh (BLK-001 resolved 2026-07-10)
+    # NOTE: weliveinhell uses Pthreads+SharedMemory, NOT ASYNCIFY. pipeline.yaml corrected accordingly.
+    # COOP/COEP headers REQUIRED on server (Cross-Origin-Opener-Policy + Cross-Origin-Embedder-Policy).
     compiler: emcc
+    emsdk_pinned_commit: 2d480a1b7c7a34a354188d93f3e89190a44a1d21  # from get_emscripten.sh — CONFIRMED
+    waf_configure_flags:
+      - --togles
+      - --emscripten
+      - --notests
+      - -4
+      - --disable-warns
+      - --build-games=portal  # change to hl2 for HL2 port
     flags:
       webgl:
-        - -sMAX_WEBGL_VERSION=2
-        - -sMIN_WEBGL_VERSION=2
-        - -sFULL_ES2=1
-        - -sGL_SUPPORT_AUTOMATIC_ENABLE_EXTENSIONS=1
+        - -sFULL_ES3
       memory:
-        - -sALLOW_MEMORY_GROWTH=1
-        - -sINITIAL_MEMORY=268435456
-        - -sSTACK_SIZE=5242880
-      filesystem:
-        - -sFILESYSTEM=1
-        - -sFORCE_FILESYSTEM=1
-        - -sCASE_INSENSITIVE_FS=1
-        - -sFETCH_SUPPORT_INDEXEDDB=1
-      runtime:
-        - -sEXIT_RUNTIME=0
-        - -sASYNCIFY=1
+        - -sINITIAL_MEMORY=2047mb   # 2 GB — CONFIRMED from build.sh
+        - -sSHARED_MEMORY=1
+        - -sSTACK_SIZE=4mb
+      threading:
+        - -sUSE_PTHREADS=1
+        - -sPTHREAD_POOL_SIZE=8
+        - -sPTHREAD_POOL_SIZE_STRICT=2
+        - -sPROXY_TO_PTHREAD=1
+      canvas:
+        - -sOFFSCREENCANVAS_SUPPORT=1
+        - -sOFFSCREENCANVASES_TO_PTHREAD="#canvas"
       libraries:
         - -sUSE_SDL=2
-        - -sUSE_ZLIB=1
+        - -sUSE_BZIP2=1
+        - -sUSE_FREETYPE=1
+        - -sUSE_LIBJPEG=1
+        - -sUSE_LIBPNG=1
+        - -sMALLOC=mimalloc
+      shell:
+        - --shell-file=emscripten/shell.html
+        - --pre-js=emscripten/pre.js
+        - --post-js=emscripten/post.js
+      module:
+        - -sMAIN_MODULE=1
+    pre_build_patches:
+      - description: SDL2 audio patch (MAIN_THREAD_EM_ASM_INT fix)
+        command: "sed -Ei 's/freq = EM_ASM_INT/freq = MAIN_THREAD_EM_ASM_INT/' {emsdk}/upstream/emscripten/cache/ports/sdl2/SDL-release-2.32.0/src/audio/emscripten/SDL_emscriptenaudio.c"
+      - description: WebGL glMapBufferRange patch
+        patch_file: emscripten/libwebgl.patch
+        target: "{emsdk}/upstream/emscripten/src/lib/libwebgl.js"
     output:
-      wasm: ./dist/hl2.wasm
-      js: ./dist/hl2.js
-    status: PENDING
+      html: ./build/launcher_main/hl2_launcher.html
+      wasm: ./build/launcher_main/hl2_launcher.wasm
+      js: ./build/launcher_main/hl2_launcher.js
+      install_dir: ./build/install/
+    deprecated_flags:
+      # These flags were in the original INFERRED pipeline — DO NOT USE:
+      - -sASYNCIFY=1  # replaced by Pthreads approach
+      - -sMAX_WEBGL_VERSION=2  # implicit with FULL_ES3
+      - -sMIN_WEBGL_VERSION=2  # implicit with FULL_ES3
+      - -sALLOW_MEMORY_GROWTH=1  # replaced by fixed 2047mb
+      - -sFILESYSTEM=1  # handled by module build
+      - -sFORCE_FILESYSTEM=1
+      - -sCASE_INSENSITIVE_FS=1
+    status: PENDING — awaiting ACTION-007
 
 # ============================================================
 # DEPLOYMENT
