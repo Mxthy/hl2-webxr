@@ -1,7 +1,7 @@
 # Blockers
 ## HL2 WebGL2/WebXR Porting Manager
 
-Zuletzt aktualisiert: 2026-07-10T17:53:00+02:00
+Zuletzt aktualisiert: 2026-07-10 18:13 (Europe/Berlin)
 
 ---
 

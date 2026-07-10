@@ -2,11 +2,10 @@
   "meta": {
     "project": "HL2 WebGL2/WebXR Porting Manager",
     "generated": "2026-07-10",
-    "updated": "2026-07-10T17:53:00+02:00",
+    "updated": "2026-07-10T18:13:00+02:00",
     "phase": "1",
     "_note": "Status-Werte: pending | in-progress | blocked | done | skipped"
   },
-
   "nodes": [
     {
       "id": "T-001",
@@ -14,7 +13,10 @@
       "phase": "1.0",
       "status": "pending",
       "depends_on": [],
-      "blocks": ["T-002", "T-005"],
+      "blocks": [
+        "T-002",
+        "T-005"
+      ],
       "estimated_days": 2,
       "owner": "TBD",
       "action_ref": "ACTION-001, ACTION-002, ACTION-005",
@@ -33,7 +35,10 @@
       "status": "blocked",
       "blocker_ref": "BLK-001",
       "depends_on": [],
-      "blocks": ["T-005", "T-009"],
+      "blocks": [
+        "T-005",
+        "T-009"
+      ],
       "estimated_days": 1,
       "action_ref": "ACTION-001",
       "tasks": [
@@ -50,7 +55,9 @@
       "phase": "1.2",
       "status": "pending",
       "depends_on": [],
-      "blocks": ["T-004"],
+      "blocks": [
+        "T-004"
+      ],
       "estimated_days": 1,
       "action_ref": "ACTION-003",
       "tasks": [
@@ -66,8 +73,12 @@
       "name": "GCF-Extraktion",
       "phase": "1.2",
       "status": "pending",
-      "depends_on": ["T-003"],
-      "blocks": ["T-006"],
+      "depends_on": [
+        "T-003"
+      ],
+      "blocks": [
+        "T-006"
+      ],
       "estimated_days": 2,
       "action_ref": "ACTION-004",
       "tasks": [
@@ -86,8 +97,13 @@
       "name": "Engine nativ bauen (Linux)",
       "phase": "1.1",
       "status": "pending",
-      "depends_on": ["T-001"],
-      "blocks": ["T-006", "T-008"],
+      "depends_on": [
+        "T-001"
+      ],
+      "blocks": [
+        "T-006",
+        "T-008"
+      ],
       "estimated_days": 3,
       "action_ref": "ACTION-002",
       "tasks": [
@@ -103,8 +119,13 @@
       "name": "Asset-Kompatibilitätstest",
       "phase": "1.2",
       "status": "pending",
-      "depends_on": ["T-004", "T-005"],
-      "blocks": ["T-007"],
+      "depends_on": [
+        "T-004",
+        "T-005"
+      ],
+      "blocks": [
+        "T-007"
+      ],
       "estimated_days": 2,
       "action_ref": "ACTION-006",
       "decision_trigger": "DEC-001",
@@ -125,8 +146,12 @@
       "name": "Asset-Logging + Pilot-Map packen",
       "phase": "1.2",
       "status": "pending",
-      "depends_on": ["T-006"],
-      "blocks": ["T-009"],
+      "depends_on": [
+        "T-006"
+      ],
+      "blocks": [
+        "T-009"
+      ],
       "estimated_days": 3,
       "action_ref": "ACTION-007 (Teilschritte)",
       "tasks": [
@@ -145,8 +170,12 @@
       "name": "Erster Emscripten-Build",
       "phase": "1.1",
       "status": "pending",
-      "depends_on": ["T-005"],
-      "blocks": ["T-009"],
+      "depends_on": [
+        "T-005"
+      ],
+      "blocks": [
+        "T-009"
+      ],
       "estimated_days": 5,
       "action_ref": "ACTION-007",
       "tasks": [
@@ -164,8 +193,13 @@
       "name": "Patches implementieren",
       "phase": "1.3+1.4",
       "status": "pending",
-      "depends_on": ["T-007", "T-008"],
-      "blocks": ["T-010"],
+      "depends_on": [
+        "T-007",
+        "T-008"
+      ],
+      "blocks": [
+        "T-010"
+      ],
       "estimated_days": 7,
       "action_ref": "ACTION-008",
       "blocker_ref": "BLK-002 (teilweise — kein slqnt-Quellcode verfügbar)",
@@ -187,8 +221,12 @@
       "name": "IDBFS Save System integrieren",
       "phase": "1.5",
       "status": "pending",
-      "depends_on": ["T-009"],
-      "blocks": ["T-011"],
+      "depends_on": [
+        "T-009"
+      ],
+      "blocks": [
+        "T-011"
+      ],
       "estimated_days": 2,
       "tasks": [
         "Flag -sFETCH_SUPPORT_INDEXEDDB=1 im Build verifizieren",
@@ -203,8 +241,12 @@
       "name": "Alle Maps packen",
       "phase": "1.6",
       "status": "pending",
-      "depends_on": ["T-010"],
-      "blocks": ["T-012"],
+      "depends_on": [
+        "T-010"
+      ],
+      "blocks": [
+        "T-012"
+      ],
       "estimated_days": 7,
       "action_ref": "ACTION-009",
       "tasks": [
@@ -220,7 +262,9 @@
       "name": "QA & Stabilisierung",
       "phase": "1.6",
       "status": "pending",
-      "depends_on": ["T-011"],
+      "depends_on": [
+        "T-011"
+      ],
       "blocks": [],
       "estimated_days": 7,
       "action_ref": "ACTION-011",
@@ -234,7 +278,6 @@
       ]
     }
   ],
-
   "decisions": [
     {
       "id": "DEC-001",
@@ -254,7 +297,11 @@
         }
       ],
       "trigger": "Ergebnis von T-006 (Asset-Kompatibilitätstest)",
-      "affects": ["source_map.json/ENG-01", "manifest.json/assets.source", "pipeline.yaml/stage_1_extraction"]
+      "affects": [
+        "source_map.json/ENG-01",
+        "manifest.json/assets.source",
+        "pipeline.yaml/stage_1_extraction"
+      ]
     },
     {
       "id": "DEC-002",
@@ -318,14 +365,17 @@
       "trigger": "Beginn Phase 3"
     }
   ],
-
   "blockers": [
     {
       "id": "BLK-001",
       "description": "weliveinhell GitHub-URL unbekannt",
       "severity": "HIGH",
       "status": "open",
-      "blocks_tasks": ["T-002", "T-005", "T-009"],
+      "blocks_tasks": [
+        "T-002",
+        "T-005",
+        "T-009"
+      ],
       "resolution_action": "ACTION-001"
     },
     {
@@ -333,7 +383,9 @@
       "description": "slqnt Port-Quellcode nicht öffentlich — Patches müssen unabhängig implementiert werden",
       "severity": "MEDIUM",
       "status": "open",
-      "blocks_tasks": ["T-009"],
+      "blocks_tasks": [
+        "T-009"
+      ],
       "resolution_action": "ACTION-008 (unabhängige Implementierung)"
     },
     {
@@ -341,7 +393,9 @@
       "description": "Build-2153 ↔ nillerusr-Engine Kompatibilität ungetestet",
       "severity": "HIGH",
       "status": "open",
-      "blocks_tasks": ["T-007"],
+      "blocks_tasks": [
+        "T-007"
+      ],
       "resolution_action": "ACTION-006 (T-006 ausführen)"
     },
     {

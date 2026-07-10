@@ -1,6 +1,6 @@
 HL2 WebGL2/WebXR Port — Projektverzeichnis
 ==========================================
-Zuletzt aktualisiert: 2026-07-10T17:53:00+02:00
+Zuletzt aktualisiert: 2026-07-10 18:13 (Europe/Berlin)
 Stand: Analyse abgeschlossen, Build-Phase noch nicht begonnen
 
 LEGENDE
@@ -115,9 +115,9 @@ EXTERNE QUELLEN (nicht im Verzeichnis — nur Referenz)
   [✅] ENG-04: github.com/vittorioromeo/HL2VRU                        (Phase-3-Referenz)
 
 ─────────────────────────────────────────────────────────────────────
-STATUS-ZUSAMMENFASSUNG: 2026-07-10
+STATUS-ZUSAMMENFASSUNG: 2026-07-10 18:13 — Workspace-Audit
 
-  Dokumentation (docs/, config/):  ✅ VOLLSTÄNDIG — 19 Dateien
+  Dokumentation (docs/, config/):  ✅ VOLLSTÄNDIG — 20 Dateien (Audit: 17 VALID, 3 repariert)
   Engine-Code (engine/):           ⏳ PENDING (ACTION-001, ACTION-002)
   Assets (assets/):                ⏳ PENDING (ACTION-003, ACTION-004)
   Patches (patches/):              ⏳ PENDING (ACTION-008)

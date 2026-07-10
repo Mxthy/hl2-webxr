@@ -1,7 +1,7 @@
 # TASK
 ## HL2 WebGL2/WebXR Porting Manager — Aktuelle Aufgabenliste
 
-Zuletzt aktualisiert: 2026-07-10T17:53:00+02:00
+Zuletzt aktualisiert: 2026-07-10 18:13 (Europe/Berlin)
 Format: Flat-List, nach Priorität sortiert.
 Detailbeschreibungen aller Actions → NEXT_ACTIONS.md
 
