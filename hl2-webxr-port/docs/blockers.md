@@ -209,3 +209,23 @@ Keine alternative Archive.org-Quelle für Episode Two bekannt.
 | BLK-006 | WebXR Debugging-Komplexität | LATENT | 3 | LATENT | Phase-3-Prep |
 | BLK-007 | Audio-System unklar | LATENT | 1.1 | LATENT (SDL2-Hinweis) | ACTION-010 |
 | BLK-008 | EP2-Quelle fehlt | LATENT | 3 | LATENT | ACTION-013 |
+
+
+---
+
+## Build-Status (2026-07-10 19:38)
+
+Erster Emscripten-Build erfolgreich abgeschlossen.
+
+| Artefakt | Größe | Status |
+|---|---|---|
+| hl2_launcher.wasm | 4.18 MB | ✅ VALID (magic b'\x00asm') |
+| hl2_launcher.js | 1.1 MB | ✅ erzeugt |
+| hl2_launcher.html | 6.5 KB | ✅ erzeugt |
+| 25x *.so | ~46 MB total | ✅ in build/install/ |
+
+**Build-Pfad:** `engine/portal-port/` (weliveinhell/source-engine, Commit 63f8364)
+**Emscripten:** 4.0.9 (emsdk 2d480a1b)
+**Flags:** Pthreads+SharedMemory, INITIAL_MEMORY=2047mb, FULL_ES3, PROXY_TO_PTHREAD
+
+**Nächster Blocker:** BLK-003 (Asset-Kompatibilität) — erst testbar nach ARC-01-Download + Asset-Packing

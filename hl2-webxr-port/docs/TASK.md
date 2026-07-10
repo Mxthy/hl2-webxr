@@ -14,7 +14,7 @@ Detailbeschreibungen aller Actions → NEXT_ACTIONS.md
   - Fallback: slqnt kontaktieren (Discord/GitHub)
   - Nach Fund: URL in source_map.json (ENG-02) + BLK-001 schließen
 
-- [ ] **ACTION-002** — nillerusr/source-engine klonen & nativ bauen
+- [x] **ACTION-002** — nillerusr/source-engine klonen & nativ bauen ✅ DONE (geklont 2026-07-10; nativ-Build optional für Asset-Logging)
   - `git clone https://github.com/nillerusr/source-engine ./engine/source-engine`
   - Build-System identifizieren (waf / cmake / make)
   - ToGLES-Modus verifizieren
@@ -24,7 +24,7 @@ Detailbeschreibungen aller Actions → NEXT_ACTIONS.md
   - Ziel: ./assets/raw/arc-01/
   - 7Z entpacken
 
-- [ ] **ACTION-005** — Emscripten SDK installieren und verifizieren
+- [x] **ACTION-005** — Emscripten SDK installieren ✅ DONE (emsdk 4.0.9, pinned commit 2d480a1b) und verifizieren
   - `git clone https://github.com/emscripten-core/emsdk ./tools/emsdk`
   - `./emsdk install latest && ./emsdk activate latest`
   - `emcc --version` muss erfolgreich sein
@@ -42,7 +42,7 @@ Detailbeschreibungen aller Actions → NEXT_ACTIONS.md
   - ARC-01-Assets in Engine laden → Fehler dokumentieren
   - Ergebnis: DEC-001 A (Build 2153 OK) oder B (steam_legacy nötig)
 
-- [ ] **ACTION-007** — Ersten Emscripten-Build ausführen
+- [x] **ACTION-007** — Ersten Emscripten-Build ausführen ✅ DONE (portal, 2026-07-10)
   - Vorbedingung: ACTION-002 + ACTION-005
   - Flags aus pipeline.yaml Stage 5 anwenden
   - Fehler in ./docs/build-errors-01.txt dokumentieren

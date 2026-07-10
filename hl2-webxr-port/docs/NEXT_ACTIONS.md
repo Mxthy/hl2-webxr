@@ -1,8 +1,8 @@
 # Next Actions
 ## HL2 WebGL2/WebXR Porting Manager
 
-Zuletzt aktualisiert: 2026-07-10 19:09 (Europe/Berlin)
-Status: BLK-001 geschlossen. Repo geklont. Build-Flags aus weliveinhell/build.sh korrigiert.
+Zuletzt aktualisiert: 2026-07-10 19:38 (Europe/Berlin)
+Status: ERSTER BUILD ERFOLGREICH — portal target. wasm VALID 4.18 MB. ACTION-007 ✅ DONE.
 
 ---
 
@@ -264,6 +264,15 @@ bash emscripten/build.sh release
 
 **Erfolgsmetrik:** hl2_launcher.wasm + hl2_launcher.js erzeugt, Browser lädt ohne sofortigen Crash
 
+✅ **ERLEDIGT 2026-07-10:**
+- waf configure: OK (26s)
+- waf install: OK (2317/2317 targets, 5m12s)
+- emcc link: OK (EXIT:0)
+- hl2_launcher.wasm: 4.18 MB, WASM magic b'\x00asm' VALID
+- hl2_launcher.js: 1.1 MB
+- hl2_launcher.html: 6.5 KB
+- 25 shared libraries in build/install/
+
 ---
 
 ### ACTION-008 — Bekannte Patches implementieren (BLK-002)
@@ -337,3 +346,39 @@ Nach jeder abgeschlossenen Action diese Dateien aktualisieren:
 | `decisions.md` | Nach ACTION-006 (DEC-001), ACTION-010 (DEC-002) |
 | `blockers.md` | ~~BLK-001~~ ✅ DONE, noch: BLK-003 nach ACTION-006 |
 | `manifest.json` | Nach erstem Build (ACTION-007): build-Sektion befüllen |
+
+---
+
+## NÄCHSTE PHASE nach erstem Build (Stand: 2026-07-10 19:38)
+
+### ACTION-009 — HL2-Assets beschaffen (ARC-01 downloaden)
+**Priorität:** HOCH
+**Status:** OFFEN
+Ohne Game-Assets kann kein Browserlauf stattfinden. 
+Benötigt: ARC-01 von archive.org (Half-Life-2-Retail-2153, ~4.8 GB)
+
+```bash
+cd /app/hl2-webxr-port/
+wget -c "https://archive.org/download/Half-Life-2-Retail-2153/Half-Life-2-Retail-2153.7z" \
+  -O assets/source/Half-Life-2-Retail-2153.7z
+```
+
+### ACTION-010 — Assets extrahieren und per-map .data Packs erzeugen
+**Priorität:** HOCH (nach ACTION-009)
+Nutze `emscripten/get_logs.sh` + `emscripten/repackage.js` aus portal-port.
+Pilot: `d1_trainstation_01` (HL2) oder `testchmb_a_00` (Portal).
+
+### ACTION-011 — Ersten Browser-Launch testen
+**Priorität:** HOCH (nach ACTION-010)
+Server mit COOP/COEP-Headern starten, .data Chunks laden, Browser-Konsole prüfen.
+
+```bash
+python3 -m http.server --bind 0.0.0.0 8080 &
+# oder: npx serve -p 8080 --cors
+```
+Server muss senden:
+- Cross-Origin-Opener-Policy: same-origin
+- Cross-Origin-Embedder-Policy: require-corp
+
+### BLK-003 — Build-2153 Asset-Kompatibilität
+**Status:** OFFEN — erst testbar nach ACTION-009+010+011

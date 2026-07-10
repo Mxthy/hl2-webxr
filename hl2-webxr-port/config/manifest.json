@@ -1,21 +1,21 @@
 {
   "_comment": "Build Manifest — HL2 WebGL2 Browser Port. Validiert gegen manifest.schema.json.",
-  "_status": "DRAFT — noch kein Build erfolgt. Werte sind Platzhalter oder INFERRED.",
+  "_status": "FIRST BUILD COMPLETE — portal target verified. HL2 target next.",
   "_schema": "./manifest.schema.json",
   "meta": {
     "version": "0.1.0",
     "generated": "2026-07-10T17:53:00+02:00",
     "project": "hl2-webgl2-port",
     "phase": "1",
-    "updated": "2026-07-10T19:09:00+02:00"
+    "updated": "2026-07-10T19:38:00+02:00"
   },
   "build": {
-    "engine_commit": "UNKNOWN — nillerusr/source-engine noch nicht geklont",
-    "emscripten_version": "UNKNOWN — noch nicht installiert",
-    "timestamp": "PENDING",
-    "wasm_file": "dist/hl2.wasm",
-    "js_file": "dist/hl2.js",
-    "wasm_size_bytes": null,
+    "engine_commit": "63f8364 (weliveinhell/source-engine, HEAD)",
+    "emscripten_version": "4.0.9 (emsdk cb2a69bce627bd2247624c71fc12907cb8785d2f)",
+    "timestamp": "2026-07-10T17:30:00+02:00",
+    "wasm_file": "engine/portal-port/build/install/hl2_launcher.wasm",
+    "js_file": "engine/portal-port/build/install/hl2_launcher.js",
+    "wasm_size_bytes": 4180061,
     "flags": [
       "-sFULL_ES3",
       "-sINITIAL_MEMORY=2047mb",
@@ -41,7 +41,9 @@
     "_flags_note": "CONFIRMED from weliveinhell/source-engine emscripten/build.sh (BLK-001 resolved 2026-07-10). Pthreads+SharedMemory approach — ASYNCIFY NOT used. Requires COOP/COEP server headers.",
     "emsdk_pinned_commit": "2d480a1b7c7a34a354188d93f3e89190a44a1d21",
     "build_script": "emscripten/build.sh",
-    "waf_flags": "--togles --emscripten --notests -4 --disable-warns --build-games=portal"
+    "waf_flags": "--togles --emscripten --notests -4 --disable-warns --build-games=portal",
+    "build_target": "portal (Proof-of-Concept — HL2 ist Ziel, Portal ist erster verifizierter Build)",
+    "build_status": "SUCCESS — first build completed 2026-07-10"
   },
   "assets": {
     "source": "PENDING — DEC-001 noch nicht entschieden (ACTION-006)",
