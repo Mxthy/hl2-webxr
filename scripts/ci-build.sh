@@ -177,6 +177,15 @@ EOF
     log "  patch: emscripten_stubs.cpp"
   fi
 
+  # Patch 6 (post): post.js — Portal-Mapname auf HL2 Retail anpassen
+  # Portal-Port nutzt 'background1', HL2-Retail hat 'background01.bsp'
+  POST_JS="$ENGINE_DIR/emscripten/post.js"
+  if [ -f "$POST_JS" ]; then
+    sed -i "s/'background1'/'background01'/g" "$POST_JS" 2>/dev/null || true
+    sed -i 's/loadMapWithDeps.*background1.*/loadMapWithDeps("background01").then(x => {/' "$POST_JS" 2>/dev/null || true
+    log "  patch: post.js map background1 → background01"
+  fi
+
   checkpoint_mark "source_patches"
 }
 
@@ -364,51 +373,58 @@ const path = require('path')
 
 const baseGamePath = process.env.ASSETS_ROOT || ''
 const outDir = './chunks'
-
-// Startup-Assets: resource, cfg, vgui-Texturen — alles für background01 / Hauptmenü
-const preloadGlobs = [
-  [baseGamePath + '/hl2/resource/**/*.*',           'hl2', 'GAME'],
-  [baseGamePath + '/hl2/cfg/**/*',                  'hl2', 'GAME'],
-  [baseGamePath + '/platform/resource/**/*.*',      'platform', 'PLATFORM'],
-]
-
 const chunks = []
+let fileCount = 0
+const MAX_SIZE = 200 * 1024 * 1024  // 200MB cap
 
-function addFile(src, prefix) {
-  try {
-    const blob = fs.readFileSync(src)
-    const dst = Buffer.from(prefix)
-    const hdr = Buffer.alloc(8)
-    hdr.writeUint32LE(dst.length, 0)
-    hdr.writeUint32LE(blob.length, 4)
-    chunks.push(hdr, dst, blob)
-  } catch {}
+function addFile(src, vpath) {
+  let blob
+  try { blob = fs.readFileSync(src) } catch { return }
+  if (chunks.reduce((a,b) => a + b.length, 0) > MAX_SIZE) return
+  const dst = Buffer.from(vpath)
+  const hdr = Buffer.alloc(8)
+  hdr.writeUint32LE(dst.length, 0)
+  hdr.writeUint32LE(blob.length, 4)
+  chunks.push(hdr, dst, blob)
+  fileCount++
 }
 
-// Alle resource + cfg Files einpacken
-const { globSync } = require('fs')
-for (const [pattern, dstRoot, pathId] of preloadGlobs) {
-  const matches = fs.readdirSync ? [] : []
-  // Vereinfacht: rekursiver walk
-  function walk(dir, rel) {
-    let entries
-    try { entries = fs.readdirSync(dir, {withFileTypes: true}) } catch { return }
-    for (const e of entries) {
-      const full = path.join(dir, e.name)
-      const relPath = rel ? rel + '/' + e.name : e.name
-      if (e.isDirectory()) { walk(full, relPath) }
-      else { addFile(full, '/' + dstRoot + '/' + relPath) }
-    }
+function walk(dir, vBase, srcBase) {
+  let entries
+  try { entries = fs.readdirSync(dir, {withFileTypes: true}) } catch { return }
+  for (const e of entries) {
+    const full = path.join(dir, e.name)
+    const rel  = path.join(srcBase, e.name)
+    if (e.isDirectory()) { walk(full, vBase, rel) }
+    else { addFile(full, vBase + '/' + rel) }
   }
-  // Pattern → base dir
-  const base = pattern.replace(/\/\*\*.*$/, '')
-  walk(base, '')
+}
+
+// Pack in priority order: cfg, resource, maps, materials, models, sounds
+const dirs = [
+  [baseGamePath + '/hl2/cfg',           '/hl2'],
+  [baseGamePath + '/hl2/resource',      '/hl2'],
+  [baseGamePath + '/platform/resource', '/platform'],
+  [baseGamePath + '/hl2/maps',          '/hl2'],
+  [baseGamePath + '/hl2/materials',     '/hl2'],
+  [baseGamePath + '/hl2/models',        '/hl2'],
+  [baseGamePath + '/hl2/sound',         '/hl2'],
+]
+
+for (const [srcDir, vBase] of dirs) {
+  if (fs.existsSync(srcDir)) {
+    console.log('Packing:', srcDir)
+    walk(srcDir, vBase, path.basename(srcDir))
+  } else {
+    console.log('SKIP (not found):', srcDir)
+  }
 }
 
 fs.mkdirSync(outDir, {recursive: true})
 const out = path.join(outDir, 'background01.data')
-fs.writeFileSync(out, Buffer.concat(chunks))
-console.log('CI startup chunk written:', out, '(' + Math.round(Buffer.concat(chunks).length/1024/1024) + ' MB)')
+const total = Buffer.concat(chunks)
+fs.writeFileSync(out, total)
+console.log('CI startup chunk written:', out, '(' + Math.round(total.length/1024/1024) + ' MB,', fileCount, 'files)')
 NODEJS
 
   if [ $? -eq 0 ]; then
