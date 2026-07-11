@@ -1,0 +1,14 @@
+# Build-Outputs
+assets/
+dist/
+logs/
+.build_checkpoint
+chunks/
+
+# Engine + Toolchain (zu groß für Repo)
+engine/
+tools/
+
+# Temp
+*.tar.*
+*.log
