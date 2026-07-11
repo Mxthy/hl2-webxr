@@ -155,16 +155,13 @@ apply_source_patches() {
     log "  patch: hk_base alloca.h"
   fi
 
-  # 5c: ivp_mindist_minimize EMSCRIPTEN guard
+  # 5c: ivp_mindist_minimize — alloca.h fix für Emscripten
+  # Das File inkludiert alloca.h nur für LINUX/SUN/MWERKS
+  # Emscripten braucht es auch (alloca() wird auf Zeile 644 genutzt)
   p="$ENGINE_DIR/ivp/ivp_collision/ivp_mindist_minimize.cxx"
-  if ! head -1 "$p" | grep -q "__EMSCRIPTEN__"; then
-    {
-      echo "#ifndef __EMSCRIPTEN__"
-      cat "$p"
-      echo ""
-      echo "#endif /* __EMSCRIPTEN__ */"
-    } > "${p}.tmp" && mv "${p}.tmp" "$p"
-    log "  patch: ivp_mindist_minimize guard"
+  if ! grep -q "__EMSCRIPTEN__" "$p"; then
+    sed -i 's/#if defined(LINUX) || defined(SUN) || (__MWERKS__ && __POWERPC__)/#if defined(LINUX) || defined(SUN) || (__MWERKS__ \&\& __POWERPC__) || defined(__EMSCRIPTEN__)/' "$p"
+    log "  patch: ivp_mindist_minimize alloca.h emscripten fix"
   fi
 
   # 5d: emscripten_stubs.cpp
