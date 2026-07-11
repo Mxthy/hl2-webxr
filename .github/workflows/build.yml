@@ -28,6 +28,8 @@ jobs:
       EMSDK_COMMIT: 2d480a1b7c7a34a354188d93f3e89190a44a1d21
       EMSDK_DIR: ${{ github.workspace }}/tools/emsdk
       ENGINE_DIR: ${{ github.workspace }}/engine/portal-port
+      # Archive.org public URL — Retail 2153 (~1.7 GB)
+      ASSETS_ARCHIVE_URL: "https://archive.org/download/Half-Life-2-Retail-2153/Half-Life%202.7z"
       ASSETS_ROOT: ${{ github.workspace }}/assets/game/Half-Life 2
       OUT_DIR: ${{ github.workspace }}/dist
       LOG_DIR: ${{ github.workspace }}/logs
@@ -65,23 +67,32 @@ jobs:
           restore-keys: |
             waf-build-${{ env.BUILDTYPE }}-${{ env.EMSDK_COMMIT }}-
 
-      - name: Restore HL2 assets
-        env:
-          ASSETS_URL: ${{ secrets.ASSETS_ARCHIVE_URL }}
+      - name: Cache HL2 assets (extracted)
+        id: cache-assets
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.ASSETS_ROOT }}
+          key: hl2-assets-retail-2153-v1
+
+      - name: Download & extract HL2 assets
+        if: steps.cache-assets.outputs.cache-hit != 'true'
         run: |
+          echo "Installing 7zip..."
+          sudo apt-get install -y p7zip-full
+
+          echo "Downloading HL2 Retail 2153 from Archive.org (~1.7 GB)..."
           mkdir -p "$ASSETS_ROOT"
-          if [ -n "${ASSETS_URL:-}" ]; then
-            echo "Downloading assets..."
-            curl -fL "$ASSETS_URL" -o /tmp/assets.tar.zst
-            if file /tmp/assets.tar.zst | grep -q "Zstandard"; then
-              tar --zstd -xf /tmp/assets.tar.zst -C "$(dirname "$ASSETS_ROOT")"
-            else
-              tar -xzf /tmp/assets.tar.zst -C "$(dirname "$ASSETS_ROOT")"
-            fi
-            echo "Assets: $(find "$ASSETS_ROOT" -type f | wc -l) files"
-          else
-            echo "::warning::ASSETS_ARCHIVE_URL not set — building without assets"
-          fi
+          curl -fL --retry 3 --retry-delay 5 \
+            "$ASSETS_ARCHIVE_URL" \
+            -o /tmp/hl2_assets.7z \
+            --progress-bar
+
+          echo "Extracting 7z archive..."
+          7z x /tmp/hl2_assets.7z -o"$(dirname "$ASSETS_ROOT")" -y
+          rm -f /tmp/hl2_assets.7z
+
+          echo "Assets extracted: $(find "$ASSETS_ROOT" -type f | wc -l) files"
+          ls -la "$ASSETS_ROOT/"
 
       - name: Run CI build
         run: |
@@ -100,7 +111,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Upload web outputs
-        if: success()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: hl2-webxr-web-${{ github.run_id }}
