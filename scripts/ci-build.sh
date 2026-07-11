@@ -293,6 +293,18 @@ emcc_link() {
     link_libs="$link_libs -l$libname"
   done
 
+  # Compile stubs (GetRam, futimes) — these are not part of waf build output
+  log "Compiling emscripten_stubs.cpp..."
+  local stubs_src="$ENGINE_DIR/emscripten/emscripten_stubs.cpp"
+  local stubs_obj="$ENGINE_DIR/build/emscripten_stubs.o"
+  if [ -f "$stubs_src" ]; then
+    emcc -O2 -fPIC -D__EMSCRIPTEN__ -c "$stubs_src" -o "$stubs_obj"
+    log "  stubs compiled: $stubs_obj"
+  else
+    stubs_obj=""
+    log "  stubs not found, skipping"
+  fi
+
   log "Running: emcc link → hl2_launcher.html ..."
   emcc \
     -sUSE_BZIP2=1 -sUSE_SDL=2 -sUSE_FREETYPE=1 -sUSE_LIBJPEG=1 \
@@ -308,8 +320,10 @@ emcc_link() {
     -sOFFSCREENCANVAS_SUPPORT=1 \
     --pre-js emscripten/pre.js \
     --post-js emscripten/post.js \
+    -sERROR_ON_UNDEFINED_SYMBOLS=0 \
     -L build/install/ \
     build/launcher_main/libhl2_launcher.a \
+    ${stubs_obj:+"$stubs_obj"} \
     $link_libs \
     -o build/launcher_main/hl2_launcher.html \
     2>&1 | tee "$LOG_DIR/emcc_link.log"
