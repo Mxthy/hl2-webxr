@@ -177,13 +177,33 @@ EOF
     log "  patch: emscripten_stubs.cpp"
   fi
 
-  # Patch 6 (post): post.js — Portal-Mapname auf HL2 Retail anpassen
-  # Portal-Port nutzt 'background1', HL2-Retail hat 'background01.bsp'
+  # Patch 6 (post): post.js — Multi-Chunk Loading für HL2 Retail
   POST_JS="$ENGINE_DIR/emscripten/post.js"
   if [ -f "$POST_JS" ]; then
-    sed -i "s/'background1'/'background01'/g" "$POST_JS" 2>/dev/null || true
-    sed -i 's/loadMapWithDeps.*background1.*/loadMapWithDeps("background01").then(x => {/' "$POST_JS" 2>/dev/null || true
-    log "  patch: post.js map background1 → background01"
+    # Schreibe neuen post.js Content der alle 3 Chunks lädt
+    cat > "$POST_JS" << 'POST_JS_EOF'
+;(() => {
+  if(typeof window === 'undefined') return;
+  window.addEventListener('beforeunload', function (event) { event.preventDefault() })
+  if (typeof canvasElement !== 'undefined') {
+    canvasElement.onkeypress = e => e.preventDefault()
+  }
+
+  // Alle Chunks parallel laden, dann Engine-Start freigeben
+  addRunDependency('load_game_data')
+  const chunks = ['background01', 'materials', 'models']
+  const promises = chunks.map(name =>
+    dataLoader.loadMapWithDeps(name)
+      .then(() => console.log('[hl2] chunk geladen:', name))
+      .catch(err => console.warn('[hl2] chunk fehlt (ignoriert):', name, err.message))
+  )
+  Promise.all(promises).then(() => {
+    console.log('[hl2] Alle Chunks geladen — Engine startet')
+    removeRunDependency('load_game_data')
+  })
+})();
+POST_JS_EOF
+    log "  patch: post.js Multi-Chunk (background01 + materials + models)"
   fi
 
   checkpoint_mark "source_patches"
@@ -373,60 +393,75 @@ const path = require('path')
 
 const baseGamePath = process.env.ASSETS_ROOT || ''
 const outDir = './chunks'
-const chunks = []
-let fileCount = 0
-const MAX_SIZE = 512 * 1024 * 1024  // 512MB cap (materials+models+maps)
+fs.mkdirSync(outDir, {recursive: true})
 
-function addFile(src, vpath) {
+function addFile(chunks, src, vpath) {
   let blob
-  try { blob = fs.readFileSync(src) } catch { return }
-  if (chunks.reduce((a,b) => a + b.length, 0) > MAX_SIZE) return
+  try { blob = fs.readFileSync(src) } catch { return 0 }
   const dst = Buffer.from(vpath)
   const hdr = Buffer.alloc(8)
   hdr.writeUint32LE(dst.length, 0)
   hdr.writeUint32LE(blob.length, 4)
   chunks.push(hdr, dst, blob)
-  fileCount++
+  return blob.length
 }
 
-function walk(dir, vBase, srcBase) {
+function walk(chunks, dir, vBase, srcRel) {
   let entries
-  try { entries = fs.readdirSync(dir, {withFileTypes: true}) } catch { return }
+  try { entries = fs.readdirSync(dir, {withFileTypes: true}) } catch { return 0 }
+  let total = 0
   for (const e of entries) {
     const full = path.join(dir, e.name)
-    const rel  = path.join(srcBase, e.name)
-    if (e.isDirectory()) { walk(full, vBase, rel) }
-    else { addFile(full, vBase + '/' + rel) }
+    const rel  = srcRel ? srcRel + '/' + e.name : e.name
+    if (e.isDirectory()) total += walk(chunks, full, vBase, rel)
+    else total += addFile(chunks, full, vBase + '/' + rel)
   }
+  return total
 }
 
-// Pack in priority order: cfg, resource, materials (Texturen!), models, maps, sounds
-const dirs = [
+function writeChunk(name, dirPairs) {
+  const chunks = []
+  let totalBytes = 0, fileCount = 0
+  for (const [srcDir, vBase] of dirPairs) {
+    if (fs.existsSync(srcDir)) {
+      const before = chunks.length
+      const bytes = walk(chunks, srcDir, vBase, path.basename(srcDir))
+      totalBytes += bytes
+      const added = (chunks.length - before) / 3  // hdr+dst+blob = 3 per file
+      fileCount += added
+      console.log(`  ${srcDir}: ${Math.round(bytes/1024/1024)}MB, ${added} files`)
+    } else {
+      console.log(`  SKIP (not found): ${srcDir}`)
+    }
+  }
+  const out = path.join(outDir, name)
+  const buf = Buffer.concat(chunks)
+  fs.writeFileSync(out, buf)
+  console.log(`-> ${name}: ${Math.round(buf.length/1024/1024)}MB, ${fileCount} files`)
+  return buf.length
+}
+
+console.log('=== Chunk 1: background01.data (Maps + Config) ===')
+writeChunk('background01.data', [
   [baseGamePath + '/hl2/cfg',           '/hl2'],
   [baseGamePath + '/hl2/resource',      '/hl2'],
   [baseGamePath + '/platform/resource', '/platform'],
-  [baseGamePath + '/hl2/materials',     '/hl2'],
-  [baseGamePath + '/hl2/models',        '/hl2'],
   [baseGamePath + '/hl2/maps',          '/hl2'],
+])
+
+console.log('\n=== Chunk 2: materials.data (Texturen) ===')
+writeChunk('materials.data', [
+  [baseGamePath + '/hl2/materials',     '/hl2'],
+])
+
+console.log('\n=== Chunk 3: models.data (Models + Sound) ===')
+writeChunk('models.data', [
+  [baseGamePath + '/hl2/models',        '/hl2'],
   [baseGamePath + '/hl2/sound',         '/hl2'],
-]
+])
 
-for (const [srcDir, vBase] of dirs) {
-  if (fs.existsSync(srcDir)) {
-    console.log('Packing:', srcDir)
-    walk(srcDir, vBase, path.basename(srcDir))
-  } else {
-    console.log('SKIP (not found):', srcDir)
-  }
-}
-
-fs.mkdirSync(outDir, {recursive: true})
-const out = path.join(outDir, 'background01.data')
-const total = Buffer.concat(chunks)
-fs.writeFileSync(out, total)
-console.log('CI startup chunk written:', out, '(' + Math.round(total.length/1024/1024) + ' MB,', fileCount, 'files)')
+console.log('\nAll chunks written!')
 NODEJS
-
   if [ $? -eq 0 ]; then
     log "  startup chunk OK: $(ls -lh $ENGINE_DIR/chunks/*.data 2>/dev/null | awk '{print $5, $9}')"
   else
