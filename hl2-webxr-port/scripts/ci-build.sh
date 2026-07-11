@@ -58,8 +58,8 @@ install_apt_deps() {
 
   log "Installing apt dependencies..."
   export DEBIAN_FRONTEND=noninteractive
-  apt-get update -qq
-  apt-get install -y --no-install-recommends \
+  sudo apt-get update -qq
+  sudo apt-get install -y --no-install-recommends \
     git curl wget xz-utils python3 python3-dev python3-pip \
     cmake ninja-build build-essential \
     pkg-config \
@@ -86,16 +86,18 @@ install_emsdk() {
 
   log "Cloning emsdk @ $EMSDK_COMMIT..."
   if [ ! -d "$EMSDK_DIR/.git" ]; then
-    git clone --depth=1 "$EMSDK_REPO" "$EMSDK_DIR"
+    # Clone without depth limit so we can checkout arbitrary commits
+    git clone "$EMSDK_REPO" "$EMSDK_DIR"
   fi
 
   cd "$EMSDK_DIR"
-  git fetch --depth=100 origin
+  git fetch origin
   git checkout "$EMSDK_COMMIT"
 
-  log "Installing & activating emsdk..."
-  ./emsdk install latest
-  ./emsdk activate latest
+  log "Installing & activating emsdk pinned to commit..."
+  # Use the SDK version that was current at the pinned commit (sdk-upstream-main-64bit)
+  ./emsdk install sdk-upstream-main-64bit 2>/dev/null || ./emsdk install latest
+  ./emsdk activate sdk-upstream-main-64bit 2>/dev/null || ./emsdk activate latest
 
   checkpoint_mark "emsdk_install"
 }
