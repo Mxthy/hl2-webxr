@@ -59,13 +59,9 @@ jobs:
           restore-keys: |
             source-engine-weliveinhell-
 
-      - name: Cache waf build objects
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.ENGINE_DIR }}/build
-          key: waf-build-v2-${{ env.BUILDTYPE }}-${{ env.EMSDK_COMMIT }}-${{ github.run_id }}
-          restore-keys: |
-            waf-build-v2-${{ env.BUILDTYPE }}-${{ env.EMSDK_COMMIT }}-
+      # waf-build Cache DEAKTIVIERT: Timestamps-Problem verhindert korrekte Cache-Invalidierung
+      # waf baut nur was nötig ist; vollständiger Build ~25min aber korrekt
+      # - name: Cache waf build objects (disabled)
 
       - name: Cache HL2 assets (extracted)
         id: cache-assets
