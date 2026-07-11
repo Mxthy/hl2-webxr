@@ -86,16 +86,18 @@ install_emsdk() {
 
   log "Cloning emsdk @ $EMSDK_COMMIT..."
   if [ ! -d "$EMSDK_DIR/.git" ]; then
-    git clone --depth=1 "$EMSDK_REPO" "$EMSDK_DIR"
+    # Clone without depth limit so we can checkout arbitrary commits
+    git clone "$EMSDK_REPO" "$EMSDK_DIR"
   fi
 
   cd "$EMSDK_DIR"
-  git fetch --depth=100 origin
+  git fetch origin
   git checkout "$EMSDK_COMMIT"
 
-  log "Installing & activating emsdk..."
-  ./emsdk install latest
-  ./emsdk activate latest
+  log "Installing & activating emsdk pinned to commit..."
+  # Use the SDK version that was current at the pinned commit (sdk-upstream-main-64bit)
+  ./emsdk install sdk-upstream-main-64bit 2>/dev/null || ./emsdk install latest
+  ./emsdk activate sdk-upstream-main-64bit 2>/dev/null || ./emsdk activate latest
 
   checkpoint_mark "emsdk_install"
 }
