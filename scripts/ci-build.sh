@@ -374,17 +374,17 @@ collect_outputs() {
   cp "$ENGINE_DIR/build/install/hl2_launcher.html" "$OUT_DIR/web/" 2>/dev/null || true
   cp "$ENGINE_DIR/build/install/hl2_launcher.js"   "$OUT_DIR/web/" 2>/dev/null || true
   cp "$ENGINE_DIR/build/install/hl2_launcher.wasm" "$OUT_DIR/web/" 2>/dev/null || true
-  cp "$ENGINE_DIR/build/install/"*.so               "$OUT_DIR/web/" 2>/dev/null || true
+  find "$ENGINE_DIR/build/install/" -name '*.so' -exec cp {} "$OUT_DIR/web/" \; 2>/dev/null || true
   cp -r "$ENGINE_DIR/build/install/assets"          "$OUT_DIR/web/" 2>/dev/null || true
 
-  # Data-Chunks
-  cp "$ENGINE_DIR/chunks/"*.data  "$OUT_DIR/chunks/" 2>/dev/null || true
+  # Data-Chunks (only if present)
+  find "$ENGINE_DIR/chunks/" -name '*.data' -exec cp {} "$OUT_DIR/chunks/" \; 2>/dev/null || true
 
   # Logs
-  cp "$LOG_DIR/"*.log              "$OUT_DIR/logs/"  2>/dev/null || true
+  find "$LOG_DIR/" -name '*.log' -exec cp {} "$OUT_DIR/logs/" \; 2>/dev/null || true
 
   log "Output summary:"
-  ls -lh "$OUT_DIR/web/"    2>/dev/null | grep -v "^total" | head -20
+  ls -lh "$OUT_DIR/web/" 2>/dev/null || true
   echo "---"
   ls -lh "$OUT_DIR/chunks/" 2>/dev/null | grep -v "^total" | head -10
 }
