@@ -375,7 +375,7 @@ const baseGamePath = process.env.ASSETS_ROOT || ''
 const outDir = './chunks'
 const chunks = []
 let fileCount = 0
-const MAX_SIZE = 200 * 1024 * 1024  // 200MB cap
+const MAX_SIZE = 512 * 1024 * 1024  // 512MB cap (materials+models+maps)
 
 function addFile(src, vpath) {
   let blob
@@ -400,14 +400,14 @@ function walk(dir, vBase, srcBase) {
   }
 }
 
-// Pack in priority order: cfg, resource, maps, materials, models, sounds
+// Pack in priority order: cfg, resource, materials (Texturen!), models, maps, sounds
 const dirs = [
   [baseGamePath + '/hl2/cfg',           '/hl2'],
   [baseGamePath + '/hl2/resource',      '/hl2'],
   [baseGamePath + '/platform/resource', '/platform'],
-  [baseGamePath + '/hl2/maps',          '/hl2'],
   [baseGamePath + '/hl2/materials',     '/hl2'],
   [baseGamePath + '/hl2/models',        '/hl2'],
+  [baseGamePath + '/hl2/maps',          '/hl2'],
   [baseGamePath + '/hl2/sound',         '/hl2'],
 ]
 
