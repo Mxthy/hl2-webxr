@@ -94,10 +94,11 @@ install_emsdk() {
   git fetch origin
   git checkout "$EMSDK_COMMIT"
 
-  log "Installing & activating emsdk pinned to commit..."
-  # Use the SDK version that was current at the pinned commit (sdk-upstream-main-64bit)
-  ./emsdk install sdk-upstream-main-64bit 2>/dev/null || ./emsdk install latest
-  ./emsdk activate sdk-upstream-main-64bit 2>/dev/null || ./emsdk activate latest
+  log "Installing & activating emsdk 3.1.72 (prebuilt binaries)..."
+  # Use a tagged release with prebuilt Clang binaries — avoids LLVM compile (~90 min)
+  # 3.1.72 is the release closest to the pinned emsdk commit (2025-05-29)
+  ./emsdk install 3.1.72
+  ./emsdk activate 3.1.72
 
   checkpoint_mark "emsdk_install"
 }
