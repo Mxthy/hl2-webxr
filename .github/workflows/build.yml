@@ -63,9 +63,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.ENGINE_DIR }}/build
-          key: waf-build-${{ env.BUILDTYPE }}-${{ env.EMSDK_COMMIT }}-${{ github.run_id }}
+          key: waf-build-v2-${{ env.BUILDTYPE }}-${{ env.EMSDK_COMMIT }}-${{ github.run_id }}
           restore-keys: |
-            waf-build-${{ env.BUILDTYPE }}-${{ env.EMSDK_COMMIT }}-
+            waf-build-v2-${{ env.BUILDTYPE }}-${{ env.EMSDK_COMMIT }}-
 
       - name: Cache HL2 assets (extracted)
         id: cache-assets
