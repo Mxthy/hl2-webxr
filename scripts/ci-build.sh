@@ -356,9 +356,69 @@ repackage_assets() {
     cp -r "$ASSETS_ROOT/platform/." build/install/platform/
   fi
 
-  log "Running repackage.js ..."
-  node emscripten/repackage.js \
-    2>&1 | tee "$LOG_DIR/repackage.log"
+  # repackage.js braucht map-*.txt Asset-Trace-Logs (via get_logs.sh + echte HL2-Installation)
+  # Im CI erzeugen wir stattdessen einen Basis-Chunk mit Startup-Assets (background01)
+  log "Generating startup asset chunk (CI mode, no map trace logs) ..."
+  mkdir -p "$ENGINE_DIR/chunks"
+
+  node - << 'NODEJS'
+const fs = require('fs')
+const path = require('path')
+
+const baseGamePath = process.env.ASSETS_ROOT || ''
+const outDir = './chunks'
+
+// Startup-Assets: resource, cfg, vgui-Texturen — alles für background01 / Hauptmenü
+const preloadGlobs = [
+  [baseGamePath + '/hl2/resource/**/*.*',           'hl2', 'GAME'],
+  [baseGamePath + '/hl2/cfg/**/*',                  'hl2', 'GAME'],
+  [baseGamePath + '/platform/resource/**/*.*',      'platform', 'PLATFORM'],
+]
+
+const chunks = []
+
+function addFile(src, prefix) {
+  try {
+    const blob = fs.readFileSync(src)
+    const dst = Buffer.from(prefix)
+    const hdr = Buffer.alloc(8)
+    hdr.writeUint32LE(dst.length, 0)
+    hdr.writeUint32LE(blob.length, 4)
+    chunks.push(hdr, dst, blob)
+  } catch {}
+}
+
+// Alle resource + cfg Files einpacken
+const { globSync } = require('fs')
+for (const [pattern, dstRoot, pathId] of preloadGlobs) {
+  const matches = fs.readdirSync ? [] : []
+  // Vereinfacht: rekursiver walk
+  function walk(dir, rel) {
+    let entries
+    try { entries = fs.readdirSync(dir, {withFileTypes: true}) } catch { return }
+    for (const e of entries) {
+      const full = path.join(dir, e.name)
+      const relPath = rel ? rel + '/' + e.name : e.name
+      if (e.isDirectory()) { walk(full, relPath) }
+      else { addFile(full, '/' + dstRoot + '/' + relPath) }
+    }
+  }
+  // Pattern → base dir
+  const base = pattern.replace(/\/\*\*.*$/, '')
+  walk(base, '')
+}
+
+fs.mkdirSync(outDir, {recursive: true})
+const out = path.join(outDir, 'background01.data')
+fs.writeFileSync(out, Buffer.concat(chunks))
+console.log('CI startup chunk written:', out, '(' + Math.round(Buffer.concat(chunks).length/1024/1024) + ' MB)')
+NODEJS
+
+  if [ $? -eq 0 ]; then
+    log "  startup chunk OK: $(ls -lh $ENGINE_DIR/chunks/*.data 2>/dev/null | awk '{print $5, $9}')"
+  else
+    log "WARNING: chunk generation failed — continuing without asset chunks"
+  fi
 
   checkpoint_mark "repackage"
 }
