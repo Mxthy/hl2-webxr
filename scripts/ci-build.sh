@@ -58,8 +58,8 @@ install_apt_deps() {
 
   log "Installing apt dependencies..."
   export DEBIAN_FRONTEND=noninteractive
-  apt-get update -qq
-  apt-get install -y --no-install-recommends \
+  sudo apt-get update -qq
+  sudo apt-get install -y --no-install-recommends \
     git curl wget xz-utils python3 python3-dev python3-pip \
     cmake ninja-build build-essential \
     pkg-config \
