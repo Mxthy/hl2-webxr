@@ -50,18 +50,32 @@ jobs:
           path: ${{ env.EMSDK_DIR }}
           key: emsdk-${{ env.EMSDK_COMMIT }}-v1
 
-      - name: Cache source-engine clone
+      - name: Cache source-engine clone (ohne build/)
         id: cache-engine
         uses: actions/cache@v4
         with:
           path: ${{ env.ENGINE_DIR }}
-          key: source-engine-weliveinhell-${{ hashFiles('.github/workflows/build.yml') }}-v2
+          # v3: build/ wird nach Restore explizit geleert — verhindert stale-.o Timestamp-Bug
+          key: source-engine-weliveinhell-${{ hashFiles('.github/workflows/build.yml') }}-v3
           restore-keys: |
             source-engine-weliveinhell-
 
-      # waf-build Cache DEAKTIVIERT: Timestamps-Problem verhindert korrekte Cache-Invalidierung
-      # waf baut nur was nötig ist; vollständiger Build ~25min aber korrekt
-      # - name: Cache waf build objects (disabled)
+      - name: Clear stale waf build objects (force full recompile)
+        run: |
+          # build/ aus altem Cache-Restore entfernen — waf muss frisch kompilieren.
+          # Ohne diesen Schritt werden gecachte .o Files wiederverwendet,
+          # selbst wenn gepatchte Quellen neuer sind (Timestamp-Kollision).
+          BUILD_DIR="${{ env.ENGINE_DIR }}/build"
+          if [ -d "$BUILD_DIR" ]; then
+            echo "Removing stale build/ dir ($BUILD_DIR) ..."
+            find "$BUILD_DIR" -mindepth 1 -delete 2>/dev/null || true
+            echo "build/ cleared."
+          else
+            echo "build/ not present — nothing to clear."
+          fi
+
+      # waf-build Cache DEAKTIVIERT (dauerhaft): stale-.o Timestamp-Bug
+      # Vollständiger Compile dauert ~25 min aber ist korrekt und reproduzierbar.
 
       - name: Cache HL2 assets (extracted)
         id: cache-assets
