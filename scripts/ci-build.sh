@@ -342,6 +342,13 @@ repackage_assets() {
   cd "$ENGINE_DIR"
 
   log "Copying assets from: $ASSETS_ROOT"
+  if [ ! -d "$ASSETS_ROOT/hl2" ]; then
+    log "WARNING: ASSETS_ROOT/hl2 not found — skipping asset copy and repackage."
+    log "  Set ASSETS_ARCHIVE_URL secret to enable full asset packaging."
+    checkpoint_mark "repackage"
+    return
+  fi
+
   mkdir -p build/install/hl2
   cp -r "$ASSETS_ROOT/hl2/." build/install/hl2/
   if [ -d "$ASSETS_ROOT/platform" ]; then
