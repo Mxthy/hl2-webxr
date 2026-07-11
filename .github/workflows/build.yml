@@ -1,4 +1,4 @@
-name: HL2 WebXR – WASM Build
+name: HL2 WebXR WASM Build
 
 on:
   push:
@@ -9,47 +9,38 @@ on:
   workflow_dispatch:
     inputs:
       buildtype:
-        description: 'Build type (release / debug)'
+        description: 'Build type: release or debug'
         required: false
         default: 'release'
 
-# Verhindert parallele Runs auf demselben Branch
 concurrency:
   group: hl2-wasm-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   build:
-    name: WASM Build (${{ github.event.inputs.buildtype || 'release' }})
-    runs-on: ubuntu-22.04          # Debian-nah, x86_64, 14 GB RAM, 6h Limit
+    name: WASM Build
+    runs-on: ubuntu-latest
 
     env:
       BUILDTYPE: ${{ github.event.inputs.buildtype || 'release' }}
-      # Pfade (relativ zum geklonten Repo)
       ENGINE_REPO: https://github.com/weliveinhell/source-engine
       EMSDK_COMMIT: 2d480a1b7c7a34a354188d93f3e89190a44a1d21
-      EMSDK_DIR:    ${{ github.workspace }}/tools/emsdk
-      ENGINE_DIR:   ${{ github.workspace }}/engine/portal-port
-      ASSETS_ROOT:  ${{ github.workspace }}/assets/game/Half-Life 2
-      OUT_DIR:      ${{ github.workspace }}/dist
-      LOG_DIR:      ${{ github.workspace }}/logs
+      EMSDK_DIR: ${{ github.workspace }}/tools/emsdk
+      ENGINE_DIR: ${{ github.workspace }}/engine/portal-port
+      ASSETS_ROOT: ${{ github.workspace }}/assets/game/Half-Life 2
+      OUT_DIR: ${{ github.workspace }}/dist
+      LOG_DIR: ${{ github.workspace }}/logs
       JOBS: 4
 
     steps:
-      # ------------------------------------------------------------------
-      # 0. Checkout dieses Repos
-      # ------------------------------------------------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          # Nur die Skripte und Configs — Assets kommen separat (Secret/Cache)
           sparse-checkout: |
             scripts/
             .github/
 
-      # ------------------------------------------------------------------
-      # 1. Cache: emsdk (spart ~5 min bei Folge-Runs)
-      # ------------------------------------------------------------------
       - name: Cache emsdk
         id: cache-emsdk
         uses: actions/cache@v4
@@ -57,10 +48,6 @@ jobs:
           path: ${{ env.EMSDK_DIR }}
           key: emsdk-${{ env.EMSDK_COMMIT }}-v1
 
-      # ------------------------------------------------------------------
-      # 2. Cache: source-engine repo (spart ~2 min Clone)
-      #    Key basiert auf Datum → täglich frisch; ggf. anpassen
-      # ------------------------------------------------------------------
       - name: Cache source-engine clone
         id: cache-engine
         uses: actions/cache@v4
@@ -70,9 +57,6 @@ jobs:
           restore-keys: |
             source-engine-weliveinhell-
 
-      # ------------------------------------------------------------------
-      # 3. Cache: waf build objects (spart ~10 min Recompile)
-      # ------------------------------------------------------------------
       - name: Cache waf build objects
         uses: actions/cache@v4
         with:
@@ -81,46 +65,30 @@ jobs:
           restore-keys: |
             waf-build-${{ env.BUILDTYPE }}-${{ env.EMSDK_COMMIT }}-
 
-      # ------------------------------------------------------------------
-      # 4. Assets bereitstellen
-      #    Strategie: Assets als GitHub Release Asset oder über Secret-URL.
-      #    Standardmäßig: HL2 Assets via Workflow-Secret ASSETS_ARCHIVE_URL
-      #    (direkter Download-Link zur gepackten assets.tar.zst)
-      #    Falls nicht gesetzt: leeres assets/-Dir anlegen (Build läuft,
-      #    Repackaging schlägt fehl — Outputs trotzdem als Artifact)
-      # ------------------------------------------------------------------
       - name: Restore HL2 assets
         env:
           ASSETS_URL: ${{ secrets.ASSETS_ARCHIVE_URL }}
         run: |
           mkdir -p "$ASSETS_ROOT"
           if [ -n "${ASSETS_URL:-}" ]; then
-            echo "Downloading assets from secret URL..."
+            echo "Downloading assets..."
             curl -fL "$ASSETS_URL" -o /tmp/assets.tar.zst
-            # zstd oder gzip, je nach Archiv
             if file /tmp/assets.tar.zst | grep -q "Zstandard"; then
               tar --zstd -xf /tmp/assets.tar.zst -C "$(dirname "$ASSETS_ROOT")"
             else
               tar -xzf /tmp/assets.tar.zst -C "$(dirname "$ASSETS_ROOT")"
             fi
-            echo "Assets restored: $(find "$ASSETS_ROOT" -type f | wc -l) files"
+            echo "Assets: $(find "$ASSETS_ROOT" -type f | wc -l) files"
           else
-            echo "::warning::ASSETS_ARCHIVE_URL secret not set — skipping asset copy"
-            echo "Build will complete without data chunks."
+            echo "::warning::ASSETS_ARCHIVE_URL not set — building without assets"
           fi
 
-      # ------------------------------------------------------------------
-      # 5. Build (ci-build.sh)
-      # ------------------------------------------------------------------
       - name: Run CI build
         run: |
           chmod +x scripts/ci-build.sh
           bash scripts/ci-build.sh
-        timeout-minutes: 90        # 90 min Timeout (waf ~16 min, emcc ~5 min)
+        timeout-minutes: 90
 
-      # ------------------------------------------------------------------
-      # 6. Build-Logs immer hochladen (auch bei Fehler)
-      # ------------------------------------------------------------------
       - name: Upload build logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -128,13 +96,9 @@ jobs:
           name: build-logs-${{ github.run_id }}
           path: |
             ${{ env.LOG_DIR }}/*.log
-            ${{ env.ENGINE_DIR }}/build/install_hl2/*.map
           retention-days: 14
           if-no-files-found: warn
 
-      # ------------------------------------------------------------------
-      # 7. Web-Outputs (html/js/wasm + .so Side-Module)
-      # ------------------------------------------------------------------
       - name: Upload web outputs
         if: success()
         uses: actions/upload-artifact@v4
@@ -147,11 +111,9 @@ jobs:
             ${{ env.OUT_DIR }}/web/*.so
             ${{ env.OUT_DIR }}/web/assets/
           retention-days: 30
-          compression-level: 0      # wasm ist bereits komprimiert
+          compression-level: 0
+          if-no-files-found: warn
 
-      # ------------------------------------------------------------------
-      # 8. Data-Chunks (gepackte Asset-Blöcke pro Map)
-      # ------------------------------------------------------------------
       - name: Upload data chunks
         if: success()
         uses: actions/upload-artifact@v4
@@ -162,23 +124,18 @@ jobs:
           compression-level: 0
           if-no-files-found: warn
 
-      # ------------------------------------------------------------------
-      # 9. Build-Zusammenfassung im GitHub-UI (Job Summary)
-      # ------------------------------------------------------------------
       - name: Write job summary
         if: always()
         run: |
           echo "## HL2 WebXR Build Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Variable | Wert |" >> $GITHUB_STEP_SUMMARY
+          echo "| Key | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|---|---|" >> $GITHUB_STEP_SUMMARY
           echo "| Build Type | \`$BUILDTYPE\` |" >> $GITHUB_STEP_SUMMARY
           echo "| emsdk commit | \`$EMSDK_COMMIT\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Run ID | \`${{ github.run_id }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "### Output-Dateien" >> $GITHUB_STEP_SUMMARY
+          echo "### Output files" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          ls -lh "$OUT_DIR/web/" 2>/dev/null || echo "(keine Web-Outputs)"
-          ls -lh "$OUT_DIR/chunks/" 2>/dev/null || echo "(keine Chunks)"
+          ls -lh "$OUT_DIR/web/" 2>/dev/null || echo "(no web outputs)"
+          ls -lh "$OUT_DIR/chunks/" 2>/dev/null || echo "(no chunks)"
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
