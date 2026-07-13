@@ -1,0 +1,69 @@
+project: hl2-webxr
+
+toolchain:
+  emscripten:
+    version: "3.1.72"
+    commit: "2d480a1b7c7a34a354188d93f3e89190a44a1d21"
+    install_mode: prebuilt
+  node:
+    version: ">=18.0.0"
+  python:
+    version: ">=3.10"
+  waf:
+    source: engine/portal-port/waf
+    version: embedded
+  clang:
+    provided_by: emsdk
+
+build_flags:
+  cpp_standard: c++14
+  emcc_link:
+    - "-sERROR_ON_UNDEFINED_SYMBOLS=0"
+    - "-sPTHREADS=1"
+    - "-sINITIAL_MEMORY=2147418112"
+    - "-sUSE_SDL=2"
+    - "-sEXPORTED_RUNTIME_METHODS=[addRunDependency,removeRunDependency]"
+    - "-sMAIN_MODULE=1"
+    - "--no-entry"
+  waf_args:
+    - "--togles"
+    - "--emscripten"
+    - "--prefix=build/install"
+
+chunks:
+  max_size_mb: 512
+  files:
+    background01:
+      sources: ["hl2/cfg", "hl2/resource", "platform/resource", "hl2/maps"]
+      expected_size_mb: 25
+      required_extensions: ["bsp", "cfg", "res", "txt"]
+    materials:
+      sources: ["hl2/materials"]
+      expected_size_mb: 498
+      required_extensions: ["vtf", "vmt"]
+    models:
+      sources: ["hl2/models", "hl2/sound"]
+      required_extensions: ["mdl", "vvd", "wav", "mp3"]
+
+server:
+  required_headers:
+    Cross-Origin-Opener-Policy: same-origin
+    Cross-Origin-Embedder-Policy: require-corp
+  port: 8080
+  reason: SharedArrayBuffer requires COOP/COEP
+
+secrets:
+  ASSETS_ARCHIVE_URL:
+    description: "Archive.org URL für HL2 Retail 2153 Assets"
+    required: true
+    format: "https://archive.org/..."
+  GITHUB_TOKEN:
+    description: "GitHub Actions built-in token"
+    required: true
+    format: automatic
+
+assets:
+  source: "HL2 Retail Build 2153"
+  url: "https://archive.org/details/Half-Life-2-Retail-2153"
+  format: extracted_directory
+  gcf_extraction: not_required
