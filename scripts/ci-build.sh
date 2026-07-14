@@ -189,29 +189,22 @@ EOF
     canvasElement.onkeypress = e => e.preventDefault()
   }
 
-  // Chunk-Loading:
-  // background01 ist eine Map → loadMapWithDeps (inkl. Dependency-Chain)
-  // materials + models sind keine Maps → loadMap() direkt (lädt chunks/{name}.data)
-  function loadChunkDirect(name) {
-    return dataLoader.loadMap(name)
-      .then(() => console.log('[hl2] chunk direkt geladen:', name))
-      .catch(err => console.warn('[hl2] chunk fehlt / skip:', name, err.message))
-  }
-
+  // Nur background1 beim Start laden (803 MB).
+  // 'background01' ist FALSCH — DataLoader.mapsOrdered enthält 'background1' (ohne 0).
+  // materials + models (~2.3 GB) werden lazy via Module.downloadMap geladen.
   addRunDependency('load_game_data')
-  Promise.all([
-    dataLoader.loadMapWithDeps('background01')
-      .then(() => console.log('[hl2] background01 OK'))
-      .catch(err => console.warn('[hl2] background01 Fehler (ignoriert):', err.message)),
-    loadChunkDirect('materials'),
-    loadChunkDirect('models'),
-  ]).then(() => {
-    console.log('[hl2] Alle Chunks fertig — Engine startet')
-    removeRunDependency('load_game_data')
-  })
+  dataLoader.loadMapWithDeps('background1')
+    .then(() => {
+      console.log('[hl2] background1 OK — Engine startet')
+      removeRunDependency('load_game_data')
+    })
+    .catch(err => {
+      console.warn('[hl2] background1 Fehler (ignoriert, Engine startet trotzdem):', err.message)
+      removeRunDependency('load_game_data')
+    })
 })();
 POST_JS_EOF
-    log "  patch: post.js Multi-Chunk (background01 + materials + models)"
+    log "  patch: post.js background1 lazy-load (materials/models via downloadMap)"
   fi
 
   checkpoint_mark "source_patches"
@@ -392,7 +385,9 @@ emcc_link() {
     -sUSE_BZIP2=1 -sUSE_SDL=2 -sUSE_FREETYPE=1 -sUSE_LIBJPEG=1 \
     -sUSE_LIBPNG -sMALLOC=mimalloc \
     -sMAIN_MODULE \
-    -sINITIAL_MEMORY=2047mb \
+    -sINITIAL_MEMORY=1024mb \
+    -sALLOW_MEMORY_GROWTH=1 \
+    -sMAXIMUM_MEMORY=4gb \
     -sSHARED_MEMORY=1 -sUSE_PTHREADS -sPTHREAD_POOL_SIZE=8 \
     -sPTHREAD_POOL_SIZE_STRICT=2 \
     -sFULL_ES3 -sSTACK_SIZE=4mb \
@@ -440,7 +435,7 @@ repackage_assets() {
   fi
 
   # repackage.js braucht map-*.txt Asset-Trace-Logs (via get_logs.sh + echte HL2-Installation)
-  # Im CI erzeugen wir stattdessen einen Basis-Chunk mit Startup-Assets (background01)
+  # Im CI erzeugen wir stattdessen einen Basis-Chunk mit Startup-Assets (background1)
   log "Generating startup asset chunk (CI mode, no map trace logs) ..."
   mkdir -p "$ENGINE_DIR/chunks"
 
@@ -498,8 +493,8 @@ function writeChunk(name, dirPairs) {
   return buf.length
 }
 
-console.log('=== Chunk 1: background01.data (Maps + Config) ===')
-writeChunk('background01.data', [
+console.log('=== Chunk 1: background1.data (Maps + Config) ===')
+writeChunk('background1.data', [
   [baseGamePath + '/hl2/cfg',           '/hl2'],
   [baseGamePath + '/hl2/resource',      '/hl2'],
   [baseGamePath + '/platform/resource', '/platform'],
