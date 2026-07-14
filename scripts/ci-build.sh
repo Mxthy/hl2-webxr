@@ -189,8 +189,8 @@ extern "C" {
 // vtable + typeinfo: provided by defining the class with virtual methods
 struct __attribute__((visibility("default"))) IVP_Mindist_Stub {
     virtual ~IVP_Mindist_Stub() {}
-    virtual void recalc_mindist() {}
-    virtual void recalc_invalid_mindist() {}
+    virtual int recalc_mindist() { return 0; }
+    virtual int recalc_invalid_mindist() { return 0; }
 };
 
 // Force-instantiate so the vtable symbol is emitted into main.wasm
@@ -205,20 +205,18 @@ void _ZN27IVP_Mindist_Minimize_Solver23init_mms_function_tableEv(void* self) {
     (void)self;
 }
 
-// IVP_Mindist::recalc_mindist weak stub
+// IVP_Mindist::recalc_mindist weak stub — (i32)->i32 matches libvphysics.so type[2]
 __attribute__((weak))
-void _ZN11IVP_Mindist14recalc_mindistEv(void* self) {
+int _ZN11IVP_Mindist14recalc_mindistEv(void* self) {
     (void)self;
-    fprintf(stderr, "[stub] IVP_Mindist::recalc_mindist called\n");
-    abort();
+    return 0;
 }
 
-// IVP_Mindist::recalc_invalid_mindist weak stub
+// IVP_Mindist::recalc_invalid_mindist weak stub — (i32)->i32 matches libvphysics.so type[2]
 __attribute__((weak))
-void _ZN11IVP_Mindist22recalc_invalid_mindistEv(void* self) {
+int _ZN11IVP_Mindist22recalc_invalid_mindistEv(void* self) {
     (void)self;
-    fprintf(stderr, "[stub] IVP_Mindist::recalc_invalid_mindist called\n");
-    abort();
+    return 0;
 }
 
 } // extern "C"
@@ -464,7 +462,7 @@ emcc_link() {
     -sMAXIMUM_MEMORY=4gb \
     -sSHARED_MEMORY=1 -sUSE_PTHREADS -sPTHREAD_POOL_SIZE=8 \
     -sPTHREAD_POOL_SIZE_STRICT=2 \
-    -sFULL_ES3 -sSTACK_SIZE=4mb \
+    -sFULL_ES3 -sSTACK_SIZE=64mb \
     --shell-file=emscripten/shell.html \
     -sPROXY_TO_PTHREAD \
     -sOFFSCREENCANVASES_TO_PTHREAD="#canvas" \
