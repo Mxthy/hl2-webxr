@@ -1,1 +1,6 @@
 .agents/.env
+
+# Large runtime assets
+hl2-test/chunks/
+hl2-test/*.so
+hl2-test/*.wasm
