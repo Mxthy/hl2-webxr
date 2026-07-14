@@ -169,16 +169,48 @@ apply_source_patches() {
 
   # 5d: emscripten_stubs.cpp
   p="$ENGINE_DIR/emscripten/emscripten_stubs.cpp"
-  if [ ! -f "$p" ]; then
-    cat > "$p" << 'EOF'
+  # Always overwrite to ensure correct IVP stubs with int-return signatures
+  cat > "$p" << 'STUBS_EOF'
 #ifdef __EMSCRIPTEN__
-unsigned long GetRam() { return 2047UL; }
+#include <stdlib.h>
+#include <stdio.h>
 #include <sys/time.h>
+
+unsigned long GetRam() { return 2047UL; }
 int futimes(int fd, const struct timeval tv[2]) { return 0; }
-#endif
-EOF
-    log "  patch: emscripten_stubs.cpp"
-  fi
+
+extern "C" {
+
+// IVP_Mindist_Minimize_Solver::init_mms_function_table: () -> void
+__attribute__((weak))
+void _ZN27IVP_Mindist_Minimize_Solver23init_mms_function_tableEv(void* self) {
+    (void)self;
+}
+
+// IVP_Mindist::recalc_mindist: (i32) -> i32  matches libvphysics.so type[2]
+__attribute__((weak))
+int _ZN11IVP_Mindist14recalc_mindistEv(void* self) {
+    (void)self;
+    return 0;
+}
+
+// IVP_Mindist::recalc_invalid_mindist: (i32) -> i32  matches libvphysics.so type[2]
+__attribute__((weak))
+int _ZN11IVP_Mindist22recalc_invalid_mindistEv(void* self) {
+    (void)self;
+    return 0;
+}
+
+} // extern "C"
+
+#endif // __EMSCRIPTEN__
+STUBS_EOF
+  log "  patch: emscripten_stubs.cpp (IVP int-return stubs)"
+
+  # Compile stubs into an object file for linking
+  STUBS_OBJ_PATH="$ENGINE_DIR/build/emscripten_stubs.o"
+  mkdir -p "$ENGINE_DIR/build"
+  em++ -std=c++14 -O2 -fPIC -c "$p" -o "$STUBS_OBJ_PATH"     2>>"$LOG_DIR/patches.log"     && log "  emscripten_stubs.o compiled OK"     || log "  WARNING: emscripten_stubs.cpp compile failed"
 
   # 5e: post.js Override — nur background1 beim Start, kein materials/models
   p="$ENGINE_DIR/emscripten/post.js"
@@ -320,6 +352,7 @@ emcc_link() {
     --post-js emscripten/post.js \
     -L build/install/ \
     build/launcher_main/libhl2_launcher.a \
+    ${STUBS_OBJ_PATH:-} \
     $link_libs \
     -o build/launcher_main/hl2_launcher.html \
     2>&1 | tee "$LOG_DIR/emcc_link.log"
