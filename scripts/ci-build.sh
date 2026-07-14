@@ -166,16 +166,67 @@ apply_source_patches() {
 
   # 5d: emscripten_stubs.cpp
   p="$ENGINE_DIR/emscripten/emscripten_stubs.cpp"
-  if [ ! -f "$p" ]; then
-    cat > "$p" << 'EOF'
+  # Always overwrite — ensure all required symbols are present
+  cat > "$p" << 'EOF'
 #ifdef __EMSCRIPTEN__
-unsigned long GetRam() { return 2047UL; }
+#include <stdlib.h>
+#include <stdio.h>
 #include <sys/time.h>
+
+unsigned long GetRam() { return 4096UL; }
 int futimes(int fd, const struct timeval tv[2]) { return 0; }
-#endif
+
+// -----------------------------------------------------------------------
+// IVP_Mindist vtable stubs
+// -----------------------------------------------------------------------
+// Emscripten MAIN_MODULE must provide these symbols so that SIDE_MODULEs
+// (libvphysics.so) can resolve them via GOT at dlopen time.
+// We declare them as C-linkage weak stubs so they don't conflict with
+// the real definitions inside libvphysics.so's private TU.
+// -----------------------------------------------------------------------
+extern "C" {
+
+// vtable + typeinfo: provided by defining the class with virtual methods
+struct __attribute__((visibility("default"))) IVP_Mindist_Stub {
+    virtual ~IVP_Mindist_Stub() {}
+    virtual void recalc_mindist() {}
+    virtual void recalc_invalid_mindist() {}
+};
+
+// Force-instantiate so the vtable symbol is emitted into main.wasm
+static IVP_Mindist_Stub* __ivp_mindist_vtable_anchor = nullptr;
+__attribute__((constructor)) static void __ivp_mindist_init() {
+    (void)__ivp_mindist_vtable_anchor;
+}
+
+// init_mms_function_table weak stub
+__attribute__((weak))
+void _ZN27IVP_Mindist_Minimize_Solver23init_mms_function_tableEv(void* self) {
+    (void)self;
+}
+
+// IVP_Mindist::recalc_mindist weak stub
+__attribute__((weak))
+void _ZN11IVP_Mindist14recalc_mindistEv(void* self) {
+    (void)self;
+    fprintf(stderr, "[stub] IVP_Mindist::recalc_mindist called\n");
+    abort();
+}
+
+// IVP_Mindist::recalc_invalid_mindist weak stub
+__attribute__((weak))
+void _ZN11IVP_Mindist22recalc_invalid_mindistEv(void* self) {
+    (void)self;
+    fprintf(stderr, "[stub] IVP_Mindist::recalc_invalid_mindist called\n");
+    abort();
+}
+
+} // extern "C"
+
+#endif // __EMSCRIPTEN__
 EOF
-    log "  patch: emscripten_stubs.cpp"
-  fi
+  log "  patch: emscripten_stubs.cpp (with IVP_Mindist weak stubs)"
+  
 
   # Patch 6 (post): post.js — Multi-Chunk Loading für HL2 Retail
   POST_JS="$ENGINE_DIR/emscripten/post.js"
@@ -315,29 +366,52 @@ compile_ivp_vtable_stub() {
   emsdk_env
   cd "$ENGINE_DIR"
 
-  local src="ivp/ivp_collision/ivp_mindist_minimize.cxx"
-  if [ ! -f "$src" ]; then
-    log "WARNING: $src nicht gefunden — ivp_vtable_stub übersprungen"
+  local main_src="ivp/ivp_collision/ivp_mindist.cxx"
+  if [ ! -f "$main_src" ]; then
+    log "WARNING: $main_src nicht gefunden — ivp_vtable_stub übersprungen"
     checkpoint_mark "ivp_vtable_stub"
     return
   fi
+  log "Compiling IVP_Mindist files für main.wasm vtable..."
 
-  log "Compiling ivp_mindist_minimize.cxx für main.wasm vtable..."
+  # Kompiliere ALLE ivp_mindist*.cxx files in main.wasm
+  # ivp_mindist.cxx enthält IVP_Mindist::recalc_mindist + recalc_invalid_mindist
+  # ohne diese Methoden gibt es KEINE vtable in main.wasm
   mkdir -p build/ivp_vtable_stub
 
   # Include-Pfade identisch zu waf-Build für ivp-Targets
   IVP_INCS="-Iivp/ivp_physics -Iivp/ivp_collision -Iivp/ivp_utility -Iivp/ivp_intern -Iivp/ivp_surface_manager -Iivp/ivp_controller -Iivp/havana/havok -Iivp/havana"
   COMMON_INCS="-Ipublic -Ipublic/tier0 -Ipublic/tier1 -Itier1 -Icommon"
+  IVP_FLAGS="-std=c++14 -O2 -D__EMSCRIPTEN__ -DPOSIX -DLINUX -D_LINUX -DTOGLES -DUSE_SDL -fPIC"
 
-  em++     -std=c++14 -O2     -D__EMSCRIPTEN__ -DPOSIX -DLINUX -D_LINUX     -DTOGLES -DUSE_SDL -fPIC     $IVP_INCS $COMMON_INCS     -c "$src"     -o build/ivp_vtable_stub/ivp_mindist_vtable.o     2>&1 | tee "$LOG_DIR/ivp_vtable_stub.log" || {
-      log "WARNING: ivp_vtable_stub compile fehlgeschlagen — vtable wird fehlen"
-      log "  Details: $LOG_DIR/ivp_vtable_stub.log"
-      # Nicht fatal — mit -sERROR_ON_UNDEFINED_SYMBOLS=0 läuft Build trotzdem
-      checkpoint_mark "ivp_vtable_stub"
-      return
+  ivp_objs=""
+  # Kompiliere alle IVP_Mindist-relevanten Dateien
+  for src_file in     ivp/ivp_collision/ivp_mindist.cxx     ivp/ivp_collision/ivp_mindist_minimize.cxx     ivp/ivp_collision/ivp_mindist_recursive.cxx     ivp/ivp_collision/ivp_mindist_event.cxx     ivp/ivp_intern/ivp_mindist_friction.cxx; do
+    if [ ! -f "$src_file" ]; then
+      log "  SKIP (nicht gefunden): $src_file"
+      continue
+    fi
+    local obj="build/ivp_vtable_stub/$(basename ${src_file%.cxx}).o"
+    log "  compiling: $src_file"
+    em++ $IVP_FLAGS $IVP_INCS $COMMON_INCS -c "$src_file" -o "$obj"       2>>"$LOG_DIR/ivp_vtable_stub.log" && {
+        log "    OK: $obj"
+        ivp_objs="$ivp_objs $obj"
+      } || log "    WARN: compile failed for $src_file"
+  done
+
+  if [ -z "$ivp_objs" ]; then
+    log "WARNING: keine ivp_vtable objs erzeugt — _ZTV11IVP_Mindist fehlt!"
+    checkpoint_mark "ivp_vtable_stub"
+    return
+  fi
+
+  # Merge alle .o zu einem einzelnen .o via emcc partial link
+  em++ -r $ivp_objs -o build/ivp_vtable_stub/ivp_mindist_vtable.o     2>>"$LOG_DIR/ivp_vtable_stub.log" &&     log "  ivp_mindist vtable stub merged OK: build/ivp_vtable_stub/ivp_mindist_vtable.o" || {
+      # Fallback: erstes .o nutzen
+      first_obj=$(echo $ivp_objs | awk '{print $1}')
+      cp "$first_obj" build/ivp_vtable_stub/ivp_mindist_vtable.o
+      log "  WARNING: merge failed, using first obj: $first_obj"
     }
-
-  log "  ivp_mindist vtable stub OK: build/ivp_vtable_stub/ivp_mindist_vtable.o"
   checkpoint_mark "ivp_vtable_stub"
 }
 
