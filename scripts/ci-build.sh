@@ -189,16 +189,24 @@ EOF
     canvasElement.onkeypress = e => e.preventDefault()
   }
 
-  // Alle Chunks parallel laden, dann Engine-Start freigeben
+  // Chunk-Loading:
+  // background01 ist eine Map → loadMapWithDeps (inkl. Dependency-Chain)
+  // materials + models sind keine Maps → loadMap() direkt (lädt chunks/{name}.data)
+  function loadChunkDirect(name) {
+    return dataLoader.loadMap(name)
+      .then(() => console.log('[hl2] chunk direkt geladen:', name))
+      .catch(err => console.warn('[hl2] chunk fehlt / skip:', name, err.message))
+  }
+
   addRunDependency('load_game_data')
-  const chunks = ['background01', 'materials', 'models']
-  const promises = chunks.map(name =>
-    dataLoader.loadMapWithDeps(name)
-      .then(() => console.log('[hl2] chunk geladen:', name))
-      .catch(err => console.warn('[hl2] chunk fehlt (ignoriert):', name, err.message))
-  )
-  Promise.all(promises).then(() => {
-    console.log('[hl2] Alle Chunks geladen — Engine startet')
+  Promise.all([
+    dataLoader.loadMapWithDeps('background01')
+      .then(() => console.log('[hl2] background01 OK'))
+      .catch(err => console.warn('[hl2] background01 Fehler (ignoriert):', err.message)),
+    loadChunkDirect('materials'),
+    loadChunkDirect('models'),
+  ]).then(() => {
+    console.log('[hl2] Alle Chunks fertig — Engine startet')
     removeRunDependency('load_game_data')
   })
 })();
@@ -301,6 +309,45 @@ waf_build() {
   checkpoint_mark "waf_build"
 }
 
+
+# ---------------------------------------------------------------------------
+# 9b. IVP_Mindist vtable stub — erzwingt vtable in main.wasm
+# ---------------------------------------------------------------------------
+# Hintergrund: Emscripten SIDE_MODULEs (libvphysics.so) importieren _ZTV11IVP_Mindist
+# via GOT.mem. Das vtable-Symbol muss im MAIN_MODULE (main.wasm) definiert sein.
+# Lösung: ivp_mindist_minimize.cxx wird ZUSÄTZLICH als main-module .o kompiliert
+# und in den emcc-Link-Schritt eingebunden → vtable landet in main.wasm.
+compile_ivp_vtable_stub() {
+  checkpoint_done "ivp_vtable_stub" && { log "ivp_vtable_stub: skip"; return; }
+  emsdk_env
+  cd "$ENGINE_DIR"
+
+  local src="ivp/ivp_collision/ivp_mindist_minimize.cxx"
+  if [ ! -f "$src" ]; then
+    log "WARNING: $src nicht gefunden — ivp_vtable_stub übersprungen"
+    checkpoint_mark "ivp_vtable_stub"
+    return
+  fi
+
+  log "Compiling ivp_mindist_minimize.cxx für main.wasm vtable..."
+  mkdir -p build/ivp_vtable_stub
+
+  # Include-Pfade identisch zu waf-Build für ivp-Targets
+  IVP_INCS="-Iivp/ivp_physics -Iivp/ivp_collision -Iivp/ivp_utility -Iivp/ivp_intern -Iivp/ivp_surface_manager -Iivp/ivp_controller -Iivp/havana/havok -Iivp/havana"
+  COMMON_INCS="-Ipublic -Ipublic/tier0 -Ipublic/tier1 -Itier1 -Icommon"
+
+  em++     -std=c++14 -O2     -D__EMSCRIPTEN__ -DPOSIX -DLINUX -D_LINUX     -DTOGLES -DUSE_SDL -fPIC     $IVP_INCS $COMMON_INCS     -c "$src"     -o build/ivp_vtable_stub/ivp_mindist_vtable.o     2>&1 | tee "$LOG_DIR/ivp_vtable_stub.log" || {
+      log "WARNING: ivp_vtable_stub compile fehlgeschlagen — vtable wird fehlen"
+      log "  Details: $LOG_DIR/ivp_vtable_stub.log"
+      # Nicht fatal — mit -sERROR_ON_UNDEFINED_SYMBOLS=0 läuft Build trotzdem
+      checkpoint_mark "ivp_vtable_stub"
+      return
+    }
+
+  log "  ivp_mindist vtable stub OK: build/ivp_vtable_stub/ivp_mindist_vtable.o"
+  checkpoint_mark "ivp_vtable_stub"
+}
+
 # ---------------------------------------------------------------------------
 # 10. emcc link (Haupt-WASM-Bundle)
 # ---------------------------------------------------------------------------
@@ -323,6 +370,15 @@ emcc_link() {
   log "Compiling emscripten_stubs.cpp..."
   local stubs_src="$ENGINE_DIR/emscripten/emscripten_stubs.cpp"
   local stubs_obj="$ENGINE_DIR/build/emscripten_stubs.o"
+
+  # IVP vtable stub — sorgt dafür dass _ZTV11IVP_Mindist in main.wasm landet
+  local ivp_vtable_obj="$ENGINE_DIR/build/ivp_vtable_stub/ivp_mindist_vtable.o"
+  if [ ! -f "$ivp_vtable_obj" ]; then
+    ivp_vtable_obj=""
+    log "  WARNING: ivp_vtable_stub nicht vorhanden — _ZTV11IVP_Mindist fehlt in main.wasm!"
+  else
+    log "  ivp vtable stub gefunden: $ivp_vtable_obj"
+  fi
   if [ -f "$stubs_src" ]; then
     emcc -O2 -fPIC -D__EMSCRIPTEN__ -c "$stubs_src" -o "$stubs_obj"
     log "  stubs compiled: $stubs_obj"
@@ -350,6 +406,7 @@ emcc_link() {
     -L build/install/ \
     build/launcher_main/libhl2_launcher.a \
     ${stubs_obj:+"$stubs_obj"} \
+    ${ivp_vtable_obj:+"$ivp_vtable_obj"} \
     $link_libs \
     -o build/launcher_main/hl2_launcher.html \
     2>&1 | tee "$LOG_DIR/emcc_link.log"
@@ -518,6 +575,7 @@ main() {
   patch_libwebgl
   waf_configure
   waf_build
+  compile_ivp_vtable_stub
   emcc_link
   repackage_assets
   collect_outputs
