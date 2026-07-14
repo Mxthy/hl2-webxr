@@ -311,7 +311,7 @@ emcc_link() {
     -sMAXIMUM_MEMORY=4gb \
     -sSHARED_MEMORY=1 -sUSE_PTHREADS -sPTHREAD_POOL_SIZE=8 \
     -sPTHREAD_POOL_SIZE_STRICT=2 \
-    -sFULL_ES3 -sSTACK_SIZE=4mb \
+    -sFULL_ES3 -sSTACK_SIZE=64mb \
     --shell-file=emscripten/shell.html \
     -sPROXY_TO_PTHREAD \
     -sOFFSCREENCANVASES_TO_PTHREAD="#canvas" \
