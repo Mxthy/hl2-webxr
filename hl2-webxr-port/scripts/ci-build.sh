@@ -180,6 +180,14 @@ EOF
     log "  patch: emscripten_stubs.cpp"
   fi
 
+  # 5e: post.js Override — nur background1 beim Start, kein materials/models
+  p="$ENGINE_DIR/emscripten/post.js"
+  REPO_POST_JS="$GITHUB_WORKSPACE/emscripten/post.js"
+  if [ -f "$REPO_POST_JS" ]; then
+    cp "$REPO_POST_JS" "$p"
+    log "  patch: post.js overridden from repo"
+  fi
+
   checkpoint_mark "source_patches"
 }
 
@@ -298,7 +306,9 @@ emcc_link() {
     -sUSE_BZIP2=1 -sUSE_SDL=2 -sUSE_FREETYPE=1 -sUSE_LIBJPEG=1 \
     -sUSE_LIBPNG -sMALLOC=mimalloc \
     -sMAIN_MODULE \
-    -sINITIAL_MEMORY=2047mb \
+    -sINITIAL_MEMORY=1024mb \
+    -sALLOW_MEMORY_GROWTH=1 \
+    -sMAXIMUM_MEMORY=4gb \
     -sSHARED_MEMORY=1 -sUSE_PTHREADS -sPTHREAD_POOL_SIZE=8 \
     -sPTHREAD_POOL_SIZE_STRICT=2 \
     -sFULL_ES3 -sSTACK_SIZE=4mb \
@@ -338,6 +348,12 @@ repackage_assets() {
   log "Running repackage.js ..."
   node emscripten/repackage.js \
     2>&1 | tee "$LOG_DIR/repackage.log"
+
+  # Normalisierung: background01.data → background1.data (DataLoader verwendet 'background1')
+  if [ -f "$ENGINE_DIR/chunks/background01.data" ] && [ ! -f "$ENGINE_DIR/chunks/background1.data" ]; then
+    mv "$ENGINE_DIR/chunks/background01.data" "$ENGINE_DIR/chunks/background1.data"
+    log "  renamed: background01.data → background1.data"
+  fi
 
   checkpoint_mark "repackage"
 }
