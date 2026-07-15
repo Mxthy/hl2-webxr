@@ -775,6 +775,7 @@ function preRun() {
 }
 
 function initRuntime() {
+  console.log('[INIT] initRuntime() called, calledRun=' + calledRun);
   assert(!runtimeInitialized);
   runtimeInitialized = true;
   if (ENVIRONMENT_IS_PTHREAD) return;
@@ -1998,6 +1999,7 @@ var PThread = {
       } else if (cmd === "markAsFinished") {
         markAsFinished(d.thread);
       } else if (cmd === "loaded") {
+        console.log('[PTHREAD] Worker loaded: ' + (worker.pthread_ptr || 'idle'));
         worker.loaded = true;
         // Check that this worker doesn't have an associated pthread.
         if (ENVIRONMENT_IS_NODE && !worker.pthread_ptr) {
@@ -2062,6 +2064,7 @@ var PThread = {
     });
   }),
   loadWasmModuleToAllWorkers(onMaybeReady) {
+    console.log('[PTHREAD] loadWasmModuleToAllWorkers called, unusedWorkers=' + PThread.unusedWorkers.length);
     // Instantiation is synchronous in pthreads.
     if (ENVIRONMENT_IS_PTHREAD) {
       return onMaybeReady();
@@ -3208,6 +3211,7 @@ var loadDylibs = () => {
     return true;
   }), Promise.resolve()).then(() => {
     // we got them all, wonderful
+    console.log('[DYLIBS] All dynamic libraries loaded successfully!');
     reportUndefinedSymbols();
     removeRunDependency("loadDylibs");
   });
@@ -33420,9 +33424,11 @@ dependenciesFulfilled = function runCaller() {
 
 // try this again later, after new deps are fulfilled
 function callMain(args = []) {
+  console.log('[CALLMAIN] callMain() called with args: ' + JSON.stringify(args));
   assert(runDependencies == 0, 'cannot call main when async dependencies remain! (listen on Module["onRuntimeInitialized"])');
   assert(__ATPRERUN__.length == 0, "cannot call main when preRun functions remain to be called");
   var entryFunction = resolveGlobalSymbol("_emscripten_proxy_main").sym;
+  console.log('[CALLMAIN] entryFunction: ' + (entryFunction ? 'found' : 'NOT FOUND'));
   // With PROXY_TO_PTHREAD make sure we keep the runtime alive until the
   // proxied main calls exit (see exitOnMainThread() for where Pop is called).
   runtimeKeepalivePush();
@@ -33439,7 +33445,9 @@ function callMain(args = []) {
   });
   GROWABLE_HEAP_U32()[((argv_ptr) >>> 2) >>> 0] = 0;
   try {
+    console.log('[CALLMAIN] Calling entryFunction...');
     var ret = entryFunction(argc, argv);
+    console.log('[CALLMAIN] entryFunction returned: ' + ret);
     // if we're not running an evented main loop, it's time to exit
     exitJS(ret, /* implicit = */ true);
     return ret;
@@ -33464,7 +33472,9 @@ function stackCheckInit() {
 var sharedModules = {};
 
 function run(args = arguments_) {
+  console.log('[RUN] run() called, runDependencies=' + runDependencies);
   if (runDependencies > 0) {
+    console.log('[RUN] runDependencies > 0, waiting for: ' + runDependencies);
     return;
   }
   if (ENVIRONMENT_IS_PTHREAD) {
@@ -33479,10 +33489,10 @@ function run(args = arguments_) {
     return;
   }
   function doRun() {
-    // run may have just been called through dependencies being fulfilled just in this very frame,
-    // or while the async setStatus time below was happening
+    console.log('[RUN] doRun() called');
     if (calledRun) return;
     calledRun = true;
+    console.log('[RUN] calledRun=true, ABORT=' + ABORT);
     Module["calledRun"] = true;
     if (ABORT) return;
     initRuntime();
