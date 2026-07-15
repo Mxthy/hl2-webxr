@@ -1039,6 +1039,10 @@ function createWasm() {
   /** @param {WebAssembly.Module=} module*/ function receiveInstance(instance, module) {
     wasmExports = instance.exports;
     wasmExports = relocateExports(wasmExports, 1024);
+
+    // PATCH: wrap init_mms_function_table to match () -> () signature expected by side-modules
+    const _ivp_orig_fn = wasmExports["_ZN27IVP_Mindist_Minimize_Solver23init_mms_function_tableEv"];
+    if (_ivp_orig_fn) wasmExports["_ZN27IVP_Mindist_Minimize_Solver23init_mms_function_tableEv"] = () => _ivp_orig_fn(0);
     var metadata = getDylinkMetadata(module);
     if (metadata.neededDynlibs) {
       /* patched: use Module.dynamicLibraries order; skip metadata neededDynlibs */

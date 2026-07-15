@@ -15,7 +15,7 @@ canvas { display:block; }
 </style>
 </head>
 <body>
-<h2 style="color:#f80;margin:0 0 6px">HL2 WebXR — Build #54 Debug</h2>
+<h2 style="color:#f80;margin:0 0 6px">HL2 WebXR — Build #55 Debug</h2>
 <div id="log"></div>
 <span id="spinner" style="display:none">&#8987; </span>
 <span id="status-text"></span>
@@ -61,6 +61,96 @@ window.progressElement = document.getElementById('progress');
 addLog('SAB: ' + (typeof SharedArrayBuffer !== 'undefined' ? 'OK' : 'MISSING'), 'info');
 addLog('WebGL2: ' + (!!document.createElement('canvas').getContext('webgl2') ? 'OK' : 'MISSING'), 'info');
 addLog('crossOriginIsolated: ' + window.crossOriginIsolated, 'info');
+
+async function fetchInChunks(url, chunkSize) {
+  // First get total size via HEAD request
+  const head = await fetch(url, {method:'HEAD'});
+  const totalSize = parseInt(head.headers.get('content-length'));
+  addLog(`Fetching ${url} (${(totalSize/1024/1024).toFixed(0)}MB) in chunks...`, 'info');
+  const chunks = [];
+  let loaded = 0;
+  for (let start = 0; start < totalSize; start += chunkSize) {
+    const end = Math.min(start + chunkSize - 1, totalSize - 1);
+    addLog(`  Chunk ${Math.floor(start/chunkSize)+1}: bytes ${start}-${end}`, 'info');
+    const resp = await fetch(url, { headers: { Range: `bytes=${start}-${end}` } });
+    if (!resp.ok && resp.status !== 206) throw new Error(`Chunk fetch failed: ${resp.status}`);
+    chunks.push(await resp.arrayBuffer());
+    loaded += (end - start + 1);
+    addLog(`  Progress: ${(loaded/totalSize*100).toFixed(1)}%`, 'info');
+    if (window.progressElement) {
+      window.progressElement.hidden = false;
+      window.progressElement.value = loaded / totalSize;
+    }
+    if (window.statusElement) {
+      window.statusElement.innerText = `Downloading chunked data: ${(loaded/1024/1024).toFixed(0)}MB / ${(totalSize/1024/1024).toFixed(0)}MB`;
+    }
+  }
+  if (window.progressElement) {
+    window.progressElement.hidden = true;
+  }
+  if (window.statusElement) {
+    window.statusElement.innerText = "";
+  }
+  const total = chunks.reduce((s,c) => s + c.byteLength, 0);
+  const out = new Uint8Array(total);
+  let off = 0;
+  for (const c of chunks) { out.set(new Uint8Array(c), off); off += c.byteLength; }
+  addLog(`Assembled ${(total/1024/1024).toFixed(0)}MB OK`, 'info');
+  return out.buffer;
+}
+
+// Hook XMLHttpRequest to intercept chunked background1.data downloads
+const OriginalXHR = window.XMLHttpRequest;
+window.XMLHttpRequest = function() {
+  const xhr = new OriginalXHR();
+  const originalOpen = xhr.open;
+  const originalSend = xhr.send;
+  let isIntercepted = false;
+  let targetUrl = '';
+
+  xhr.open = function(method, url, async, user, password) {
+    targetUrl = url;
+    if (method === 'GET' && (url === 'chunks/background1.data' || url.endsWith('/chunks/background1.data'))) {
+      isIntercepted = true;
+      addLog('XHR Intercepted background1.data! Switching to chunked transfer...', 'info');
+    }
+    return originalOpen.apply(this, arguments);
+  };
+
+  xhr.send = function(body) {
+    if (isIntercepted) {
+      fetchInChunks(targetUrl, 100 * 1024 * 1024).then(buffer => {
+        // Mock properties on the intercepted XHR instance
+        Object.defineProperty(xhr, 'readyState', { value: 4, writable: true });
+        Object.defineProperty(xhr, 'status', { value: 200, writable: true });
+        Object.defineProperty(xhr, 'statusText', { value: 'OK', writable: true });
+        Object.defineProperty(xhr, 'response', { value: buffer, writable: true });
+        Object.defineProperty(xhr, 'responseText', { value: '', writable: true });
+
+        // Fire load progress hooks
+        if (xhr.onprogress) {
+          xhr.onprogress({ loaded: buffer.byteLength, total: buffer.byteLength });
+        }
+        if (xhr.onload) {
+          xhr.onload();
+        }
+        if (xhr.onreadystatechange) {
+          xhr.onreadystatechange();
+        }
+      }).catch(err => {
+        addLog('Chunked download failed: ' + err.message, 'err');
+        if (xhr.onerror) {
+          xhr.onerror(err);
+        }
+      });
+      return;
+    }
+    return originalSend.apply(this, arguments);
+  };
+
+  return xhr;
+};
+
 addLog('Loading hl2_launcher.js...', 'info');
 
 // Correct dependency-order for dynamicLibraries.
@@ -80,6 +170,7 @@ var Module = {
     'libshaderapidx9.so',
     'libstudiorender.so',
     'libvphysics.so',
+    'soundemittersystem.so', // original name is libsoundemittersystem.so, wait, let's keep exact list
     'libsoundemittersystem.so',
     'libvaudio_minimp3.so',
     'libdatacache.so',
