@@ -380,7 +380,7 @@ compile_ivp_vtable_stub() {
   # Include-Pfade identisch zu waf-Build für ivp-Targets
   IVP_INCS="-Iivp/ivp_physics -Iivp/ivp_collision -Iivp/ivp_utility -Iivp/ivp_intern -Iivp/ivp_surface_manager -Iivp/ivp_controller -Iivp/havana/havok -Iivp/havana"
   COMMON_INCS="-Ipublic -Ipublic/tier0 -Ipublic/tier1 -Itier1 -Icommon"
-  IVP_FLAGS="-std=c++14 -O2 -D__EMSCRIPTEN__ -DPOSIX -DLINUX -D_LINUX -DTOGLES -DUSE_SDL -fPIC"
+  IVP_FLAGS="-std=c++14 -O2 -DNDEBUG -D__EMSCRIPTEN__ -DPOSIX -DLINUX -D_LINUX -DTOGLES -DUSE_SDL -fPIC"
 
   ivp_objs=""
   # Kompiliere alle IVP_Mindist-relevanten Dateien
