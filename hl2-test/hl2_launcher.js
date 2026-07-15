@@ -201,10 +201,17 @@ class DataLoader {
 const dataLoader = new DataLoader;
 
 Module.downloadMap = (lock, mapName) => {
-  dataLoader.loadMapWithDeps(mapName).then(() => {
-    Atomics.store(GROWABLE_HEAP_I32(), lock, 0);
-    Atomics.notify(GROWABLE_HEAP_I32(), lock);
-  });
+  console.error('[DOWNLOAD-MAP] CALLED! lock=' + lock + ' map=' + mapName);
+  try {
+    var heap = GROWABLE_HEAP_I32();
+    var oldVal = Atomics.load(heap, lock >> 2);
+    console.error('[DOWNLOAD-MAP] lock addr=' + lock + ' oldVal=' + oldVal);
+    Atomics.store(heap, lock >> 2, 0);
+    var notified = Atomics.notify(heap, lock >> 2);
+    console.error('[DOWNLOAD-MAP] notified=' + notified + ' agents');
+  } catch(e) {
+    console.error('[DOWNLOAD-MAP] ERROR: ' + e.message);
+  }
 };
 
 // end include: /home/runner/work/hl2-webxr/hl2-webxr/engine/portal-port/emscripten/pre.js
