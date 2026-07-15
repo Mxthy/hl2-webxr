@@ -324,8 +324,8 @@ class DataLoader {
 const dataLoader = new DataLoader()
 
 Module.downloadMap = (lock, mapName) => {
-	dataLoader.loadMapWithDeps(mapName).then(() => {
-		Atomics.store(HEAP32, lock, 0)
-		Atomics.notify(HEAP32, lock)
-	})
+	console.log('[SKIP-DOWNLOAD] Skipping chunk download for: ' + mapName);
+	// Immediately release the lock so the engine proceeds without assets
+	Atomics.store(HEAP32, lock, 0)
+	Atomics.notify(HEAP32, lock)
 }
