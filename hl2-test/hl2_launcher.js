@@ -2902,6 +2902,11 @@ var resolveGlobalSymbol = (symName, direct = false) => {
           return tableBase;
         }
         if (prop in wasmImports && !wasmImports[prop].stub) {
+          // TYPE-COMPAT: Wrap known type-mismatched symbols
+          if (prop === "_ZN27IVP_Mindist_Minimize_Solver23init_mms_function_tableEv") {
+            var _orig = wasmImports[prop];
+            return function() { return _orig(0); };
+          }
           // No stub needed, symbol already exists in symbol table
           return wasmImports[prop];
         }
@@ -3268,6 +3273,21 @@ var loadDylibs = () => {
 =======
   var _dylibsToLoad = dynamicLibraries.slice();
   console.log("[loadDylibs] Starting: " + _dylibsToLoad.length + " libraries: " + _dylibsToLoad.join(", "));
+  // Pre-patch type-mismatched symbols in wasmImports BEFORE side modules load
+  // libvphysics.so expects () -> void but main exports (i32) -> void
+  // We override with a () -> void JS wrapper so WASM type-checking passes
+  (function preloadTypeShims() {
+    var sym = "_ZN27IVP_Mindist_Minimize_Solver23init_mms_function_tableEv";
+    var target = wasmExports && wasmExports[sym] ? wasmExports[sym] : wasmImports[sym];
+    if (target) {
+      // Create a new function with NO parameters (matching libvphysics.so expectation)
+      // This bypasses WASM type-checking by using a JS wrapper
+      wasmImports[sym] = function() { target(0); };
+      console.log("[TYPE-SHIM] Pre-patched: " + sym);
+    } else {
+      console.warn("[TYPE-SHIM] Symbol not found yet: " + sym);
+    }
+  })();
   _dylibsToLoad.reduce((chain, lib) => chain.then(() => {
     console.log("[loadDylibs] Loading: " + lib);
     return loadDynamicLibrary(lib, {
