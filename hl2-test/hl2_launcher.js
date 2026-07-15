@@ -102,12 +102,38 @@ if (ENVIRONMENT_IS_NODE) {
 // --pre-jses are emitted after the Module integration code, so that they can
 // refer to Module (if they choose; they can also define Module)
 // include: /home/runner/work/hl2-webxr/hl2-webxr/engine/portal-port/emscripten/pre.js
+// HL2 WebXR — patched pre.js nach slqnt.dev-Pattern
 Module["arguments"] = Module["arguments"] || [];
 
-Module["arguments"].push("-game", "portal", "-noip", "-language", "english", "-windowed", "+mat_hdr_level", "0", "+mat_colorcorrection", "1");
+// Feature-Check
+(function() {
+  if (typeof window === 'undefined') return;
+  var sab = typeof SharedArrayBuffer !== 'undefined';
+  var coi = window.crossOriginIsolated === true;
+  console.log('[PRE] SAB:', sab ? 'OK' : 'FEHLT', '| crossOriginIsolated:', coi ? 'JA' : 'NEIN');
+  var canv = document.getElementById('canvas');
+  window.canvasElement = canv;
+  window.statusElement = document.getElementById('status');
+  window.progressElement = document.getElementById('progress');
+  window.spinnerElement = document.getElementById('spinner');
+})();
+
+var canvasElement = (typeof window !== 'undefined') ? (window.canvasElement || document.getElementById('canvas')) : null;
+var statusElement = (typeof window !== 'undefined') ? (window.statusElement || document.getElementById('status')) : null;
+var progressElement = (typeof window !== 'undefined') ? (window.progressElement || document.getElementById('progress')) : null;
+var spinnerElement = (typeof window !== 'undefined') ? (window.spinnerElement || document.getElementById('spinner')) : null;
+
+// __gameChoice Promise — Engine wartet auf User-Spielauswahl (wie slqnt.dev)
+Module.__gameChoice = Module.__gameChoice || new Promise(function(resolve) {
+  Module.__resolveGame = resolve;
+  if (typeof window !== 'undefined') window.__resolveGame = resolve;
+});
 
 class DataLoader {
-  mapsOrdered=[ "background1", "testchmb_a_00", "testchmb_a_01", "testchmb_a_02", "testchmb_a_03", "testchmb_a_04", "testchmb_a_05", "testchmb_a_06", "testchmb_a_07", "testchmb_a_08", "testchmb_a_09", "testchmb_a_10", "testchmb_a_11", "testchmb_a_13", "testchmb_a_14", "testchmb_a_15" ];
+  mapsOrdered = ["background1", "testchmb_a_00", "testchmb_a_01", "testchmb_a_02",
+    "testchmb_a_03", "testchmb_a_04", "testchmb_a_05", "testchmb_a_06",
+    "testchmb_a_07", "testchmb_a_08", "testchmb_a_09", "testchmb_a_10",
+    "testchmb_a_11", "testchmb_a_13", "testchmb_a_14", "testchmb_a_15"];
   loadedMaps={};
   async loadMapWithDeps(mapName) {
     const index = this.mapsOrdered.indexOf(mapName);
@@ -179,15 +205,45 @@ class DataLoader {
     return promise;
   }
 }
+}
 
-const dataLoader = new DataLoader;
-
-Module.downloadMap = (lock, mapName) => {
-  dataLoader.loadMapWithDeps(mapName).then(() => {
-    Atomics.store(GROWABLE_HEAP_I32(), lock, 0);
-    Atomics.notify(GROWABLE_HEAP_I32(), lock);
+// slqnt-Pattern: dataLoader + Module.arguments + downloadMap via preRun + __gameChoice
+let dataLoader;
+if (typeof window !== 'undefined') {
+  Module.preRun = Module.preRun || [];
+  Module.preRun.push(function() {
+    addRunDependency("game_select");
+    Module.__gameChoice.then(function(game) {
+      // Engine-Argumente setzen
+      Module["arguments"].push(
+        "-game", "hl2",
+        "-windowed",
+        "-w", String(window.screen ? window.screen.availWidth : 1280),
+        "-h", String(window.screen ? window.screen.availHeight : 800),
+        "-novid", "-noip",
+        "+mat_hdr_level", "0",
+        "+mat_colorcorrection", "1",
+        "+mat_picmip", "1"
+      );
+      dataLoader = new DataLoader();
+      Module.downloadMap = function(lock, mapName) {
+        dataLoader.loadMapWithDeps(mapName).then(function() {
+          Atomics.store(GROWABLE_HEAP_I32(), lock, 0);
+          Atomics.notify(GROWABLE_HEAP_I32(), lock);
+        });
+      };
+      addRunDependency("load_game_data");
+      removeRunDependency("game_select");
+      dataLoader.loadMapWithDeps("background1").then(function() {
+        console.log("[HL2] background1 geladen — Engine startet");
+        removeRunDependency("load_game_data");
+      }).catch(function(err) {
+        console.warn("[HL2] background1 Fehler (Engine startet trotzdem):", err.message);
+        removeRunDependency("load_game_data");
+      });
+    });
   });
-};
+}
 
 // end include: /home/runner/work/hl2-webxr/hl2-webxr/engine/portal-port/emscripten/pre.js
 // Sometimes an existing Module object exists with properties
@@ -33955,23 +34011,5 @@ if (Module["noInitialRun"]) shouldRunNow = false;
 
 run();
 
-(() => {
-  if (typeof window === "undefined") return;
-  window.addEventListener("beforeunload", function(event) {
-    event.preventDefault();
-  });
-  if (typeof canvasElement !== "undefined") {
-    canvasElement.onkeypress = e => e.preventDefault();
-  }
-  // Nur background1 beim Start laden (803 MB).
-  // 'background01' ist FALSCH — DataLoader.mapsOrdered enthält 'background1' (ohne 0).
-  // materials + models (~2.3 GB) werden lazy via Module.downloadMap geladen.
-  addRunDependency("load_game_data");
-  dataLoader.loadMapWithDeps("background1").then(() => {
-    console.log("[hl2] background1 OK — Engine startet");
-    removeRunDependency("load_game_data");
-  }).catch(err => {
-    console.warn("[hl2] background1 Fehler (ignoriert, Engine startet trotzdem):", err.message);
-    removeRunDependency("load_game_data");
-  });
-})();
+// PATCHED: slqnt-Pattern für korrekte Initialisierungs-Reihenfolge
+// dataLoader wird erst nach __gameChoice erstellt (wie slqnt.dev)

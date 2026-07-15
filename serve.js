@@ -30,6 +30,28 @@ const server = http.createServer((req, res) => {
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
 
   let urlPath = req.url.split('?')[0]
+
+  // TESTMODUS: Chunks durch Stub ersetzen für schnelles Testing
+  const STUB_CHUNKS = process.env.STUB_CHUNKS === '1';
+  if (STUB_CHUNKS && urlPath.startsWith('/chunks/') && urlPath.endsWith('.data')) {
+    const mapName = urlPath.split('/').pop().replace('.data', '');
+    const pathStr = `/hl2/maps/${mapName}.bsp`;
+    const pathBuf = Buffer.from(pathStr, 'utf8');
+    const dataBuf = Buffer.alloc(64);
+    const header = Buffer.alloc(8);
+    header.writeInt32LE(pathBuf.length, 0);
+    header.writeInt32LE(dataBuf.length, 4);
+    const stub = Buffer.concat([header, pathBuf, dataBuf]);
+    res.writeHead(200, {
+      'Content-Type': 'application/octet-stream',
+      'Content-Length': stub.length,
+      'Cache-Control': 'no-cache',
+    });
+    res.end(stub);
+    console.log('[STUB] ' + urlPath + ' -> ' + stub.length + ' bytes');
+    return;
+  }
+
   if (urlPath === '/') urlPath = '/index.html'
 
   const filePath = path.join(ROOT, urlPath)
