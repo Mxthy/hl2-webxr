@@ -179,32 +179,33 @@ apply_source_patches() {
 unsigned long GetRam() { return 2047UL; }
 int futimes(int fd, const struct timeval tv[2]) { return 0; }
 
-// Forward-declare the classes so C++ member stubs get the right ABI/type signatures.
-// These must NOT be in extern "C" — they are C++ mangled symbols.
+// libvphysics.so imports init_mms_function_table from "env" with type () -> ().
+// The Main WASM module must export it with the same type.
+// We use the real C++ class definition so the mangled name + signature match exactly.
+// DO NOT use extern "C" here — the mangled name IS the C++ symbol.
 
-struct IVP_Mindist_Minimize_Solver {
+class IVP_Mindist_Minimize_Solver {
+public:
     void init_mms_function_table();
 };
 
-struct IVP_Mindist {
+__attribute__((weak))
+void IVP_Mindist_Minimize_Solver::init_mms_function_table() {
+    // no-op stub: real implementation is in the compiled ivp source
+}
+
+// IVP_Mindist member stubs — () -> (i32) in WASM (implicit this via first i32)
+class IVP_Mindist {
+public:
     int recalc_mindist();
     int recalc_invalid_mindist();
 };
 
 __attribute__((weak))
-void IVP_Mindist_Minimize_Solver::init_mms_function_table() {
-    // stub — real impl loaded from libvphysics.so at runtime
-}
+int IVP_Mindist::recalc_mindist() { return 0; }
 
 __attribute__((weak))
-int IVP_Mindist::recalc_mindist() {
-    return 0;
-}
-
-__attribute__((weak))
-int IVP_Mindist::recalc_invalid_mindist() {
-    return 0;
-}
+int IVP_Mindist::recalc_invalid_mindist() { return 0; }
 
 #endif // __EMSCRIPTEN__
 STUBS_EOF
@@ -213,7 +214,7 @@ STUBS_EOF
   # Compile stubs into an object file for linking
   STUBS_OBJ_PATH="$ENGINE_DIR/build/emscripten_stubs.o"
   mkdir -p "$ENGINE_DIR/build"
-  em++ -std=c++14 -O2 -fPIC -c "$p" -o "$STUBS_OBJ_PATH"     2>>"$LOG_DIR/patches.log"     && log "  emscripten_stubs.o compiled OK"     || log "  WARNING: emscripten_stubs.cpp compile failed"
+  em++ -std=c++14 -O2 -DNDEBUG -fPIC -c "$p" -o "$STUBS_OBJ_PATH"     2>>"$LOG_DIR/patches.log"     && log "  emscripten_stubs.o compiled OK"     || log "  WARNING: emscripten_stubs.cpp compile failed"
 
   # 5e: post.js Override — nur background1 beim Start, kein materials/models
   p="$ENGINE_DIR/emscripten/post.js"
