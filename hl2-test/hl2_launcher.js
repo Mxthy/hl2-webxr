@@ -30780,7 +30780,41 @@ function checkIncomingModuleAPI() {
   ignoredModuleProp("fetchSettings");
 }
 
+
 var wasmImports;
+
+// ===== emscripten_GetProcAddress — resolve GL function pointers =====
+// The Source Engine calls SDL_GL_GetProcAddress which internally calls this.
+// It resolves desktop GL function names to function pointers via addFunction().
+var _emscripten_GetProcAddress;
+_emscripten_GetProcAddress = function(name_) {
+  var name = UTF8ToString(name_);
+  
+  // 1. Check if it's a known emscripten_gl* function (WebGL wrapper)
+  var emFunc = Module['_emscripten_gl' + name.substring(2)] || Module['_gl' + name.substring(2)];
+  if (typeof emFunc === 'function') {
+    console.log('[GL-PROC] Resolved: ' + name + ' → emscripten_gl wrapper');
+    return addFunction(emFunc);
+  }
+  
+  // 2. Check the desktop GL stubs table from pre.js
+  if (Module.__glStubs && Module.__glStubs[name]) {
+    console.log('[GL-PROC] Stub: ' + name);
+    return addFunction(Module.__glStubs[name]);
+  }
+  
+  // 3. Try looking up directly in the global scope
+  if (typeof self !== 'undefined' && typeof self[name] === 'function') {
+    console.log('[GL-PROC] Global: ' + name);
+    return addFunction(self[name]);
+  }
+  
+  // 4. Not found — return 0 (null pointer) and warn
+  console.warn('[GL-PROC] NOT FOUND: ' + name);
+  return 0;
+};
+_emscripten_GetProcAddress.sig = "pp";
+
 
 function assignWasmImports() {
   wasmImports = {
@@ -31927,6 +31961,7 @@ function assignWasmImports() {
     /** @export */ emscripten_vibrate: _emscripten_vibrate,
     /** @export */ emscripten_vibrate_pattern: _emscripten_vibrate_pattern,
     /** @export */ emscripten_webgl_commit_frame: _emscripten_webgl_commit_frame,
+    /** @export */ emscripten_GetProcAddress: _emscripten_GetProcAddress,
     /** @export */ emscripten_webgl_create_context: _emscripten_webgl_create_context,
     /** @export */ emscripten_webgl_destroy_context: _emscripten_webgl_destroy_context,
     /** @export */ emscripten_webgl_destroy_context_calling_thread: _emscripten_webgl_destroy_context_calling_thread,
