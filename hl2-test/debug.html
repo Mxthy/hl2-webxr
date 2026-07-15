@@ -6,7 +6,6 @@
 <style>
 body { background:#111; color:#0f0; font-family:monospace; margin:0; padding:10px; }
 #log { height:250px; overflow-y:auto; border:1px solid #0f0; padding:8px; font-size:12px; margin-bottom:8px; }
-#status-bar { color:#fa0; margin-bottom:4px; font-size:13px; }
 #progress { width:100%; margin-bottom:8px; }
 #canvas-wrap { border:2px solid #f80; display:inline-block; }
 canvas { display:block; }
@@ -16,9 +15,9 @@ canvas { display:block; }
 </style>
 </head>
 <body>
-<h2 style="color:#f80;margin:0 0 6px">HL2 WebXR — Build #51 Debug</h2>
+<h2 style="color:#f80;margin:0 0 6px">HL2 WebXR — Build #54 Debug</h2>
 <div id="log"></div>
-<span id="spinner" style="display:none">⏳ </span>
+<span id="spinner" style="display:none">&#8987; </span>
 <span id="status-text"></span>
 <progress id="progress" value="0" max="1" hidden></progress>
 <div id="canvas-wrap">
@@ -27,58 +26,86 @@ canvas { display:block; }
 
 <script>
 const log = document.getElementById('log');
-function addLog(msg, cls='') {
+function addLog(msg, cls) {
+  cls = cls || '';
   const d = document.createElement('div');
   d.className = cls;
-  d.textContent = `[${new Date().toISOString().substr(11,12)}] ${msg}`;
+  d.textContent = '[' + new Date().toISOString().substr(11,12) + '] ' + msg;
   log.appendChild(d);
   log.scrollTop = log.scrollHeight;
 }
 
-// Intercept console
-['log','warn','error','info'].forEach(m => {
+['log','warn','error','info'].forEach(function(m) {
   const orig = console[m];
-  console[m] = (...args) => {
-    orig(...args);
+  console[m] = function() {
+    orig.apply(console, arguments);
+    const args = Array.prototype.slice.call(arguments);
     const cls = m === 'error' ? 'err' : m === 'warn' ? 'warn' : m === 'info' ? 'info' : '';
-    addLog(`[${m.toUpperCase()}] ` + args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' '), cls);
+    addLog('[' + m.toUpperCase() + '] ' + args.map(function(a){ return typeof a === 'object' ? JSON.stringify(a) : String(a); }).join(' '), cls);
   };
 });
 
-window.onerror = (msg, src, line, col, err) => {
-  addLog(`UNCAUGHT: ${msg} @ ${src}:${line}:${col}`, 'err');
+window.onerror = function(msg, src, line, col, err) {
+  addLog('UNCAUGHT: ' + msg + ' @ ' + src + ':' + line + ':' + col, 'err');
   return false;
 };
-window.onunhandledrejection = e => {
-  addLog(`PROMISE REJECT: ${e.reason}`, 'err');
+window.onunhandledrejection = function(e) {
+  addLog('PROMISE REJECT: ' + e.reason, 'err');
 };
 
-// *** Globals required by hl2_launcher.js ***
-window.canvasElement    = document.getElementById('canvas');
-window.statusElement    = document.getElementById('status-text');
-window.spinnerElement   = document.getElementById('spinner');
-window.progressElement  = document.getElementById('progress');
+window.canvasElement  = document.getElementById('canvas');
+window.statusElement  = document.getElementById('status-text');
+window.spinnerElement = document.getElementById('spinner');
+window.progressElement = document.getElementById('progress');
 
-addLog('SAB: ' + (typeof SharedArrayBuffer !== 'undefined' ? '✅' : '❌'), 'info');
-addLog('WebGL2: ' + (!!document.createElement('canvas').getContext('webgl2') ? '✅' : '❌'), 'info');
+addLog('SAB: ' + (typeof SharedArrayBuffer !== 'undefined' ? 'OK' : 'MISSING'), 'info');
+addLog('WebGL2: ' + (!!document.createElement('canvas').getContext('webgl2') ? 'OK' : 'MISSING'), 'info');
 addLog('crossOriginIsolated: ' + window.crossOriginIsolated, 'info');
 addLog('Loading hl2_launcher.js...', 'info');
 
-// Module config — must be before script load
+// Correct dependency-order for dynamicLibraries.
+// Fixes libclient.so hang: tier0/vstdlib/engine must load BEFORE client/server/GameUI.
 var Module = {
   canvas: window.canvasElement,
+  dynamicLibraries: [
+    'libtier0.so',
+    'libvstdlib.so',
+    'libsteam_api.so',
+    'libfilesystem_stdio.so',
+    'libinputsystem.so',
+    'libtogl.so',
+    'libmaterialsystem.so',
+    'libvtex_dll.so',
+    'libstdshader_dx9.so',
+    'libshaderapidx9.so',
+    'libstudiorender.so',
+    'libvphysics.so',
+    'libsoundemittersystem.so',
+    'libvaudio_minimp3.so',
+    'libdatacache.so',
+    'libscenefilecache.so',
+    'libvideo_services.so',
+    'libengine.so',
+    'libvgui2.so',
+    'libvguimatsurface.so',
+    'libclient.so',
+    'libserver.so',
+    'libGameUI.so',
+    'libServerBrowser.so',
+    'liblauncher.so'
+  ],
   onRuntimeInitialized: function() {
-    addLog('✅ WASM Runtime initialized! Engine should start now.', 'info');
+    addLog('WASM Runtime initialized! Engine starting...', 'info');
   },
-  print:    (t) => addLog('[stdout] ' + t),
-  printErr: (t) => addLog('[stderr] ' + t, 'warn'),
-  setStatus: (t) => { if(t) addLog('[setStatus] ' + t); },
+  print:    function(t) { addLog('[stdout] ' + t); },
+  printErr: function(t) { addLog('[stderr] ' + t, 'warn'); },
+  setStatus: function(t) { if(t) addLog('[setStatus] ' + t); }
 };
 
 const s = document.createElement('script');
 s.src = 'hl2_launcher.js';
-s.onload  = () => addLog('hl2_launcher.js loaded ✅', 'info');
-s.onerror = ()  => addLog('hl2_launcher.js LOAD ERROR ❌', 'err');
+s.onload  = function() { addLog('hl2_launcher.js loaded OK', 'info'); };
+s.onerror = function() { addLog('hl2_launcher.js LOAD ERROR', 'err'); };
 document.body.appendChild(s);
 </script>
 </body>

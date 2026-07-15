@@ -1041,7 +1041,8 @@ function createWasm() {
     wasmExports = relocateExports(wasmExports, 1024);
     var metadata = getDylinkMetadata(module);
     if (metadata.neededDynlibs) {
-      dynamicLibraries = metadata.neededDynlibs.concat(dynamicLibraries);
+      /* patched: use Module.dynamicLibraries order; skip metadata neededDynlibs */
+      if (!dynamicLibraries.length) dynamicLibraries = metadata.neededDynlibs;
     }
     mergeLibSymbols(wasmExports, "main");
     LDSO.init();
