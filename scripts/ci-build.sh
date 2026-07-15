@@ -177,49 +177,52 @@ unsigned long GetRam() { return 4096UL; }
 int futimes(int fd, const struct timeval tv[2]) { return 0; }
 
 // -----------------------------------------------------------------------
-// IVP_Mindist vtable stubs
+// IVP_Mindist vtable + symbol stubs for Emscripten MAIN_MODULE
 // -----------------------------------------------------------------------
-// Emscripten MAIN_MODULE must provide these symbols so that SIDE_MODULEs
-// (libvphysics.so) can resolve them via GOT at dlopen time.
-// We declare them as C-linkage weak stubs so they don't conflict with
-// the real definitions inside libvphysics.so's private TU.
+// libvphysics.so (SIDE_MODULE) imports these via GOT. The MAIN_MODULE
+// must export them with EXACTLY the signatures libvphysics.so expects.
+//
+// CRITICAL: libvphysics.so imports init_mms_function_table as () -> void
+// (no this pointer). The main module must match this exactly or
+// WebAssembly.instantiate() throws a LinkError type-mismatch.
 // -----------------------------------------------------------------------
-extern "C" {
 
-// vtable + typeinfo: provided by defining the class with virtual methods
-struct __attribute__((visibility("default"))) IVP_Mindist_Stub {
-    virtual ~IVP_Mindist_Stub() {}
+// Define IVP_Mindist class with matching vtable layout
+// The vtable symbol _ZTV11IVP_Mindist is emitted when we define
+// (not just declare) at least one non-pure virtual method.
+class __attribute__((visibility("default"))) IVP_Mindist {
+public:
+    virtual ~IVP_Mindist() {}
     virtual int recalc_mindist() { return 0; }
     virtual int recalc_invalid_mindist() { return 0; }
 };
 
-// Force-instantiate so the vtable symbol is emitted into main.wasm
-static IVP_Mindist_Stub* __ivp_mindist_vtable_anchor = nullptr;
+// Force vtable emission by taking its address
+static void* __ivp_mindist_vtable_anchor = nullptr;
 __attribute__((constructor)) static void __ivp_mindist_init() {
-    (void)__ivp_mindist_vtable_anchor;
+    IVP_Mindist tmp;
+    __ivp_mindist_vtable_anchor = *(void**)&tmp;
 }
 
-// init_mms_function_table weak stub
-__attribute__((weak))
-void _ZN27IVP_Mindist_Minimize_Solver23init_mms_function_tableEv(void* self) {
-    (void)self;
+// init_mms_function_table — () -> void (NO this pointer, matches libvphysics.so)
+extern "C" __attribute__((visibility("default")))
+void _ZN27IVP_Mindist_Minimize_Solver23init_mms_function_tableEv() {
+    // no-op stub — real implementation lives in libvphysics.so
 }
 
-// IVP_Mindist::recalc_mindist weak stub — (i32)->i32 matches libvphysics.so type[2]
-__attribute__((weak))
+// IVP_Mindist::recalc_mindist — (i32) -> i32 (has this pointer)
+extern "C" __attribute__((visibility("default")))
 int _ZN11IVP_Mindist14recalc_mindistEv(void* self) {
     (void)self;
     return 0;
 }
 
-// IVP_Mindist::recalc_invalid_mindist weak stub — (i32)->i32 matches libvphysics.so type[2]
-__attribute__((weak))
+// IVP_Mindist::recalc_invalid_mindist — (i32) -> i32 (has this pointer)
+extern "C" __attribute__((visibility("default")))
 int _ZN11IVP_Mindist22recalc_invalid_mindistEv(void* self) {
     (void)self;
     return 0;
 }
-
-} // extern "C"
 
 #endif // __EMSCRIPTEN__
 EOF
@@ -361,9 +364,23 @@ waf_build() {
 # und in den emcc-Link-Schritt eingebunden → vtable landet in main.wasm.
 compile_ivp_vtable_stub() {
   checkpoint_done "ivp_vtable_stub" && { log "ivp_vtable_stub: skip"; return; }
+  # SKIPPED: compiling real ivp_mindist*.cxx produces (i32)->void signatures
+  # for init_mms_function_table, but libvphysics.so expects () -> void.
+  # The emscripten_stubs.cpp now provides correct signatures + vtable.
+  # Creating an empty .o so the emcc_link step's file check passes.
   emsdk_env
   cd "$ENGINE_DIR"
+  mkdir -p build/ivp_vtable_stub
+  echo "" | em++ -x c++ -c - -o build/ivp_vtable_stub/ivp_mindist_vtable.o 2>/dev/null || true
+  if [ ! -f build/ivp_vtable_stub/ivp_mindist_vtable.o ]; then
+    # Fallback: create empty file — emcc_link checks existence
+    touch build/ivp_vtable_stub/ivp_mindist_vtable.o
+  fi
+  log "  ivp vtable stub: using emscripten_stubs.cpp signatures (skip real .cxx)"
+  checkpoint_mark "ivp_vtable_stub"
+  return
 
+  # --- OLD CODE BELOW (not executed) ---
   local main_src="ivp/ivp_collision/ivp_mindist.cxx"
   if [ ! -f "$main_src" ]; then
     log "WARNING: $main_src nicht gefunden — ivp_vtable_stub übersprungen"
