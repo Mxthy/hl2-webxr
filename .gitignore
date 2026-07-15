@@ -7,3 +7,4 @@ dist/
 *.log
 node_modules/
 incoming_files/
+hl2-test/chunks/
