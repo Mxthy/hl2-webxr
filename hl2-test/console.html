@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>HL2 Console Log</title>
+  <style>
+    body { background: #111; color: #0f0; font-family: monospace; font-size: 12px; padding: 10px; }
+    .err { color: #f44; }
+    .warn { color: #fa0; }
+    .info { color: #0f0; }
+    #log { white-space: pre-wrap; overflow-y: auto; height: 90vh; }
+    #controls { margin-bottom: 10px; }
+    button { background: #333; color: #fff; border: 1px solid #555; padding: 4px 8px; cursor: pointer; margin-right: 5px; }
+  </style>
+</head>
+<body>
+  <div id="controls">
+    <button onclick="document.getElementById('log').innerHTML=''">Clear</button>
+    <button onclick="document.getElementById('log').scrollTop=document.getElementById('log').scrollHeight">Bottom</button>
+    <span id="count" style="color:#888">0 messages</span>
+  </div>
+  <div id="log"></div>
+  <script>
+    const logEl = document.getElementById('log');
+    const countEl = document.getElementById('count');
+    let msgCount = 0;
+    
+    function addLog(type, args) {
+      const line = document.createElement('div');
+      line.className = type;
+      const time = new Date().toISOString().slice(11,23);
+      const text = Array.from(args).map(a => {
+        try { return typeof a === 'object' ? JSON.stringify(a) : String(a); }
+        catch(e) { return String(a); }
+      }).join(' ');
+      line.textContent = `[${time}] ${text}`;
+      logEl.appendChild(line);
+      logEl.scrollTop = logEl.scrollHeight;
+      countEl.textContent = ++msgCount + ' messages';
+    }
+    
+    const _log = console.log.bind(console);
+    const _err = console.error.bind(console);
+    const _warn = console.warn.bind(console);
+    
+    console.log = (...a) => { _log(...a); addLog('info', a); };
+    console.error = (...a) => { _err(...a); addLog('err', a); };
+    console.warn = (...a) => { _warn(...a); addLog('warn', a); };
+    window.onerror = (m,s,l,c,e) => { addLog('err', [`UNCAUGHT: ${m} at ${s}:${l}:${c}`]); };
+    window.onunhandledrejection = e => addLog('err', [`PROMISE: ${e.reason}`]);
+    
+    console.log('[console.html] Bereit. Öffne /hl2_launcher.html in neuem Tab um zu debuggen.');
+    console.log('[console.html] Tipp: Öffne beide im selben Browser um Logs hier zu sehen.');
+  </script>
+</body>
+</html>

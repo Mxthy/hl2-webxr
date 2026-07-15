@@ -31,6 +31,69 @@
     h1{font-size:26px;font-weight:bold;letter-spacing:3px;color:#ff6600}
     .subtitle{font-size:11px;color:#444;margin-top:4px}
   </style>
+
+  <!-- Console Log Capture für Debugging -->
+  <style>
+    #console-log {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      height: 160px; overflow-y: auto;
+      background: rgba(0,0,0,0.85); color: #0f0;
+      font-family: monospace; font-size: 10px;
+      padding: 4px 8px; z-index: 9999;
+      border-top: 1px solid #333;
+      display: none; /* Standardmäßig versteckt */
+    }
+    #console-log.visible { display: block; }
+    #console-log .err { color: #f44; }
+    #console-log .warn { color: #fa0; }
+    #log-toggle {
+      position: fixed; bottom: 165px; right: 8px; z-index: 10000;
+      background: #333; color: #fff; border: 1px solid #555;
+      padding: 2px 6px; font-size: 10px; cursor: pointer;
+      font-family: monospace;
+    }
+  </style>
+  <script>
+  (function() {
+    // Log-Panel Setup
+    const panel = document.createElement('div');
+    panel.id = 'console-log';
+    const btn = document.createElement('button');
+    btn.id = 'log-toggle';
+    btn.textContent = 'LOG';
+    btn.onclick = () => panel.classList.toggle('visible');
+    
+    document.addEventListener('DOMContentLoaded', () => {
+      document.body.appendChild(panel);
+      document.body.appendChild(btn);
+    });
+    
+    let count = 0;
+    function addLine(type, args) {
+      const line = document.createElement('div');
+      if (type !== 'log') line.className = type;
+      const t = new Date().toISOString().slice(11,19);
+      const text = Array.from(args).map(a => {
+        try { return typeof a === 'object' ? JSON.stringify(a).slice(0,200) : String(a).slice(0,500); }
+        catch(e) { return String(a).slice(0,200); }
+      }).join(' ');
+      line.textContent = `[${t}] ${text}`;
+      panel.appendChild(line);
+      panel.scrollTop = panel.scrollHeight;
+      if (++count === 1) panel.classList.add('visible'); // Zeige beim ersten Log
+      if (type === 'err') panel.classList.add('visible'); // Zeige immer bei Fehlern
+    }
+    
+    const _log = console.log.bind(console);
+    const _err = console.error.bind(console);
+    const _warn = console.warn.bind(console);
+    console.log = (...a) => { _log(...a); addLine('log', a); };
+    console.error = (...a) => { _err(...a); addLine('err', a); };
+    console.warn = (...a) => { _warn(...a); addLine('warn', a); };
+    window.addEventListener('error', e => addLine('err', [`UNCAUGHT: ${e.message} @ ${e.filename}:${e.lineno}`]));
+    window.addEventListener('unhandledrejection', e => addLine('err', [`PROMISE REJECT: ${e.reason}`]));
+  })();
+  </script>
 </head>
 <body>
   <canvas id="canvas" oncontextmenu="return false;" tabindex="-1"></canvas>
