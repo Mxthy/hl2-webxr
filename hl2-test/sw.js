@@ -1,5 +1,5 @@
 // sw.js — Service Worker: COOP/COEP-Header-Injection + Caching
-const CACHE = 'hl2-xr-v1';
+const CACHE = 'hl2-xr-v2';
 
 const PRECACHE = [
   './',

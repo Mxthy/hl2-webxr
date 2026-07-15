@@ -205,7 +205,6 @@ class DataLoader {
     return promise;
   }
 }
-}
 
 // slqnt-Pattern: dataLoader + Module.arguments + downloadMap via preRun + __gameChoice
 let dataLoader;
