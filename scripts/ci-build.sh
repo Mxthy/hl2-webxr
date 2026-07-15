@@ -188,20 +188,27 @@ int futimes(int fd, const struct timeval tv[2]) { return 0; }
 // -----------------------------------------------------------------------
 
 // Define IVP_Mindist class with matching vtable layout
-// The vtable symbol _ZTV11IVP_Mindist is emitted when we define
-// (not just declare) at least one non-pure virtual method.
+// CRITICAL: The destructor is declared OUT-OF-LINE (not inline).
+// This makes it the "key function" in C++ ABI, which forces the
+// compiler to emit the vtable (_ZTV11IVP_Mindist) in THIS TU.
+// All-inline virtual methods would NOT emit a vtable.
 class __attribute__((visibility("default"))) IVP_Mindist {
 public:
-    virtual ~IVP_Mindist() {}
+    virtual ~IVP_Mindist();  // out-of-line declaration = key function
     virtual int recalc_mindist() { return 0; }
     virtual int recalc_invalid_mindist() { return 0; }
 };
 
-// Force vtable emission by taking its address
-static void* __ivp_mindist_vtable_anchor = nullptr;
+// Out-of-line definition — this is the key function that forces vtable emission
+IVP_Mindist::~IVP_Mindist() {}
+
+// Force the vtable symbol to not be stripped by the linker
+__attribute__((used, visibility("default")))
+extern "C" void* _ZTV11IVP_Mindist_anchor = nullptr;
 __attribute__((constructor)) static void __ivp_mindist_init() {
-    IVP_Mindist tmp;
-    __ivp_mindist_vtable_anchor = *(void**)&tmp;
+    // Create an instance to ensure the vtable is referenced
+    static IVP_Mindist __ivp_instance;
+    _ZTV11IVP_Mindist_anchor = *(void**)&__ivp_instance;
 }
 
 // init_mms_function_table — () -> void (NO this pointer, matches libvphysics.so)
@@ -484,6 +491,7 @@ emcc_link() {
     -sPROXY_TO_PTHREAD \
     -sOFFSCREENCANVASES_TO_PTHREAD="#canvas" \
     -sOFFSCREENCANVAS_SUPPORT=1 \
+    "-sEXPORTED_FUNCTIONS=[\"_ZTV11IVP_Mindist\",\"_ZTI11IVP_Mindist\"]" \
     "-sEXPORTED_RUNTIME_METHODS=['wasmMemory','addRunDependency','removeRunDependency','FS','callMain','abort','HEAPU8']" \
     --pre-js emscripten/pre.js \
     --post-js emscripten/post.js \
