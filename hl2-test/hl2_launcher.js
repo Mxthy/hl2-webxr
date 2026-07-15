@@ -1048,7 +1048,16 @@ function createWasm() {
       /* patched: use Module.dynamicLibraries order; skip metadata neededDynlibs */
       if (!dynamicLibraries.length) dynamicLibraries = metadata.neededDynlibs;
     }
-    mergeLibSymbols(wasmExports, "main");
+    // PATCH: fix init_mms_function_table type mismatch
+  // libvphysics.so expects () -> () but wasm exports (i32) -> ()
+  // Wrap it as a no-arg thunk with a fixed self-ptr
+  if (wasmExports["_ZN27IVP_Mindist_Minimize_Solver23init_mms_function_tableEv"]) {
+    var _orig_init_mms = wasmExports["_ZN27IVP_Mindist_Minimize_Solver23init_mms_function_tableEv"];
+    wasmExports["_ZN27IVP_Mindist_Minimize_Solver23init_mms_function_tableEv"] = function() {
+      return _orig_init_mms(0);
+    };
+  }
+  mergeLibSymbols(wasmExports, "main");
     LDSO.init();
     loadDylibs();
     wasmExports = applySignatureConversions(wasmExports);
@@ -3152,12 +3161,33 @@ var loadDylibs = () => {
   }
   // Load binaries asynchronously
   addRunDependency("loadDylibs");
-  dynamicLibraries.reduce((chain, lib) => chain.then(() => loadDynamicLibrary(lib, {
-    loadAsync: true,
-    global: true,
-    nodelete: true,
-    allowUndefined: true
-  })), Promise.resolve()).then(() => {
+
+  // PATCH: retry helper for LinkError type mismatches
+  function loadLibWithRetry(lib) {
+    return loadDynamicLibrary(lib, {
+      loadAsync: true, global: true, nodelete: true, allowUndefined: true
+    }).catch(err => {
+      if (err instanceof WebAssembly.LinkError) {
+        console.warn('[PATCH] LinkError loading ' + lib + ': ' + err.message);
+        // Extract the mismatched symbol and patch it as a no-arg thunk
+        var match = err.message.match(/"([^"]+)"[^"]*$/);
+        if (match) {
+          var sym = match[1];
+          console.warn('[PATCH] Patching symbol: ' + sym);
+          var prev = wasmExports[sym];
+          wasmExports[sym] = prev ? function() { return prev(0); } : function() { return 0; };
+        }
+        // Retry once
+        return loadDynamicLibrary(lib, {
+          loadAsync: true, global: true, nodelete: true, allowUndefined: true
+        });
+      }
+      throw err;
+    });
+  }
+
+  dynamicLibraries.reduce((chain, lib) => chain.then(() => loadLibWithRetry(lib)),
+    Promise.resolve()).then(() => {
     // we got them all, wonderful
     reportUndefinedSymbols();
     removeRunDependency("loadDylibs");
