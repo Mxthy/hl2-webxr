@@ -454,13 +454,13 @@ emcc_link() {
 
   log "Running: emcc link → hl2_launcher.html ..."
   emcc \
-    -sUSE_BZIP2=1 -sUSE_SDL=2 -sUSE_FREETYPE=1 -sUSE_LIBJPEG=1 \
+    -msimd128 -DWEBXR=1 -sUSE_BZIP2=1 -sUSE_SDL=2 -sUSE_FREETYPE=1 -sUSE_LIBJPEG=1 \
     -sUSE_LIBPNG -sMALLOC=mimalloc \
     -sMAIN_MODULE \
-    -sINITIAL_MEMORY=1024mb \
+    -sINITIAL_MEMORY=2048mb \
     -sALLOW_MEMORY_GROWTH=1 \
-    -sMAXIMUM_MEMORY=4gb \
-    -sSHARED_MEMORY=1 -sUSE_PTHREADS -sPTHREAD_POOL_SIZE=8 \
+    -sMAXIMUM_MEMORY=3gb \
+    -sSHARED_MEMORY=1 -sUSE_PTHREADS -sPTHREAD_POOL_SIZE=4 \
     -sPTHREAD_POOL_SIZE_STRICT=2 \
     -sFULL_ES3 -sSTACK_SIZE=64mb \
     --shell-file=emscripten/shell.html \
@@ -471,6 +471,7 @@ emcc_link() {
     --pre-js emscripten/pre.js \
     --post-js emscripten/post.js \
     -sERROR_ON_UNDEFINED_SYMBOLS=0 \
+    -Wl,--export=_ZTV11IVP_Mindist -Wl,--export=_ZTV16IVP_Mindist_Base \
     -L build/install/ \
     build/launcher_main/libhl2_launcher.a \
     ${stubs_obj:+"$stubs_obj"} \
@@ -608,6 +609,11 @@ collect_outputs() {
   cp "$ENGINE_DIR/build/install/hl2_launcher.js"   "$OUT_DIR/web/" 2>/dev/null || true
   cp "$ENGINE_DIR/build/install/hl2_launcher.wasm" "$OUT_DIR/web/" 2>/dev/null || true
   find "$ENGINE_DIR/build/install/" -name '*.so' -exec cp {} "$OUT_DIR/web/" \; 2>/dev/null || true
+  # WebXR Frontend-Dateien
+  for xr_file in xr_wrapper.js index.html sw.js pre.js; do
+    cp "$ENGINE_DIR/emscripten/$xr_file" "$OUT_DIR/web/" 2>/dev/null || true
+  done
+  log "  WebXR Frontend-Dateien kopiert"
   cp -r "$ENGINE_DIR/build/install/assets"          "$OUT_DIR/web/" 2>/dev/null || true
 
   # Data-Chunks (only if present)

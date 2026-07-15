@@ -129,6 +129,10 @@ jobs:
             ${{ env.OUT_DIR }}/web/hl2_launcher.html
             ${{ env.OUT_DIR }}/web/hl2_launcher.js
             ${{ env.OUT_DIR }}/web/hl2_launcher.wasm
+            ${{ env.OUT_DIR }}/web/index.html
+            ${{ env.OUT_DIR }}/web/xr_wrapper.js
+            ${{ env.OUT_DIR }}/web/sw.js
+            ${{ env.OUT_DIR }}/web/pre.js
             ${{ env.OUT_DIR }}/web/*.so
             ${{ env.OUT_DIR }}/web/assets/
           retention-days: 30
