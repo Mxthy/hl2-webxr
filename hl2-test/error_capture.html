@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head><title>HL2 Error Capture</title>
+<style>
+body { background:#111; color:#0f0; font-family:monospace; font-size:11px; margin:0; padding:8px; }
+#log { white-space:pre-wrap; max-height:100vh; overflow:auto; }
+.err { color:#f44; } .warn { color:#fa0; } .info { color:#0ff; }
+</style></head>
+<body>
+<div id="log"></div>
+<script>
+const logEl = document.getElementById('log');
+function append(cls, msg) {
+  const d = document.createElement('div');
+  d.className = cls;
+  d.textContent = msg;
+  logEl.appendChild(d);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+// Capture ALL console output
+['log','error','warn','info','debug'].forEach(method => {
+  const orig = console[method];
+  console[method] = function(...args) {
+    const cls = method === 'error' ? 'err' : method === 'warn' ? 'warn' : method === 'info' ? 'info' : '';
+    append(cls, `[${method}] ${args.map(a => {
+      if (a instanceof Error) return a.stack || a.message;
+      if (typeof a === 'object') try { return JSON.stringify(a); } catch { return String(a); }
+      return String(a);
+    }).join(' ')}`);
+    orig.apply(console, args);
+  };
+});
+
+window.onerror = function(msg, url, line, col, err) {
+  append('err', `UNCAUGHT: ${msg} at ${(url||'').split('/').pop()}:${line}:${col}\n${err ? err.stack : ''}`);
+  return false;
+};
+
+window.addEventListener('unhandledrejection', function(e) {
+  append('err', `UNHANDLED REJECTION: ${e.reason}`);
+});
+
+append('info', 'Loading hl2_launcher.html...');
+
+// Load the actual launcher in an iframe (same-origin so we CAN access it)
+const frame = document.createElement('iframe');
+frame.style.cssText = 'width:100%;height:400px;border:1px solid #333;';
+frame.src = 'hl2_launcher.html';
+document.body.appendChild(frame);
+
+frame.onload = () => append('info', 'iframe loaded');
+frame.onerror = (e) => append('err', 'iframe error: ' + e);
+</script>
+</body>
+</html>

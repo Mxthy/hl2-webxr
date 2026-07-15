@@ -158,6 +158,11 @@ class DataLoader {
       reject(new Error(`cannot load map ${mapName}`));
     };
     xhr.onload = e => {
+      if (xhr.status !== 200 || !xhr.response || xhr.response.byteLength < 16) {
+        console.warn(`[dataLoader] ${mapName}.data not available (status=${xhr.status}, size=${xhr.response ? xhr.response.byteLength : 0}) — skipping`);
+        resolve();
+        return;
+      }
       this.setProgress(mapName, 1);
       const dv = new DataView(xhr.response);
       let offset = 0;
@@ -174,7 +179,8 @@ class DataLoader {
       }
       resolve();
     };
-    xhr.open("GET", `chunks/${mapName}.data`, true);
+    const r2Url = `https://bdeeeb229289da950d71472c4c4bab76.r2.cloudflarestorage.com/hl2-webxr-assets/chunks/${mapName}.data`;
+      xhr.open("GET", r2Url, true);
     xhr.send();
     return promise;
   }
