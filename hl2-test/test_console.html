@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head><title>HL2TEST</title></head>
+<body style="background:#111;color:#0f0;font-family:monospace;font-size:11px;margin:0;padding:0;">
+<canvas id="canvas" style="width:100%;height:600px;display:block;" oncontextmenu="event.preventDefault()" tabindex=-1></canvas>
+<pre id="log" style="white-space:pre-wrap;word-wrap:break-word;padding:8px;max-height:40vh;overflow:auto;"></pre>
+<script>
+// Unregister any existing service workers
+navigator.serviceWorker.getRegistrations().then(function(regs) {
+  regs.forEach(function(r) { r.unregister(); });
+}).catch(function() {});
+
+var logEl = document.getElementById('log');
+var logs = [];
+var errCount = 0;
+function addLog(prefix, args) {
+  var line = '[' + new Date().toISOString().substring(11,23) + '] ' + prefix + ': ' + Array.from(args).map(function(a) {
+    if (typeof a === 'string') return a.substring(0, 200);
+    try { return JSON.stringify(a).substring(0, 200); } catch(e) { return String(a).substring(0, 200); }
+  }).join(' ');
+  logs.push(line);
+  if (logs.length > 200) logs.shift();
+  logEl.textContent = logs.join('\n');
+  logEl.scrollTop = logEl.scrollHeight;
+  // Also update document title with last 5 lines for easy retrieval
+  document.title = 'HL2:' + logs.slice(-5).join('|').substring(0, 500);
+  if (prefix === 'ERR' || prefix === 'ABORT' || prefix === 'UNCAUGHT') errCount++;
+}
+
+var origLog = console.log, origErr = console.error, origWarn = console.warn;
+console.log = function(){ addLog('LOG', arguments); origLog.apply(console, arguments); };
+console.error = function(){ addLog('ERR', arguments); origErr.apply(console, arguments); };
+console.warn = function(){ addLog('WRN', arguments); origWarn.apply(console, arguments); };
+window.onerror = function(msg, src, line, col, err) {
+  addLog('UNCAUGHT', [msg + ' at ' + (src||'').split('/').pop() + ':' + line + ':' + col]);
+  return false;
+};
+window.addEventListener('unhandledrejection', function(e) {
+  addLog('REJECT', [e.reason ? (e.reason.message || e.reason) : 'unknown']);
+});
+
+var canvasElement = document.getElementById('canvas');
+canvasElement.widthNative = screen.availWidth;
+canvasElement.heightNative = screen.availHeight;
+
+window.Module = {
+  print: function(text) { addLog('OUT', [text]); },
+  printErr: function(text) { addLog('ERR', [text]); },
+  canvas: canvasElement,
+  onRuntimeInitialized: function() { addLog('EVENT', ['Runtime initialized!']); },
+  onAbort: function(reason) { addLog('ABORT', [reason]); },
+  setStatus: function(text) { addLog('STATUS', [text]); },
+  preRun: [],
+  postRun: [],
+};
+
+addLog('SYS', ['Loading engine...']);
+setTimeout(function() {
+  var script = document.createElement('script');
+  script.src = 'hl2_launcher.js?v=16';
+  script.onload = function() { addLog('SYS', ['hl2_launcher.js loaded OK']); };
+  script.onerror = function() { addLog('SYS', ['hl2_launcher.js FAILED to load']); };
+  document.head.appendChild(script);
+}, 2000);
+</script>
+</body>
+</html>
