@@ -467,6 +467,7 @@ emcc_link() {
     -sPROXY_TO_PTHREAD \
     -sOFFSCREENCANVASES_TO_PTHREAD="#canvas" \
     -sOFFSCREENCANVAS_SUPPORT=1 \
+    "-sEXPORTED_RUNTIME_METHODS=['wasmMemory','addRunDependency','removeRunDependency','FS','callMain','abort','HEAPU8']" \
     --pre-js emscripten/pre.js \
     --post-js emscripten/post.js \
     -sERROR_ON_UNDEFINED_SYMBOLS=0 \
