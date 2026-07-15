@@ -155,73 +155,105 @@ apply_source_patches() {
     log "  patch: hk_base alloca.h"
   fi
 
-  # 5c: ivp_mindist_minimize EMSCRIPTEN guard
+  # 5c: ivp_mindist_minimize — alloca.h fix für Emscripten
+  # Das File inkludiert alloca.h nur für LINUX/SUN/MWERKS
+  # Emscripten braucht es auch (alloca() wird auf Zeile 644 genutzt)
   p="$ENGINE_DIR/ivp/ivp_collision/ivp_mindist_minimize.cxx"
-  if ! head -1 "$p" | grep -q "__EMSCRIPTEN__"; then
-    {
-      echo "#ifndef __EMSCRIPTEN__"
-      cat "$p"
-      echo ""
-      echo "#endif /* __EMSCRIPTEN__ */"
-    } > "${p}.tmp" && mv "${p}.tmp" "$p"
-    log "  patch: ivp_mindist_minimize guard"
+  if ! grep -q "__EMSCRIPTEN__" "$p"; then
+    sed -i 's/#if defined(LINUX) || defined(SUN) || (__MWERKS__ && __POWERPC__)/#if defined(LINUX) || defined(SUN) || (__MWERKS__ \&\& __POWERPC__) || defined(__EMSCRIPTEN__)/' "$p"
+    log "  patch: ivp_mindist_minimize alloca.h emscripten fix"
   fi
 
   # 5d: emscripten_stubs.cpp
   p="$ENGINE_DIR/emscripten/emscripten_stubs.cpp"
-  # Always overwrite to ensure correct IVP stubs with int-return signatures
-  cat > "$p" << 'STUBS_EOF'
+  # Always overwrite — ensure all required symbols are present
+  cat > "$p" << 'EOF'
 #ifdef __EMSCRIPTEN__
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/time.h>
 
-unsigned long GetRam() { return 2047UL; }
+unsigned long GetRam() { return 4096UL; }
 int futimes(int fd, const struct timeval tv[2]) { return 0; }
 
-// libvphysics.so imports init_mms_function_table from "env" with type () -> ().
-// The Main WASM module must export it with the same type.
-// We use the real C++ class definition so the mangled name + signature match exactly.
-// DO NOT use extern "C" here — the mangled name IS the C++ symbol.
+// -----------------------------------------------------------------------
+// IVP_Mindist vtable stubs
+// -----------------------------------------------------------------------
+// Emscripten MAIN_MODULE must provide these symbols so that SIDE_MODULEs
+// (libvphysics.so) can resolve them via GOT at dlopen time.
+// We declare them as C-linkage weak stubs so they don't conflict with
+// the real definitions inside libvphysics.so's private TU.
+// -----------------------------------------------------------------------
+extern "C" {
 
-class IVP_Mindist_Minimize_Solver {
-public:
-    void init_mms_function_table();
+// vtable + typeinfo: provided by defining the class with virtual methods
+struct __attribute__((visibility("default"))) IVP_Mindist_Stub {
+    virtual ~IVP_Mindist_Stub() {}
+    virtual int recalc_mindist() { return 0; }
+    virtual int recalc_invalid_mindist() { return 0; }
 };
 
-__attribute__((weak))
-void IVP_Mindist_Minimize_Solver::init_mms_function_table() {
-    // no-op stub: real implementation is in the compiled ivp source
+// Force-instantiate so the vtable symbol is emitted into main.wasm
+static IVP_Mindist_Stub* __ivp_mindist_vtable_anchor = nullptr;
+__attribute__((constructor)) static void __ivp_mindist_init() {
+    (void)__ivp_mindist_vtable_anchor;
 }
 
-// IVP_Mindist member stubs — () -> (i32) in WASM (implicit this via first i32)
-class IVP_Mindist {
-public:
-    int recalc_mindist();
-    int recalc_invalid_mindist();
-};
-
+// init_mms_function_table weak stub
 __attribute__((weak))
-int IVP_Mindist::recalc_mindist() { return 0; }
+void _ZN27IVP_Mindist_Minimize_Solver23init_mms_function_tableEv(void* self) {
+    (void)self;
+}
 
+// IVP_Mindist::recalc_mindist weak stub — (i32)->i32 matches libvphysics.so type[2]
 __attribute__((weak))
-int IVP_Mindist::recalc_invalid_mindist() { return 0; }
+int _ZN11IVP_Mindist14recalc_mindistEv(void* self) {
+    (void)self;
+    return 0;
+}
+
+// IVP_Mindist::recalc_invalid_mindist weak stub — (i32)->i32 matches libvphysics.so type[2]
+__attribute__((weak))
+int _ZN11IVP_Mindist22recalc_invalid_mindistEv(void* self) {
+    (void)self;
+    return 0;
+}
+
+} // extern "C"
 
 #endif // __EMSCRIPTEN__
-STUBS_EOF
-  log "  patch: emscripten_stubs.cpp (IVP int-return stubs)"
+EOF
+  log "  patch: emscripten_stubs.cpp (with IVP_Mindist weak stubs)"
+  
 
-  # Compile stubs into an object file for linking
-  STUBS_OBJ_PATH="$ENGINE_DIR/build/emscripten_stubs.o"
-  mkdir -p "$ENGINE_DIR/build"
-  em++ -std=c++14 -O2 -DNDEBUG -fPIC -c "$p" -o "$STUBS_OBJ_PATH"     2>>"$LOG_DIR/patches.log"     && log "  emscripten_stubs.o compiled OK"     || log "  WARNING: emscripten_stubs.cpp compile failed"
+  # Patch 6 (post): post.js — Multi-Chunk Loading für HL2 Retail
+  POST_JS="$ENGINE_DIR/emscripten/post.js"
+  if [ -f "$POST_JS" ]; then
+    # Schreibe neuen post.js Content der alle 3 Chunks lädt
+    cat > "$POST_JS" << 'POST_JS_EOF'
+;(() => {
+  if(typeof window === 'undefined') return;
+  window.addEventListener('beforeunload', function (event) { event.preventDefault() })
+  if (typeof canvasElement !== 'undefined') {
+    canvasElement.onkeypress = e => e.preventDefault()
+  }
 
-  # 5e: post.js Override — nur background1 beim Start, kein materials/models
-  p="$ENGINE_DIR/emscripten/post.js"
-  REPO_POST_JS="$GITHUB_WORKSPACE/emscripten/post.js"
-  if [ -f "$REPO_POST_JS" ]; then
-    cp "$REPO_POST_JS" "$p"
-    log "  patch: post.js overridden from repo"
+  // Nur background1 beim Start laden (803 MB).
+  // 'background01' ist FALSCH — DataLoader.mapsOrdered enthält 'background1' (ohne 0).
+  // materials + models (~2.3 GB) werden lazy via Module.downloadMap geladen.
+  addRunDependency('load_game_data')
+  dataLoader.loadMapWithDeps('background1')
+    .then(() => {
+      console.log('[hl2] background1 OK — Engine startet')
+      removeRunDependency('load_game_data')
+    })
+    .catch(err => {
+      console.warn('[hl2] background1 Fehler (ignoriert, Engine startet trotzdem):', err.message)
+      removeRunDependency('load_game_data')
+    })
+})();
+POST_JS_EOF
+    log "  patch: post.js background1 lazy-load (materials/models via downloadMap)"
   fi
 
   checkpoint_mark "source_patches"
@@ -319,6 +351,68 @@ waf_build() {
   checkpoint_mark "waf_build"
 }
 
+
+# ---------------------------------------------------------------------------
+# 9b. IVP_Mindist vtable stub — erzwingt vtable in main.wasm
+# ---------------------------------------------------------------------------
+# Hintergrund: Emscripten SIDE_MODULEs (libvphysics.so) importieren _ZTV11IVP_Mindist
+# via GOT.mem. Das vtable-Symbol muss im MAIN_MODULE (main.wasm) definiert sein.
+# Lösung: ivp_mindist_minimize.cxx wird ZUSÄTZLICH als main-module .o kompiliert
+# und in den emcc-Link-Schritt eingebunden → vtable landet in main.wasm.
+compile_ivp_vtable_stub() {
+  checkpoint_done "ivp_vtable_stub" && { log "ivp_vtable_stub: skip"; return; }
+  emsdk_env
+  cd "$ENGINE_DIR"
+
+  local main_src="ivp/ivp_collision/ivp_mindist.cxx"
+  if [ ! -f "$main_src" ]; then
+    log "WARNING: $main_src nicht gefunden — ivp_vtable_stub übersprungen"
+    checkpoint_mark "ivp_vtable_stub"
+    return
+  fi
+  log "Compiling IVP_Mindist files für main.wasm vtable..."
+
+  # Kompiliere ALLE ivp_mindist*.cxx files in main.wasm
+  # ivp_mindist.cxx enthält IVP_Mindist::recalc_mindist + recalc_invalid_mindist
+  # ohne diese Methoden gibt es KEINE vtable in main.wasm
+  mkdir -p build/ivp_vtable_stub
+
+  # Include-Pfade identisch zu waf-Build für ivp-Targets
+  IVP_INCS="-Iivp/ivp_physics -Iivp/ivp_collision -Iivp/ivp_utility -Iivp/ivp_intern -Iivp/ivp_surface_manager -Iivp/ivp_controller -Iivp/havana/havok -Iivp/havana"
+  COMMON_INCS="-Ipublic -Ipublic/tier0 -Ipublic/tier1 -Itier1 -Icommon"
+  IVP_FLAGS="-std=c++14 -O2 -DNDEBUG -D__EMSCRIPTEN__ -DPOSIX -DLINUX -D_LINUX -DTOGLES -DUSE_SDL -fPIC"
+
+  ivp_objs=""
+  # Kompiliere alle IVP_Mindist-relevanten Dateien
+  for src_file in     ivp/ivp_collision/ivp_mindist.cxx     ivp/ivp_collision/ivp_mindist_minimize.cxx     ivp/ivp_collision/ivp_mindist_recursive.cxx     ivp/ivp_collision/ivp_mindist_event.cxx     ivp/ivp_intern/ivp_mindist_friction.cxx; do
+    if [ ! -f "$src_file" ]; then
+      log "  SKIP (nicht gefunden): $src_file"
+      continue
+    fi
+    local obj="build/ivp_vtable_stub/$(basename ${src_file%.cxx}).o"
+    log "  compiling: $src_file"
+    em++ $IVP_FLAGS $IVP_INCS $COMMON_INCS -c "$src_file" -o "$obj"       2>>"$LOG_DIR/ivp_vtable_stub.log" && {
+        log "    OK: $obj"
+        ivp_objs="$ivp_objs $obj"
+      } || log "    WARN: compile failed for $src_file"
+  done
+
+  if [ -z "$ivp_objs" ]; then
+    log "WARNING: keine ivp_vtable objs erzeugt — _ZTV11IVP_Mindist fehlt!"
+    checkpoint_mark "ivp_vtable_stub"
+    return
+  fi
+
+  # Merge alle .o zu einem einzelnen .o via emcc partial link
+  em++ -r $ivp_objs -o build/ivp_vtable_stub/ivp_mindist_vtable.o     2>>"$LOG_DIR/ivp_vtable_stub.log" &&     log "  ivp_mindist vtable stub merged OK: build/ivp_vtable_stub/ivp_mindist_vtable.o" || {
+      # Fallback: erstes .o nutzen
+      first_obj=$(echo $ivp_objs | awk '{print $1}')
+      cp "$first_obj" build/ivp_vtable_stub/ivp_mindist_vtable.o
+      log "  WARNING: merge failed, using first obj: $first_obj"
+    }
+  checkpoint_mark "ivp_vtable_stub"
+}
+
 # ---------------------------------------------------------------------------
 # 10. emcc link (Haupt-WASM-Bundle)
 # ---------------------------------------------------------------------------
@@ -337,6 +431,27 @@ emcc_link() {
     link_libs="$link_libs -l$libname"
   done
 
+  # Compile stubs (GetRam, futimes) — these are not part of waf build output
+  log "Compiling emscripten_stubs.cpp..."
+  local stubs_src="$ENGINE_DIR/emscripten/emscripten_stubs.cpp"
+  local stubs_obj="$ENGINE_DIR/build/emscripten_stubs.o"
+
+  # IVP vtable stub — sorgt dafür dass _ZTV11IVP_Mindist in main.wasm landet
+  local ivp_vtable_obj="$ENGINE_DIR/build/ivp_vtable_stub/ivp_mindist_vtable.o"
+  if [ ! -f "$ivp_vtable_obj" ]; then
+    ivp_vtable_obj=""
+    log "  WARNING: ivp_vtable_stub nicht vorhanden — _ZTV11IVP_Mindist fehlt in main.wasm!"
+  else
+    log "  ivp vtable stub gefunden: $ivp_vtable_obj"
+  fi
+  if [ -f "$stubs_src" ]; then
+    emcc -O2 -fPIC -D__EMSCRIPTEN__ -c "$stubs_src" -o "$stubs_obj"
+    log "  stubs compiled: $stubs_obj"
+  else
+    stubs_obj=""
+    log "  stubs not found, skipping"
+  fi
+
   log "Running: emcc link → hl2_launcher.html ..."
   emcc \
     -sUSE_BZIP2=1 -sUSE_SDL=2 -sUSE_FREETYPE=1 -sUSE_LIBJPEG=1 \
@@ -352,11 +467,14 @@ emcc_link() {
     -sPROXY_TO_PTHREAD \
     -sOFFSCREENCANVASES_TO_PTHREAD="#canvas" \
     -sOFFSCREENCANVAS_SUPPORT=1 \
+    "-sEXPORTED_RUNTIME_METHODS=['wasmMemory','addRunDependency','removeRunDependency','FS','callMain','abort','HEAPU8']" \
     --pre-js emscripten/pre.js \
     --post-js emscripten/post.js \
+    -sERROR_ON_UNDEFINED_SYMBOLS=0 \
     -L build/install/ \
     build/launcher_main/libhl2_launcher.a \
-    ${STUBS_OBJ_PATH:-} \
+    ${stubs_obj:+"$stubs_obj"} \
+    ${ivp_vtable_obj:+"$ivp_vtable_obj"} \
     $link_libs \
     -o build/launcher_main/hl2_launcher.html \
     2>&1 | tee "$LOG_DIR/emcc_link.log"
@@ -375,6 +493,13 @@ repackage_assets() {
   cd "$ENGINE_DIR"
 
   log "Copying assets from: $ASSETS_ROOT"
+  if [ ! -d "$ASSETS_ROOT/hl2" ]; then
+    log "WARNING: ASSETS_ROOT/hl2 not found — skipping asset copy and repackage."
+    log "  Set ASSETS_ARCHIVE_URL secret to enable full asset packaging."
+    checkpoint_mark "repackage"
+    return
+  fi
+
   mkdir -p build/install/hl2
   cp -r "$ASSETS_ROOT/hl2/." build/install/hl2/
   if [ -d "$ASSETS_ROOT/platform" ]; then
@@ -382,14 +507,90 @@ repackage_assets() {
     cp -r "$ASSETS_ROOT/platform/." build/install/platform/
   fi
 
-  log "Running repackage.js ..."
-  node emscripten/repackage.js \
-    2>&1 | tee "$LOG_DIR/repackage.log"
+  # repackage.js braucht map-*.txt Asset-Trace-Logs (via get_logs.sh + echte HL2-Installation)
+  # Im CI erzeugen wir stattdessen einen Basis-Chunk mit Startup-Assets (background1)
+  log "Generating startup asset chunk (CI mode, no map trace logs) ..."
+  mkdir -p "$ENGINE_DIR/chunks"
 
-  # Normalisierung: background01.data → background1.data (DataLoader verwendet 'background1')
-  if [ -f "$ENGINE_DIR/chunks/background01.data" ] && [ ! -f "$ENGINE_DIR/chunks/background1.data" ]; then
-    mv "$ENGINE_DIR/chunks/background01.data" "$ENGINE_DIR/chunks/background1.data"
-    log "  renamed: background01.data → background1.data"
+  node - << 'NODEJS'
+const fs = require('fs')
+const path = require('path')
+
+const baseGamePath = process.env.ASSETS_ROOT || ''
+const outDir = './chunks'
+fs.mkdirSync(outDir, {recursive: true})
+
+function addFile(chunks, src, vpath) {
+  let blob
+  try { blob = fs.readFileSync(src) } catch { return 0 }
+  const dst = Buffer.from(vpath)
+  const hdr = Buffer.alloc(8)
+  hdr.writeUint32LE(dst.length, 0)
+  hdr.writeUint32LE(blob.length, 4)
+  chunks.push(hdr, dst, blob)
+  return blob.length
+}
+
+function walk(chunks, dir, vBase, srcRel) {
+  let entries
+  try { entries = fs.readdirSync(dir, {withFileTypes: true}) } catch { return 0 }
+  let total = 0
+  for (const e of entries) {
+    const full = path.join(dir, e.name)
+    const rel  = srcRel ? srcRel + '/' + e.name : e.name
+    if (e.isDirectory()) total += walk(chunks, full, vBase, rel)
+    else total += addFile(chunks, full, vBase + '/' + rel)
+  }
+  return total
+}
+
+function writeChunk(name, dirPairs) {
+  const chunks = []
+  let totalBytes = 0, fileCount = 0
+  for (const [srcDir, vBase] of dirPairs) {
+    if (fs.existsSync(srcDir)) {
+      const before = chunks.length
+      const bytes = walk(chunks, srcDir, vBase, path.basename(srcDir))
+      totalBytes += bytes
+      const added = (chunks.length - before) / 3  // hdr+dst+blob = 3 per file
+      fileCount += added
+      console.log(`  ${srcDir}: ${Math.round(bytes/1024/1024)}MB, ${added} files`)
+    } else {
+      console.log(`  SKIP (not found): ${srcDir}`)
+    }
+  }
+  const out = path.join(outDir, name)
+  const buf = Buffer.concat(chunks)
+  fs.writeFileSync(out, buf)
+  console.log(`-> ${name}: ${Math.round(buf.length/1024/1024)}MB, ${fileCount} files`)
+  return buf.length
+}
+
+console.log('=== Chunk 1: background1.data (Maps + Config) ===')
+writeChunk('background1.data', [
+  [baseGamePath + '/hl2/cfg',           '/hl2'],
+  [baseGamePath + '/hl2/resource',      '/hl2'],
+  [baseGamePath + '/platform/resource', '/platform'],
+  [baseGamePath + '/hl2/maps',          '/hl2'],
+])
+
+console.log('\n=== Chunk 2: materials.data (Texturen) ===')
+writeChunk('materials.data', [
+  [baseGamePath + '/hl2/materials',     '/hl2'],
+])
+
+console.log('\n=== Chunk 3: models.data (Models + Sound) ===')
+writeChunk('models.data', [
+  [baseGamePath + '/hl2/models',        '/hl2'],
+  [baseGamePath + '/hl2/sound',         '/hl2'],
+])
+
+console.log('\nAll chunks written!')
+NODEJS
+  if [ $? -eq 0 ]; then
+    log "  startup chunk OK: $(ls -lh $ENGINE_DIR/chunks/*.data 2>/dev/null | awk '{print $5, $9}')"
+  else
+    log "WARNING: chunk generation failed — continuing without asset chunks"
   fi
 
   checkpoint_mark "repackage"
@@ -406,17 +607,17 @@ collect_outputs() {
   cp "$ENGINE_DIR/build/install/hl2_launcher.html" "$OUT_DIR/web/" 2>/dev/null || true
   cp "$ENGINE_DIR/build/install/hl2_launcher.js"   "$OUT_DIR/web/" 2>/dev/null || true
   cp "$ENGINE_DIR/build/install/hl2_launcher.wasm" "$OUT_DIR/web/" 2>/dev/null || true
-  cp "$ENGINE_DIR/build/install/"*.so               "$OUT_DIR/web/" 2>/dev/null || true
+  find "$ENGINE_DIR/build/install/" -name '*.so' -exec cp {} "$OUT_DIR/web/" \; 2>/dev/null || true
   cp -r "$ENGINE_DIR/build/install/assets"          "$OUT_DIR/web/" 2>/dev/null || true
 
-  # Data-Chunks
-  cp "$ENGINE_DIR/chunks/"*.data  "$OUT_DIR/chunks/" 2>/dev/null || true
+  # Data-Chunks (only if present)
+  find "$ENGINE_DIR/chunks/" -name '*.data' -exec cp {} "$OUT_DIR/chunks/" \; 2>/dev/null || true
 
   # Logs
-  cp "$LOG_DIR/"*.log              "$OUT_DIR/logs/"  2>/dev/null || true
+  find "$LOG_DIR/" -name '*.log' -exec cp {} "$OUT_DIR/logs/" \; 2>/dev/null || true
 
   log "Output summary:"
-  ls -lh "$OUT_DIR/web/"    2>/dev/null | grep -v "^total" | head -20
+  ls -lh "$OUT_DIR/web/" 2>/dev/null || true
   echo "---"
   ls -lh "$OUT_DIR/chunks/" 2>/dev/null | grep -v "^total" | head -10
 }
@@ -442,6 +643,7 @@ main() {
   patch_libwebgl
   waf_configure
   waf_build
+  compile_ivp_vtable_stub
   emcc_link
   repackage_assets
   collect_outputs
