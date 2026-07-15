@@ -3170,7 +3170,12 @@ var loadDylibs = () => {
     global: true,
     nodelete: true,
     allowUndefined: true
-  })), Promise.resolve()).then(() => {
+  })).catch(err => {
+    console.error('[loadDylibs] FAILED to load ' + lib + ': ' + (err.message || err));
+    console.error('[loadDylibs] Stack: ' + (err.stack || 'no stack'));
+    // Don't rethrow — let other libs load
+    return true;
+  }), Promise.resolve()).then(() => {
     // we got them all, wonderful
     reportUndefinedSymbols();
     removeRunDependency("loadDylibs");
