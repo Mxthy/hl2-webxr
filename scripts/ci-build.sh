@@ -491,7 +491,7 @@ emcc_link() {
     -sPROXY_TO_PTHREAD \
     -sOFFSCREENCANVASES_TO_PTHREAD="#canvas" \
     -sOFFSCREENCANVAS_SUPPORT=1 \
-    "-sEXPORTED_FUNCTIONS=[\"_ZTV11IVP_Mindist\",\"_ZTI11IVP_Mindist\"]" \
+    "-sEXPORTED_FUNCTIONS=[\"_ZTV11IVP_Mindist\"]" \
     "-sEXPORTED_RUNTIME_METHODS=['wasmMemory','addRunDependency','removeRunDependency','FS','callMain','abort','HEAPU8']" \
     --pre-js emscripten/pre.js \
     --post-js emscripten/post.js \
