@@ -1,47 +1,130 @@
-// pre.js — Globale Variablen + SharedArrayBuffer Layout
-// Wird von emcc --pre-js eingebunden (vor dem generierten Emscripten-Code)
+Module['arguments'] = Module['arguments'] || []
+Module['arguments'].push(
+	'-game', 'portal',
+	'-noip',
+	'-language', 'english',
+	'-windowed',
+	'+mat_hdr_level', '0',
+	'+mat_colorcorrection', '1'
+)
 
-// DOM-Referenzen (werden von index.html gesetzt, hier als Fallback)
-var canvasElement = window.canvasElement || document.getElementById('canvas');
-var statusElement = window.statusElement || document.getElementById('status');
-var progressElement = window.progressElement || document.getElementById('progress');
-var spinnerElement = window.spinnerElement || document.getElementById('spinner');
+class DataLoader {
+	mapsOrdered = [
+		'background1',
+		'testchmb_a_00',
+		'testchmb_a_01',
+		'testchmb_a_02',
+		'testchmb_a_03',
+		'testchmb_a_04',
+		'testchmb_a_05',
+		'testchmb_a_06',
+		'testchmb_a_07',
+		'testchmb_a_08',
+		'testchmb_a_09',
+		'testchmb_a_10',
+		'testchmb_a_11',
+		'testchmb_a_13',
+		'testchmb_a_14',
+		'testchmb_a_15'
+	]
 
-// Emscripten Module-Objekt initialisieren
-var Module = Module || {};
+	loadedMaps = {}
 
-// SharedArrayBuffer Layout-Konstanten für XR-Bridge
-// Struktur (512 Bytes):
-// [0]   Int32   FRAME_READY (0=Engine wartet, 1=neue Pose bereit)
-// [4]   Float32[7]  HMD Pose: pos(x,y,z) + rot(x,y,z,w)
-// [32]  Float32[16] Left Eye View Matrix
-// [96]  Float32[16] Left Eye Projection Matrix
-// [160] Float32[16] Right Eye View Matrix
-// [224] Float32[16] Right Eye Projection Matrix
-// [288] Float32[7]  Controller Left Pose: pos(x,y,z) + rot(x,y,z,w)
-// [320] Float32[8]  Controller Left Data: stickX,stickY,trigger,grip,A,B,thumbClick,menu
-// [352] Float32[7]  Controller Right Pose
-// [384] Float32[8]  Controller Right Data
-// [416] Int32   CONTROLLERS_ACTIVE Bitmaske (bit0=left, bit1=right)
-var FRAME_READY_OFFSET    = 0;
-var HMD_POSE_OFFSET       = 4;
-var LEFT_VIEW_OFFSET      = 32;
-var LEFT_PROJ_OFFSET      = 96;
-var RIGHT_VIEW_OFFSET     = 160;
-var RIGHT_PROJ_OFFSET     = 224;
-var CONTROLLER_L_POSE     = 288;
-var CONTROLLER_L_DATA     = 320;
-var CONTROLLER_R_POSE     = 352;
-var CONTROLLER_R_DATA     = 384;
-var CONTROLLER_ACTIVE_OFFSET = 416;
+	async loadMapWithDeps(mapName) {
+		const index = this.mapsOrdered.indexOf(mapName)
+		if(index === -1) {
+			throw new Error(`no such map: ${mapName}`)
+		}
 
-// Feature-Check
-(function() {
-  var sab = typeof SharedArrayBuffer !== 'undefined';
-  var wgl2 = !!document.createElement('canvas').getContext('webgl2');
-  var coi = window.crossOriginIsolated === true;
-  console.log('[PRE] SAB:', sab ? 'OK' : 'FEHLT', '| WebGL2:', wgl2 ? 'OK' : 'FEHLT', '| crossOriginIsolated:', coi ? 'JA' : 'NEIN');
-  if (!sab || !coi) {
-    console.warn('[PRE] WARNUNG: SharedArrayBuffer benötigt COOP/COEP-Header!');
-  }
-})();
+		// load past maps and current one
+		for(let i = 0; i < index + 1; i++) {
+			await this.loadMapCached(this.mapsOrdered[i])
+		}
+
+		// schedule next map if it exists
+		const next = this.mapsOrdered[index + 1]
+		if(next) {
+			this.loadMapCached(next)
+		}
+	}
+
+	async loadMapCached(mapName) {
+		if(mapName in this.loadedMaps) return this.loadedMaps[mapName]
+		const promise = this.loadMap(mapName)
+		this.loadedMaps[mapName] = promise
+		return promise
+	}
+
+	async setProgress(mapName, progress) {
+		if(progress < 1) {
+			spinnerElement.style.display = ''
+			statusElement.innerText = `Downloading map ${mapName}`
+			progressElement.hidden = false
+			progressElement.value = progress
+		} else {
+			spinnerElement.style.display = 'none'
+			statusElement.innerText = ''
+			progressElement.hidden = true
+		}
+	}
+
+	async loadMap(mapName) {
+		this.setProgress(mapName, 0)
+
+		let resolve, reject
+		const promise = new Promise((res, rej) => { resolve = res; reject = rej })
+
+		const xhr = new XMLHttpRequest()
+		xhr.responseType = 'arraybuffer'
+		xhr.onprogress = e => {
+			this.setProgress(mapName, e.loaded / e.total)
+		}
+
+		xhr.onerror = () => {
+			reject(new Error(`cannot load map ${mapName}`))
+		}
+
+		xhr.onload = e => {
+			this.setProgress(mapName, 1)
+			const dv = new DataView(xhr.response)
+
+			let offset = 0
+			
+			// data format: { pathLen: uint32le, dataLen: uint32le, path: bytes, blob: bytes }[]
+			while(offset < dv.byteLength) {
+				const pathLen = dv.getInt32(offset, true)
+				const dataLen = dv.getInt32(offset + 4, true)
+				const path = new TextDecoder().decode(new DataView(
+					dv.buffer,
+					offset + 8,
+					pathLen
+				))
+				const blob = new Uint8Array(
+					dv.buffer,
+					offset + 8 + pathLen,
+					dataLen
+				)
+				offset += 8 + pathLen + dataLen
+
+				const dir = path.replace(/\/[^\/]+$/, '')
+				FS.mkdirTree(dir)
+				FS.writeFile(path, blob)
+			}
+
+			resolve()
+		}
+		xhr.open('GET', `chunks/${mapName}.data`, true)
+		xhr.send()
+
+		return promise
+	}
+}
+
+const dataLoader = new DataLoader()
+
+Module.downloadMap = (lock, mapName) => {
+	dataLoader.loadMapWithDeps(mapName).then(() => {
+		Atomics.store(HEAP32, lock, 0)
+		Atomics.notify(HEAP32, lock)
+	})
+}
