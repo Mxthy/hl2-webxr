@@ -491,12 +491,10 @@ emcc_link() {
     -sPROXY_TO_PTHREAD \
     -sOFFSCREENCANVASES_TO_PTHREAD="#canvas" \
     -sOFFSCREENCANVAS_SUPPORT=1 \
-    # EXPORTED_FUNCTIONS is ignored with MAIN_MODULE=1 (all symbols auto-exported)
     "-sEXPORTED_RUNTIME_METHODS=['wasmMemory','addRunDependency','removeRunDependency','FS','callMain','abort','HEAPU8']" \
     --pre-js emscripten/pre.js \
     --post-js emscripten/post.js \
     -sERROR_ON_UNDEFINED_SYMBOLS=0 \
-    # IVP vtable symbols auto-exported via MAIN_MODULE=1
     -L build/install/ \
     build/launcher_main/libhl2_launcher.a \
     ${stubs_obj:+"$stubs_obj"} \
