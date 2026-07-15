@@ -1103,6 +1103,7 @@ function createWasm() {
       /* patched: use Module.dynamicLibraries order; skip metadata neededDynlibs */
       if (!dynamicLibraries.length) dynamicLibraries = metadata.neededDynlibs;
     }
+<<<<<<< HEAD
     // PATCH: fix init_mms_function_table type mismatch
   // libvphysics.so expects () -> () but wasm exports (i32) -> ()
   // Wrap it as a no-arg thunk with a fixed self-ptr
@@ -1113,6 +1114,26 @@ function createWasm() {
     };
   }
   mergeLibSymbols(wasmExports, "main");
+=======
+    mergeLibSymbols(wasmExports, "main");
+    // TYPE-MISMATCH FIX: libvphysics.so expects () -> void but main exports (i32) -> void
+    // Wrap the function to accept 0 args (libvphysics calls it with no args)
+    (function patchIVPSymbols() {
+      var sym = "_ZN27IVP_Mindist_Minimize_Solver23init_mms_function_tableEv";
+      var orig = wasmImports[sym];
+      if (orig) {
+        wasmImports[sym] = function() { return orig(0); };
+        console.log("[PATCH] Wrapped " + sym + " for type-compat (i32->void as void->void)");
+      } else {
+        // Also check wasmExports directly
+        var exp = wasmExports[sym];
+        if (exp) {
+          wasmImports[sym] = function() { return exp(0); };
+          console.log("[PATCH] Wrapped " + sym + " from exports");
+        }
+      }
+    })();
+>>>>>>> 0b1f659 (Auto-commit agent changes)
     LDSO.init();
     loadDylibs();
     wasmExports = applySignatureConversions(wasmExports);
@@ -3216,6 +3237,7 @@ var loadDylibs = () => {
   }
   // Load binaries asynchronously
   addRunDependency("loadDylibs");
+<<<<<<< HEAD
 
   // PATCH: retry helper for LinkError type mismatches
   function loadLibWithRetry(lib) {
@@ -3243,8 +3265,32 @@ var loadDylibs = () => {
 
   dynamicLibraries.reduce((chain, lib) => chain.then(() => loadLibWithRetry(lib)),
     Promise.resolve()).then(() => {
+=======
+  var _dylibsToLoad = dynamicLibraries.slice();
+  console.log("[loadDylibs] Starting: " + _dylibsToLoad.length + " libraries: " + _dylibsToLoad.join(", "));
+  _dylibsToLoad.reduce((chain, lib) => chain.then(() => {
+    console.log("[loadDylibs] Loading: " + lib);
+    return loadDynamicLibrary(lib, {
+      loadAsync: true,
+      global: true,
+      nodelete: true,
+      allowUndefined: true
+    }).then(result => {
+      console.log("[loadDylibs] OK: " + lib);
+      return result;
+    });
+  }).catch(err => {
+    console.warn("[loadDylibs] FAILED (skipping): " + lib + " — " + err);
+    // Don't break the chain — continue with next library
+  }), Promise.resolve()).then(() => {
+>>>>>>> 0b1f659 (Auto-commit agent changes)
     // we got them all, wonderful
+    console.log("[loadDylibs] All done, removing dependency");
     reportUndefinedSymbols();
+    removeRunDependency("loadDylibs");
+  }).catch(err => {
+    console.error("[loadDylibs] Chain error: " + err);
+    // Force continue even on error
     removeRunDependency("loadDylibs");
   });
 };
