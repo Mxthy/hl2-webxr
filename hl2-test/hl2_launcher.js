@@ -3000,11 +3000,17 @@ var mergeLibSymbols = (exports, libName) => {
   var dep = !noRunDep ? getUniqueRunDependency(`al ${url}`) : "";
   readAsync(url).then(arrayBuffer => {
     assert(arrayBuffer, `Loading data file "${url}" failed (no arrayBuffer).`);
-    onload(new Uint8Array(arrayBuffer));
+    try {
+      onload(new Uint8Array(arrayBuffer));
+    } catch(e) {
+      console.error('[asyncLoad] onload threw for ' + url + ': ' + (e && e.message ? e.message : e));
+      if (onerror) { try { onerror(e); } catch(e2) { console.error('[asyncLoad] onerror also threw: ' + e2); } }
+    }
     if (dep) removeRunDependency(dep);
   }, err => {
+    if (dep) removeRunDependency(dep);
     if (onerror) {
-      onerror();
+      onerror(err);
     } else {
       throw `Loading data file "${url}" failed.`;
     }
@@ -3104,7 +3110,13 @@ var registerDynCallSymbols = exports => {
     }
     var libFile = locateFile(libName);
     if (flags.loadAsync) {
-      return new Promise((resolve, reject) => asyncLoad(libFile, resolve, reject));
+      return new Promise((resolve, reject) => asyncLoad(libFile, 
+        (data) => { resolve(data); },
+        (err) => { 
+          console.error('[loadLibData] asyncLoad failed for ' + libName + ' (' + libFile + '): ' + (err || 'no error'));
+          reject(err);
+        }
+      ));
     }
     // load the binary synchronously
     if (!readBinary) {
@@ -3121,7 +3133,16 @@ var registerDynCallSymbols = exports => {
     }
     // module not preloaded - load lib data and create new module from it
     if (flags.loadAsync) {
-      return loadLibData().then(libData => loadWebAssemblyModule(libData, flags, libName, localScope, handle));
+      return loadLibData().then(libData => {
+        if (!libData || libData.length === 0) {
+          throw new Error('Empty libData for ' + libName);
+        }
+        return loadWebAssemblyModule(libData, flags, libName, localScope, handle);
+      }).catch(err => {
+        console.error('[getExports] Error loading ' + libName + ': ' + (err ? (err.message || err) : 'null/undefined error'));
+        if (err && err.stack) console.error('[getExports] Stack: ' + err.stack);
+        throw err; // re-throw so loadDylibs catch handler gets it
+      });
     }
     return loadWebAssemblyModule(loadLibData(), flags, libName, localScope, handle);
   }
@@ -3180,6 +3201,9 @@ var loadDylibs = () => {
   })).catch(err => {
     console.error('[loadDylibs] FAILED to load ' + lib + ': ' + (err ? (err.message || err) : 'unknown error'));
     console.error('[loadDylibs] Stack: ' + (err ? (err.stack || 'no stack') : 'no err object'));
+    // Force-remove any lingering run dependency for this lib
+    var depId = 'al ' + (lib.startsWith('http') ? lib : (Module.locateFile ? Module.locateFile(lib) : lib));
+    if (depId) { try { removeRunDependency(depId); } catch(e) { /* might already be removed */ } }
     // Don't rethrow — let other libs load
     return true;
   }), Promise.resolve()).then(() => {
