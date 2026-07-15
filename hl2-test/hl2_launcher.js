@@ -661,7 +661,7 @@ if (!ENVIRONMENT_IS_PTHREAD) {
   if (Module["wasmMemory"]) {
     wasmMemory = Module["wasmMemory"];
   } else {
-    var INITIAL_MEMORY = Module["INITIAL_MEMORY"] || 1073741824;
+    var INITIAL_MEMORY = Module["INITIAL_MEMORY"] || 2147483648;
     legacyModuleProp("INITIAL_MEMORY", "INITIAL_MEMORY");
     assert(INITIAL_MEMORY >= 67108864, "INITIAL_MEMORY should be larger than STACK_SIZE, was " + INITIAL_MEMORY + "! (STACK_SIZE=" + 67108864 + ")");
     /** @suppress {checkTypes} */ wasmMemory = new WebAssembly.Memory({
@@ -671,7 +671,7 @@ if (!ENVIRONMENT_IS_PTHREAD) {
       // https://github.com/emscripten-core/emscripten/issues/14130
       // And in the pthreads case we definitely need to emit a maximum. So
       // always emit one.
-      "maximum": 65536,
+      "maximum": 49152,
       "shared": true
     });
   }
@@ -1887,7 +1887,7 @@ var PThread = {
     }
   },
   initMainThread() {
-    var pthreadPoolSize = 8;
+    var pthreadPoolSize = 4;
     // Start loading up the Worker pool, if requested.
     while (pthreadPoolSize--) {
       PThread.allocateUnusedWorker();
@@ -19099,7 +19099,7 @@ var getHeapMax = () => // Stay one Wasm page short of 4GB: while e.g. Chrome is 
 // full 4GB Wasm memories, the size will wrap back to 0 bytes in Wasm side
 // for any code that deals with heap sizes, which would require special
 // casing all heap size related code to treat 0 specially.
-4294901760;
+3221225472;
 
 function _emscripten_get_heap_max() {
   return getHeapMax();
@@ -33636,6 +33636,7 @@ var _socket = createExportWrapper("socket", 3);
 
 var ___wasm_apply_data_relocs = createExportWrapper("__wasm_apply_data_relocs", 0);
 
+<<<<<<< HEAD
 var __ZTVN10__cxxabiv120__si_class_type_infoE = Module["__ZTVN10__cxxabiv120__si_class_type_infoE"] = 338016;
 
 var __ZTVN10__cxxabiv117__class_type_infoE = Module["__ZTVN10__cxxabiv117__class_type_infoE"] = 337976;
@@ -33645,12 +33646,29 @@ var __ZTVN10__cxxabiv121__vmi_class_type_infoE = Module["__ZTVN10__cxxabiv121__v
 var _stderr = Module["_stderr"] = 331488;
 
 var _stdout = Module["_stdout"] = 331640;
+=======
+var __ZTV16IVP_Mindist_Base = Module["__ZTV16IVP_Mindist_Base"] = 331328;
+
+var __ZTVN10__cxxabiv120__si_class_type_infoE = Module["__ZTVN10__cxxabiv120__si_class_type_infoE"] = 338464;
+
+var __ZTVN10__cxxabiv117__class_type_infoE = Module["__ZTVN10__cxxabiv117__class_type_infoE"] = 338424;
+
+var __ZTVN10__cxxabiv121__vmi_class_type_infoE = Module["__ZTVN10__cxxabiv121__vmi_class_type_infoE"] = 338516;
+
+var _stderr = Module["_stderr"] = 331960;
+
+var _stdout = Module["_stdout"] = 332112;
+>>>>>>> 78707dc (Auto-commit agent changes)
 
 var ___THREW__ = Module["___THREW__"] = 1180;
 
 var ___threwValue = Module["___threwValue"] = 1184;
 
+<<<<<<< HEAD
 var __ZTIi = Module["__ZTIi"] = 337968;
+=======
+var __ZTIi = Module["__ZTIi"] = 338416;
+>>>>>>> 78707dc (Auto-commit agent changes)
 
 function invoke_viiii(index, a1, a2, a3, a4) {
   var sp = stackSave();

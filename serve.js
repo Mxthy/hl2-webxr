@@ -30,7 +30,7 @@ const server = http.createServer((req, res) => {
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
 
   let urlPath = req.url.split('?')[0]
-  if (urlPath === '/') urlPath = '/hl2_launcher.html'
+  if (urlPath === '/') urlPath = '/index.html'
 
   const filePath = path.join(ROOT, urlPath)
 
@@ -63,7 +63,7 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`\n🎮 HL2 WebXR Test Server`)
   console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
-  console.log(`   URL:  http://localhost:${PORT}/hl2_launcher.html`)
+  console.log(`   URL:  http://localhost:${PORT}/`)
   console.log(`   Root: ${ROOT}`)
   console.log(`   COOP/COEP: ✓ (SharedArrayBuffer enabled)`)
   console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
