@@ -469,7 +469,7 @@ emcc_link() {
     log "  ivp vtable stub gefunden: $ivp_vtable_obj"
   fi
   if [ -f "$stubs_src" ]; then
-    emcc -O2 -fPIC -D__EMSCRIPTEN__ -c "$stubs_src" -o "$stubs_obj"
+    emcc -O0 -fPIC -D__EMSCRIPTEN__ -c "$stubs_src" -o "$stubs_obj"  # -O0 prevents vtable DCE
     log "  stubs compiled: $stubs_obj"
   else
     stubs_obj=""
@@ -491,12 +491,12 @@ emcc_link() {
     -sPROXY_TO_PTHREAD \
     -sOFFSCREENCANVASES_TO_PTHREAD="#canvas" \
     -sOFFSCREENCANVAS_SUPPORT=1 \
-    "-sEXPORTED_FUNCTIONS=[\"_ZTV11IVP_Mindist\"]" \
+    # EXPORTED_FUNCTIONS is ignored with MAIN_MODULE=1 (all symbols auto-exported)
     "-sEXPORTED_RUNTIME_METHODS=['wasmMemory','addRunDependency','removeRunDependency','FS','callMain','abort','HEAPU8']" \
     --pre-js emscripten/pre.js \
     --post-js emscripten/post.js \
     -sERROR_ON_UNDEFINED_SYMBOLS=0 \
-    -Wl,--export=_ZTV11IVP_Mindist -Wl,--export=_ZTV16IVP_Mindist_Base \
+    # IVP vtable symbols auto-exported via MAIN_MODULE=1
     -L build/install/ \
     build/launcher_main/libhl2_launcher.a \
     ${stubs_obj:+"$stubs_obj"} \
