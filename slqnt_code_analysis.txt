@@ -1,0 +1,331 @@
+================================================================================
+QUELLCODE-ANALYSE VON HL2_LAUNCHER.JS
+================================================================================
+
+Diese Analyse wurde automatisch anhand des heruntergeladenen Quellcodes von 
+https://hl2.slqnt.dev/hl2_launcher.js erstellt (Dateigröße: 3.865.747 Bytes).
+
+--------------------------------------------------------------------------------
+1. DYNAMIC LIBRARIES (`dynamicLibraries`)
+--------------------------------------------------------------------------------
+* Definition:
+  `var dynamicLibraries = [];`
+  
+* Lademechanismus:
+  Obwohl das Array initial leer ist, nutzt das WebAssembly-Modul dynamisches 
+  Linking (Dylink). Der Ladevorgang läuft wie folgt ab:
+  - In `createWasm()` wird die Funktion `receiveInstance(instance, module)` aufgerufen.
+  - Diese holt Metadaten aus dem WebAssembly-Modul via `getDylinkMetadata(module)`.
+  - Wenn `metadata.neededDynlibs` vorhanden sind, werden sie an `dynamicLibraries` 
+    angehängt:
+    `if (metadata.neededDynlibs) { dynamicLibraries = metadata.neededDynlibs.concat(dynamicLibraries); }`
+  - Anschließend werden die Bibliotheken geladen:
+    `loadDylibs();`
+
+--------------------------------------------------------------------------------
+2. MODULE.* EINSTELLUNGEN
+--------------------------------------------------------------------------------
+* `Module.canvas`:
+  Wird dynamisch im Worker/PThread-Kontext zugewiesen. Bei Empfang des OffscreenCanvases:
+  `if (!Module["canvas"] && data.moduleCanvasId && GL.offscreenCanvases[data.moduleCanvasId]) {`
+  `  Module["canvas"] = GL.offscreenCanvases[data.moduleCanvasId].offscreenCanvas;`
+  `  Module["canvas"].id = data.moduleCanvasId;`
+  `}`
+
+* `Module.arguments`:
+  Wird initialisiert als:
+  `Module["arguments"] = Module["arguments"] || [];`
+  Im `preRun`-Schritt (wenn im Browser-Fenster ausgeführt) wird nach der 
+  Spielauswahl (`Module.__gameChoice`) Folgendes angehängt:
+  `Module["arguments"].push("-game", gameArgs[game], "-windowed", "-w", "1280", "-h", "800", "-novid", "-noip", "+mat_hdr_level", "0", "+mat_colorcorrection", "1", "+mat_picmip", "1");`
+
+* `Module.preRun`:
+  Es werden mehrere Callbacks in `Module.preRun` geschoben:
+  - IDBFS-Initialisierung: Mountet `/idbfs` (IndexedDB FS), kopiert persistente Spielstände (`gamestate.txt`, `/save`), startet den Auto-Flush Intervall (alle 10s via `setInterval(..., 10000)`).
+  - Game-Auswahl & Map-Preload: Wartet auf das Versprechen `Module.__gameChoice`, legt die Engine-Startparameter fest, initialisiert den `DataLoader` und lädt die jeweilige Startmap (z. B. `background01`).
+
+* `Module.postRun`:
+  Standardmäßige Emscripten-Abarbeitung von Post-Run Callbacks:
+  `if (Module["postRun"]) {`
+  `  if (typeof Module["postRun"] == "function") Module["postRun"] = [Module["postRun"]];`
+  `  while (Module["postRun"].length) { addOnPostRun(Module["postRun"].shift()); }`
+  `}`
+
+* `Module.locateFile`:
+  Bestimmt den Pfad zu externen Ressourcen (wie der `.wasm`-Datei):
+  `function locateFile(path) {`
+  `  if (Module["locateFile"]) { return Module["locateFile"](path, scriptDirectory); }`
+  `  return scriptDirectory + path;`
+  `}`
+
+--------------------------------------------------------------------------------
+3. DATALOADER-IMPLEMENTIERUNG
+--------------------------------------------------------------------------------
+Der `DataLoader` lädt Maps und deren Abhängigkeiten inkrementell und cached 
+diese im Browser-OPFS (Origin Private File System).
+
+Der vollständige Code der `DataLoader`-Klasse:
+
+```javascript
+class DataLoader {
+    hl2MapsOrdered = ["background01", "d1_trainstation_01", "d1_trainstation_02", "d1_trainstation_03", "d1_trainstation_04", "d1_trainstation_05", "d1_trainstation_06", "background02", "d1_canals_01", "d1_canals_01a", "d1_canals_02", "d1_canals_03", "d1_canals_05", "d1_canals_06", "d1_canals_07", "d1_canals_08", "d1_canals_09", "d1_canals_10", "d1_canals_11", "d1_canals_12", "d1_canals_13", "d1_eli_01", "d1_eli_02", "background03", "d1_town_01", "d1_town_01a", "d1_town_02", "d1_town_02a", "d1_town_03", "d1_town_04", "d1_town_05", "background04", "d2_coast_01", "d2_coast_03", "d2_coast_04", "d2_coast_05", "d2_coast_07", "d2_coast_08", "d2_coast_09", "d2_coast_10", "d2_coast_11", "d2_coast_12", "d2_prison_01", "d2_prison_02", "d2_prison_03", "d2_prison_04", "d2_prison_05", "d2_prison_06", "d2_prison_07", "d2_prison_08", "background05", "d3_c17_01", "d3_c17_02", "d3_c17_03", "d3_c17_04", "d3_c17_05", "d3_c17_06a", "d3_c17_06b", "d3_c17_07", "d3_c17_08", "d3_c17_09", "d3_c17_10a", "d3_c17_10b", "d3_c17_11", "d3_c17_12", "background06", "d3_citadel_01", "d3_citadel_02", "d3_citadel_03", "d3_citadel_04", "d3_citadel_05", "d3_breen_01"];
+    ep1MapsOrdered = ["ep1_background_00", "ep1_background01", "ep1_citadel_00", "ep1_citadel_01", "ep1_citadel_02", "ep1_citadel_02b", "ep1_citadel_03", "ep1_citadel_04", "ep1_c17_00", "ep1_c17_00a", "ep1_c17_01", "ep1_c17_02", "ep1_c17_0b", "ep1_c17_0a", "ep1_c17_05", "ep1_c17_06", "ep1_background_01a", "ep1_background_02"];
+    ep2MapsOrdered = ["ep2_background01", "ep2_outland_01", "ep2_outland_01a", "ep2_outland_02", "ep2_outland_03", "ep2_outland_04", "ep2_outland_05", "ep2_outland_06", "ep2_outland_06a", "ep2_outland_07", "ep2_outland_08", "ep2_outland_09", "ep2_outland_10", "ep2_outland_10a", "ep2_outland_11", "ep2_outland_11a", "ep2_outland_11b", "ep2_outland_12", "ep2_outland_12a"];
+    mapsOrdered = [];
+    mapsOrdered = {
+        hl2: this.hl2MapsOrdered,
+        ep1: this.ep1MapsOrdered,
+        ep2: this.ep2MapsOrdered
+    }[sessionStorage.getItem("ep")] || this.ep2MapsOrdered;
+    loadedMaps = {};
+    preloadNextMap = false;
+    opfsAvailable = false;
+
+    async getOpfsDir() {
+        if (!this._opfsDir) {
+            const root = await navigator.storage.getDirectory();
+            this._opfsDir = await root.getDirectoryHandle(OPFS_CHUNK_DIR, {
+                create: true
+            })
+        }
+        return this._opfsDir
+    }
+
+    async opfsRead(name) {
+        try {
+            const dir = await this.getOpfsDir();
+            const fh = await dir.getFileHandle(name);
+            return await (await fh.getFile()).arrayBuffer()
+        } catch (e) {
+            return null
+        }
+    }
+
+    async opfsWrite(name, data) {
+        try {
+            const dir = await this.getOpfsDir();
+            const tmp = name + ".tmp";
+            const fh = await dir.getFileHandle(tmp, {
+                create: true
+            });
+            const w = await fh.createWritable();
+            await w.write(data);
+            await w.close();
+            if (fh.move) {
+                await fh.move(name)
+            } else {
+                const finalFh = await dir.getFileHandle(name, {
+                    create: true
+                });
+                const fw = await finalFh.createWritable();
+                await fw.write(data);
+                await fw.close();
+                await dir.removeEntry(tmp).catch(() => {})
+            }
+            return true
+        } catch (e) {
+            console.warn("opfs write failed: ", name, e);
+            return false
+        }
+    }
+
+    async opfsDelete(name) {
+        try {
+            const dir = await this.getOpfsDir();
+            await dir.removeEntry(name)
+        } catch (e) {}
+    }
+
+    reconcileManifest() {
+        return this._reconcilePromise ??= this._reconcileManifestImpl()
+    }
+
+    async _reconcileManifestImpl() {
+        this.opfsAvailable = !!(typeof navigator !== "undefined" && navigator.storage && navigator.storage.getDirectory);
+        if (!this.opfsAvailable) {
+            console.warn("opfs unavailable, maps will not save");
+            return
+        }
+        try {
+            if (navigator.storage.persist) await navigator.storage.persist()
+        } catch (e) {}
+        let newManifest = null;
+        try {
+            const res = await fetch("chunks/manifest.json", {
+                cache: "no-store"
+            });
+            if (res.ok) newManifest = await res.json()
+        } catch (e) {}
+        if (!newManifest) {
+            return
+        }
+        let oldManifest = {};
+        const saved = await this.opfsRead("manifest.json");
+        if (saved) {
+            try {
+                oldManifest = JSON.parse((new TextDecoder).decode(saved))
+            } catch (e) {}
+        }
+        const stale = diffManifests(oldManifest, newManifest);
+        for (const name of stale) await this.opfsDelete(name + ".data");
+        if (stale.length) console.log(`invalidated ${stale.length} outdated map(s)`);
+        await this.opfsWrite("manifest.json", (new TextEncoder).encode(JSON.stringify(newManifest)))
+    }
+
+    async loadMapWithDeps(mapName) {
+        await this.reconcileManifest();
+        const index = this.mapsOrdered.indexOf(mapName);
+        if (index === -1) {
+            console.error(`no such map: ${mapName}`)
+        }
+        for (let i = 0; i < index + 1; i++) {
+            await this.loadMapCached(this.mapsOrdered[i])
+        }
+        if (this.preloadNextMap) {
+            const next = this.mapsOrdered[index + 1];
+            if (next) {
+                this.loadMapCached(next)
+            }
+        }
+    }
+
+    async loadMapCached(mapName) {
+        if (mapName in this.loadedMaps) return this.loadedMaps[mapName];
+        const promise = this.loadMap(mapName);
+        this.loadedMaps[mapName] = promise;
+        return promise
+    }
+
+    async setProgress(mapName, progress) {
+        if (progress < 1) {
+            spinnerElement.style.display = "";
+            statusElement.innerText = `Downloading map ${mapName}`;
+            progressElement.hidden = false;
+            progressElement.value = progress
+        } else {
+            spinnerElement.style.display = "none";
+            statusElement.innerText = "";
+            progressElement.hidden = true
+        }
+    }
+
+    async loadMap(mapName) {
+        const fileName = `${mapName}.data`;
+        let buffer = this.opfsAvailable ? await this.opfsRead(fileName) : null;
+        if (!buffer) {
+            this.setProgress(mapName, 0);
+            buffer = await this.fetchMapData(mapName);
+            if (this.opfsAvailable) await this.opfsWrite(fileName, buffer);
+            this.setProgress(mapName, 1)
+        }
+        this.unpackIntoMemfs(buffer)
+    }
+
+    fetchMapData(mapName) {
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest;
+            xhr.responseType = "arraybuffer";
+            xhr.onprogress = e => {
+                if (e.lengthComputable) this.setProgress(mapName, e.loaded / e.total)
+            };
+            xhr.onerror = () => reject(new Error(`cannot load map ${mapName}`));
+            xhr.onload = () => {
+                if (xhr.status >= 200 && xhr.status < 300) resolve(xhr.response);
+                else reject(new Error(`cannot load map ${mapName}: HTTP ${xhr.status}`))
+            };
+            xhr.open("GET", `chunks/${mapName}.data`, true);
+            xhr.send()
+        })
+    }
+
+    unpackIntoMemfs(buffer) {
+        const dv = new DataView(buffer);
+        let offset = 0;
+        while (offset < dv.byteLength) {
+            const pathLen = dv.getInt32(offset, true);
+            const dataLen = dv.getInt32(offset + 4, true);
+            const path = (new TextDecoder).decode(new DataView(buffer, offset + 8, pathLen));
+            const blob = new Uint8Array(buffer, offset + 8 + pathLen, dataLen);
+            offset += 8 + pathLen + dataLen;
+            if (Module.__persist.preferPersistentGameState && /\/gamestate\.txt$/i.test(path)) {
+                continue
+            }
+            const dir = path.replace(/\/[^\/]+$/, "");
+            FS.mkdirTree(dir);
+            FS.writeFile(path, blob)
+        }
+    }
+}
+```
+
+--------------------------------------------------------------------------------
+4. WASM-INSTANTIIERUNGSPROZESS
+--------------------------------------------------------------------------------
+* Finden der WASM:
+  `wasmBinaryFile` wird via `findWasmBinary()` bestimmt, was wiederum `locateFile("hl2_launcher.wasm")` nutzt.
+
+* Laden & Instantiierung:
+  - `createWasm()` ist der Haupteinstiegspunkt. Er initialisiert ein Import-Objekt via `getWasmImports()`.
+  - Wenn `instantiateWasm` als Module-Callback existiert, wird dieses bevorzugt.
+  - Wenn es sich um einen PThread-Worker handelt (`ENVIRONMENT_IS_PTHREAD`), wartet dieser auf das geladene WebAssembly-Modul von dem Haupt-Thread über `wasmModuleReceived`.
+  - Im Hauptthread wird `instantiateAsync(wasmBinary, wasmBinaryFile, info)` aufgerufen.
+  - `instantiateAsync()` versucht `WebAssembly.instantiateStreaming` direkt mit dem `fetch`-Response (sofern vom Browser unterstützt, nicht auf `file://` und nicht im Node-Kontext):
+    `var response = fetch(binaryFile, { credentials: "same-origin" });`
+    `var instantiationResult = await WebAssembly.instantiateStreaming(response, imports);`
+  - Schlägt Streaming fehl, fällt es auf `instantiateArrayBuffer()` zurück. Dieses liest die WASM-Binärdaten über `readAsync()` bzw. `readBinary()` und führt die Standardinstantiierung aus:
+    `WebAssembly.instantiate(binary, imports)`
+  - Nach erfolgreicher Instantiierung wird das resultierende `exports`-Objekt via `receiveInstance` bzw. `receiveInstantiationResult` ausgewertet, um TLS, dylink und globale Exports zu registrieren.
+
+--------------------------------------------------------------------------------
+5. PROXY_TO_PTHREAD & OFFSCREEN CANVAS
+--------------------------------------------------------------------------------
+* `PROXY_TO_PTHREAD`:
+  Ja, `PROXY_TO_PTHREAD` wird aktiv genutzt. 
+  - Der Launcher verwendet ein Web Worker-Pool (Größe = 6 Workers, `pthreadPoolSize = 6`).
+  - In `callMain` wird nach `_emscripten_proxy_main` gesucht und die Ausführung dorthin delegiert:
+    `var entryFunction = resolveGlobalSymbol("_emscripten_proxy_main").sym;`
+    `...`
+    `var ret = entryFunction(argc, argv);`
+  - PThread-Erstellung erfolgt via `___pthread_create_js()`, welcher Parameter serialisiert und Threads spawnt.
+
+* Offscreen Canvas Übergabe:
+  - Ein Canvas-Element wird im Thread-Erstellungsprozess (`___pthread_create_js`) an den Worker übertragen.
+  - Das Attribut `transferredCanvasNames` wird aus dem Thread-Attribute-Offset (`attr + 40 >> 2`) gelesen. Wenn es `#canvas` entspricht, wird `Module["canvas"]` herangezogen.
+  - Auf dem Haupt-Thread wird `canvas.transferControlToOffscreen()` aufgerufen, um die Kontrolle abzugeben:
+    `offscreenCanvasInfo = {`
+    `  offscreenCanvas: canvas.transferControlToOffscreen(),`
+    `  canvasSharedPtr: canvas.canvasSharedPtr,`
+    `  id: canvas.id`
+    `};`
+  - Der `offscreenCanvas` wird in das `transferList`-Array gepusht und via `worker.postMessage(msg, threadParams.transferList)` an den Worker übertragen.
+  - Der Worker empfängt dies in `receiveOffscreenCanvases(data)`, packt ihn wieder aus und weist ihn im Worker-Kontext `Module["canvas"]` zu.
+
+--------------------------------------------------------------------------------
+6. EMSCRIPTEN VERSION
+--------------------------------------------------------------------------------
+* Analyse der Emscripten-Version:
+  Da die JS-Datei hochgradig minifiziert/optimiert wurde (wahrscheinlich mit dem Closure Compiler), wurden standardmäßige Emscripten-Kommentare mit Versionshinweisen entfernt.
+  - Die Funktion `_emscripten_get_compiler_setting` wirft den Fehler:
+    `"You must build with -sRETAIN_COMPILER_SETTINGS for getCompilerSetting or emscripten_get_compiler_setting to work"`
+  - Jedoch deutet das Vorhandensein moderner Features (wie standardmäßiges BigInt64Array in updateMemoryViews, ES6 Class-Syntax im DataLoader, dynamic linker/dylink API und modularer PThread-Pool Manager) auf eine moderne Emscripten-Version (v3.1.x oder neuer) hin.
+
+--------------------------------------------------------------------------------
+7. ENGINE-STARTARGUMENTE
+--------------------------------------------------------------------------------
+* Spielzuweisung (GameChoice):
+  `const gameArgs = { hl2: "hl2", ep1: "episodic", ep2: "ep2" };`
+
+* Engine-Startargumente:
+  Die Argumente werden im `preRun`-Schritt wie folgt konfiguriert und an die Engine übergeben:
+  `Module["arguments"].push(`
+  `  "-game", gameArgs[game],`
+  `  "-windowed",`
+  `  "-w", "1280",`
+  `  "-h", "800",`
+  `  "-novid",`
+  `  "-noip",`
+  `  "+mat_hdr_level", "0",`
+  `  "+mat_colorcorrection", "1",`
+  `  "+mat_picmip", "1"`
+  `);`
+================================================================================
