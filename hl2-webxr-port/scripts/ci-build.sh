@@ -179,29 +179,32 @@ apply_source_patches() {
 unsigned long GetRam() { return 2047UL; }
 int futimes(int fd, const struct timeval tv[2]) { return 0; }
 
-extern "C" {
+// Forward-declare the classes so C++ member stubs get the right ABI/type signatures.
+// These must NOT be in extern "C" — they are C++ mangled symbols.
 
-// IVP_Mindist_Minimize_Solver::init_mms_function_table: () -> void
+struct IVP_Mindist_Minimize_Solver {
+    void init_mms_function_table();
+};
+
+struct IVP_Mindist {
+    int recalc_mindist();
+    int recalc_invalid_mindist();
+};
+
 __attribute__((weak))
-void _ZN27IVP_Mindist_Minimize_Solver23init_mms_function_tableEv(void* self) {
-    (void)self;
+void IVP_Mindist_Minimize_Solver::init_mms_function_table() {
+    // stub — real impl loaded from libvphysics.so at runtime
 }
 
-// IVP_Mindist::recalc_mindist: (i32) -> i32  matches libvphysics.so type[2]
 __attribute__((weak))
-int _ZN11IVP_Mindist14recalc_mindistEv(void* self) {
-    (void)self;
+int IVP_Mindist::recalc_mindist() {
     return 0;
 }
 
-// IVP_Mindist::recalc_invalid_mindist: (i32) -> i32  matches libvphysics.so type[2]
 __attribute__((weak))
-int _ZN11IVP_Mindist22recalc_invalid_mindistEv(void* self) {
-    (void)self;
+int IVP_Mindist::recalc_invalid_mindist() {
     return 0;
 }
-
-} // extern "C"
 
 #endif // __EMSCRIPTEN__
 STUBS_EOF
