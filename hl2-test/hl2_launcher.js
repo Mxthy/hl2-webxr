@@ -108,10 +108,11 @@ Module["arguments"].push("-game", "hl2", "-noip", "-language", "english", "-wind
 
 
 // Create gameinfo.txt for HL2
+Module.preRun = Module.preRun || [];
 Module.preRun.push(function() {
   if (typeof FS !== "undefined") {
     FS.mkdirTree("/hl2");
-    var gameinfo = '"GameInfo"\n{\n  game    "HALF-LIFE 2"\n  title   "HALF-LIFE 2"\n  type    singleplayer_only\n  nomodels 1\n  nohint 1\n  nodifficulty 1\n  gamedetail 1\n  GameData "hl2"\n  FileSystem\n  {\n    SteamAppId        2153\n    ToolsAppId         211\n    SearchPaths\n    {\n      Game                |gameinfo_path|.\n      Game                |all_source_engine_paths|hl2\n      Platform            |all_source_engine_paths|platform\n      GameBin             |gameinfo_path|bin\n    }\n  }\n}";
+    var gameinfo = '"GameInfo"\n{\n  game    "HALF-LIFE 2"\n  title   "HALF-LIFE 2"\n  type    singleplayer_only\n  nomodels 1\n  nohint 1\n  nodifficulty 1\n  gamedetail 1\n  GameData "hl2"\n  FileSystem\n  {\n    SteamAppId        2153\n    ToolsAppId         211\n    SearchPaths\n    {\n      Game                |gameinfo_path|.\n      Game                |all_source_engine_paths|hl2\n      Platform            |all_source_engine_paths|platform\n      GameBin             |gameinfo_path|bin\n    }\n  }\n}"';
     FS.writeFile("/hl2/gameinfo.txt", gameinfo);
     console.log("[GAMEINFO] Created /hl2/gameinfo.txt");
   }
