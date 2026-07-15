@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head><title>DyLib Instantiate Test</title>
+<style>
+body{background:#111;color:#0f0;font-family:monospace;font-size:11px;padding:8px}
+.err{color:#f44}.ok{color:#4f4}.info{color:#ff0}.warn{color:#fa0}
+</style>
+</head>
+<body>
+<h3>DyLib Instantiate Test (compile + instantiate)</h3>
+<div id="log"></div>
+<script>
+const log=document.getElementById('log');
+function L(msg,cls){const d=document.createElement('div');d.className=cls||'';d.textContent='['+new Date().toISOString().substr(11,8)+'] '+msg;log.appendChild(d);console.log(msg);}
+
+// Lade die Haupt-WASM zuerst um die Export-Tabelle zu bekommen
+// Dann teste jedes .so einzeln mit instantiate (import-Objekt)
+
+const libs=[
+  "libtier0.so","libvstdlib.so","libengine.so",
+  "libfilesystem_stdio.so","libmaterialsystem.so","libshaderapidx9.so",
+  "libtogl.so","libvphysics.so","libserver.so","libclient.so",
+  "libGameUI.so","libinputsystem.so","liblauncher.so",
+  "libdatacache.so","libscenefilecache.so","libsoundemittersystem.so",
+  "libstdshader_dx9.so","libsteam_api.so","libstudiorender.so",
+  "libServerBrowser.so","libvaudio_minimp3.so","libvgui2.so",
+  "libvguimatsurface.so","libvideo_services.so","libvtex_dll.so"
+];
+
+async function tryInstantiate(libName, importObject) {
+  const resp = await fetch(libName);
+  const buf = await resp.arrayBuffer();
+  const mod = await WebAssembly.compile(buf);
+  // Instantiate mit einem generischen Import-Objekt
+  const inst = await WebAssembly.instantiate(mod, importObject);
+  return inst;
+}
+
+async function testAll() {
+  L('Lade hl2_launcher.wasm für Import-Tabelle...','info');
+  
+  // Generisches Import-Objekt: alle Imports werden als Dummy-Funktionen bereitgestellt
+  const makeGenericImports = (mod) => {
+    const imports = WebAssembly.Module.imports(mod);
+    const obj = {};
+    for (const imp of imports) {
+      if (!obj[imp.module]) obj[imp.module] = {};
+      if (imp.kind === 'function') {
+        obj[imp.module][imp.name] = () => {};
+      } else if (imp.kind === 'memory') {
+        obj[imp.module][imp.name] = new WebAssembly.Memory({initial: 256, maximum: 256, shared: true});
+      } else if (imp.kind === 'table') {
+        obj[imp.module][imp.name] = new WebAssembly.Table({initial: 0, element: 'anyfunc'});
+      } else if (imp.kind === 'global') {
+        obj[imp.module][imp.name] = new WebAssembly.Global({value: 'i32', mutable: true}, 0);
+      }
+    }
+    return obj;
+  };
+
+  let ok = 0, fail = 0;
+  for (const lib of libs) {
+    try {
+      const t0 = performance.now();
+      const resp = await fetch(lib);
+      const buf = await resp.arrayBuffer();
+      const mod = await WebAssembly.compile(buf);
+      const imports = makeGenericImports(mod);
+      
+      // Timeout für instantiate (max 10s)
+      const timeoutP = new Promise((_, rej) => setTimeout(() => rej(new Error('TIMEOUT 10s')), 10000));
+      const instP = WebAssembly.instantiate(mod, imports);
+      await Promise.race([instP, timeoutP]);
+      
+      const dt = (performance.now() - t0).toFixed(0);
+      L(`✓ ${lib} — compile+instantiate OK in ${dt}ms`, 'ok');
+      ok++;
+    } catch(e) {
+      L(`✗ ${lib} — ${e.message}`, 'err');
+      fail++;
+    }
+  }
+  L(`\nResult: ${ok} ok, ${fail} failed`, ok===libs.length ? 'ok' : 'err');
+}
+
+testAll().catch(e => L('FATAL: '+e.message,'err'));
+</script>
+</body>
+</html>

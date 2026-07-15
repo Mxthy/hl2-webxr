@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head><title>DyLib Load Test</title>
+<style>
+body { background: #111; color: #0f0; font-family: monospace; font-size: 12px; padding: 10px; }
+.err { color: #f44; }
+.ok { color: #4f4; }
+.info { color: #ff0; }
+</style>
+</head>
+<body>
+<h3>DyLib Load Test</h3>
+<div id="log"></div>
+<script>
+const log = document.getElementById('log');
+function L(msg, cls) {
+  const d = document.createElement('div');
+  d.className = cls || '';
+  d.textContent = '[' + new Date().toISOString().substr(11,8) + '] ' + msg;
+  log.appendChild(d);
+  console.log(msg);
+}
+
+const libs = [
+  "libGameUI.so","libServerBrowser.so","libclient.so","libdatacache.so",
+  "libengine.so","libfilesystem_stdio.so","libinputsystem.so","liblauncher.so",
+  "libmaterialsystem.so","libscenefilecache.so","libserver.so","libshaderapidx9.so",
+  "libsoundemittersystem.so","libstdshader_dx9.so","libsteam_api.so","libstudiorender.so",
+  "libtier0.so","libtogl.so","libvaudio_minimp3.so","libvgui2.so","libvguimatsurface.so",
+  "libvideo_services.so","libvphysics.so","libvstdlib.so","libvtex_dll.so"
+];
+
+L('SAB: ' + (typeof SharedArrayBuffer !== 'undefined'), 'info');
+L('crossOriginIsolated: ' + window.crossOriginIsolated, 'info');
+L('Testing ' + libs.length + ' .so files...', 'info');
+
+async function testAll() {
+  let ok = 0, fail = 0;
+  for (const lib of libs) {
+    try {
+      const t0 = performance.now();
+      const r = await fetch(lib, {method: 'HEAD'});
+      const size = r.headers.get('content-length');
+      const dt = (performance.now() - t0).toFixed(0);
+      if (r.ok) {
+        L(`✓ ${lib} — ${(size/1024).toFixed(0)}KB — HEAD ${dt}ms`, 'ok');
+        ok++;
+      } else {
+        L(`✗ ${lib} — HTTP ${r.status}`, 'err');
+        fail++;
+      }
+    } catch(e) {
+      L(`✗ ${lib} — ${e.message}`, 'err');
+      fail++;
+    }
+  }
+  L(`\nResult: ${ok} ok, ${fail} failed`, ok===libs.length ? 'ok' : 'err');
+
+  // Jetzt: versuche ein einzelnes .so zu kompilieren (libtier0.so als erstes)
+  L('\nTesting WebAssembly.compileStreaming(libtier0.so)...', 'info');
+  try {
+    const t0 = performance.now();
+    const resp = await fetch('libtier0.so');
+    const buf = await resp.arrayBuffer();
+    const dt1 = (performance.now() - t0).toFixed(0);
+    L(`libtier0.so fetch: ${(buf.byteLength/1024).toFixed(0)}KB in ${dt1}ms`, 'info');
+    
+    const t1 = performance.now();
+    const mod = await WebAssembly.compile(buf);
+    const dt2 = (performance.now() - t1).toFixed(0);
+    L(`libtier0.so compile: OK in ${dt2}ms`, 'ok');
+  } catch(e) {
+    L(`libtier0.so compile FAILED: ${e.message}`, 'err');
+  }
+
+  // libserver.so (11MB — größte)
+  L('\nTesting WebAssembly.compile(libserver.so) (11MB)...', 'info');
+  try {
+    const t0 = performance.now();
+    const resp = await fetch('libserver.so');
+    const buf = await resp.arrayBuffer();
+    const dt1 = (performance.now() - t0).toFixed(0);
+    L(`libserver.so fetch: ${(buf.byteLength/1024/1024).toFixed(1)}MB in ${dt1}ms`, 'info');
+    
+    const t1 = performance.now();
+    const mod = await WebAssembly.compile(buf);
+    const dt2 = (performance.now() - t1).toFixed(0);
+    L(`libserver.so compile: OK in ${dt2}ms`, 'ok');
+  } catch(e) {
+    L(`libserver.so compile FAILED: ${e.message}`, 'err');
+  }
+}
+
+testAll().catch(e => L('FATAL: ' + e.message, 'err'));
+</script>
+</body>
+</html>
