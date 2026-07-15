@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>HL2 WebXR Debug</title>
+<style>
+body { background:#111; color:#0f0; font-family:monospace; margin:0; padding:10px; }
+#log { height:250px; overflow-y:auto; border:1px solid #0f0; padding:8px; font-size:12px; margin-bottom:8px; }
+#status-bar { color:#fa0; margin-bottom:4px; font-size:13px; }
+#progress { width:100%; margin-bottom:8px; }
+#canvas-wrap { border:2px solid #f80; display:inline-block; }
+canvas { display:block; }
+.err { color:#f44; }
+.warn { color:#fa0; }
+.info { color:#4af; }
+</style>
+</head>
+<body>
+<h2 style="color:#f80;margin:0 0 6px">HL2 WebXR — Build #50 Debug</h2>
+<div id="log"></div>
+<span id="spinner" style="display:none">⏳ </span>
+<span id="status-text"></span>
+<progress id="progress" value="0" max="1" hidden></progress>
+<div id="canvas-wrap">
+  <canvas id="canvas" width="1280" height="720"></canvas>
+</div>
+
+<script>
+const log = document.getElementById('log');
+function addLog(msg, cls='') {
+  const d = document.createElement('div');
+  d.className = cls;
+  d.textContent = `[${new Date().toISOString().substr(11,12)}] ${msg}`;
+  log.appendChild(d);
+  log.scrollTop = log.scrollHeight;
+}
+
+// Intercept console
+['log','warn','error','info'].forEach(m => {
+  const orig = console[m];
+  console[m] = (...args) => {
+    orig(...args);
+    const cls = m === 'error' ? 'err' : m === 'warn' ? 'warn' : m === 'info' ? 'info' : '';
+    addLog(`[${m.toUpperCase()}] ` + args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' '), cls);
+  };
+});
+
+window.onerror = (msg, src, line, col, err) => {
+  addLog(`UNCAUGHT: ${msg} @ ${src}:${line}:${col}`, 'err');
+  return false;
+};
+window.onunhandledrejection = e => {
+  addLog(`PROMISE REJECT: ${e.reason}`, 'err');
+};
+
+// *** Globals required by hl2_launcher.js ***
+window.canvasElement    = document.getElementById('canvas');
+window.statusElement    = document.getElementById('status-text');
+window.spinnerElement   = document.getElementById('spinner');
+window.progressElement  = document.getElementById('progress');
+
+addLog('SAB: ' + (typeof SharedArrayBuffer !== 'undefined' ? '✅' : '❌'), 'info');
+addLog('WebGL2: ' + (!!document.createElement('canvas').getContext('webgl2') ? '✅' : '❌'), 'info');
+addLog('crossOriginIsolated: ' + window.crossOriginIsolated, 'info');
+addLog('Loading hl2_launcher.js...', 'info');
+
+// Module config — must be before script load
+var Module = {
+  canvas: window.canvasElement,
+  onRuntimeInitialized: function() {
+    addLog('✅ WASM Runtime initialized! Engine should start now.', 'info');
+  },
+  print:    (t) => addLog('[stdout] ' + t),
+  printErr: (t) => addLog('[stderr] ' + t, 'warn'),
+  setStatus: (t) => { if(t) addLog('[setStatus] ' + t); },
+};
+
+const s = document.createElement('script');
+s.src = 'hl2_launcher.js';
+s.onload  = () => addLog('hl2_launcher.js loaded ✅', 'info');
+s.onerror = ()  => addLog('hl2_launcher.js LOAD ERROR ❌', 'err');
+document.body.appendChild(s);
+</script>
+</body>
+</html>
