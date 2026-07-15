@@ -179,7 +179,7 @@ class DataLoader {
       }
       resolve();
     };
-    const r2Url = `https://bdeeeb229289da950d71472c4c4bab76.r2.cloudflarestorage.com/hl2-webxr-assets/chunks/${mapName}.data`;
+    const r2Url = `https://hl2-assets-proxy.hl2-webxr.workers.dev/chunks/${mapName}.data`;
       xhr.open("GET", r2Url, true);
     xhr.send();
     return promise;
