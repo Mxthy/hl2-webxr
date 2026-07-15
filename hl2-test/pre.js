@@ -162,7 +162,7 @@ Module.preRun.push(function() {
       var name = UTF8ToString(namePtr);
       if (glStubs[name]) {
         console.log('[GL] Stub for: ' + name);
-        return Runtime.addFunction(glStubs[name]);
+        return addFunction(glStubs[name]);
       }
       return origEmGetProc(namePtr);
     };
@@ -171,6 +171,43 @@ Module.preRun.push(function() {
   console.log('[GL] Desktop GL stub table ready (' + Object.keys(glStubs).length + ' functions)');
 });
 
+
+
+// Create gameinfo.txt for HL2
+Module.preRun.push(function() {
+  if (typeof FS !== 'undefined') {
+    FS.mkdirTree('/hl2');
+    var gameinfo = [
+  '"GameInfo"',
+  '{',
+  '  game    "HALF-LIFE 2"',
+  '  title   "HALF-LIFE 2"',
+  '  type    singleplayer_only',
+  '  nomodels 1',
+  '  nohint 1',
+  '  nodifficulty 1',
+  '  gamedetail 1',
+  '  GameData "hl2"',
+  '  FileSystem',
+  '  {',
+  '    SteamAppId        2153',
+  '    ToolsAppId         211',
+  '    SearchPaths',
+  '    {',
+  '      Game                |all_source_engine_paths|hl2',
+  '      Platform            |all_source_engine_paths|platform',
+  '      GameBin             |gameinfo_path|bin',
+  '      Game                |gameinfo_path|.',
+  '      Game                |all_source_engine_paths|hl2',
+  '      Game                |all_source_engine_paths|../hl2',
+  '    }',
+  '  }',
+  '}'
+].join('\n');
+    FS.writeFile('/hl2/gameinfo.txt', gameinfo);
+    console.log('[GAMEINFO] Created /hl2/gameinfo.txt');
+  }
+});
 
 class DataLoader {
 	mapsOrdered = [
@@ -277,7 +314,7 @@ class DataLoader {
 
 			resolve()
 		}
-		xhr.open('GET', `chunks/${mapName}.data`, true)
+		xhr.open('GET', `https://hl2-assets-proxy.hl2-webxr.workers.dev/chunks/${mapName}.data`, true)
 		xhr.send()
 
 		return promise

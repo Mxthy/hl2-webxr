@@ -104,7 +104,18 @@ if (ENVIRONMENT_IS_NODE) {
 // include: /home/runner/work/hl2-webxr/hl2-webxr/engine/portal-port/emscripten/pre.js
 Module["arguments"] = Module["arguments"] || [];
 
-Module["arguments"].push("-game", "portal", "-noip", "-language", "english", "-windowed", "+mat_hdr_level", "0", "+mat_colorcorrection", "1");
+Module["arguments"].push("-game", "hl2", "-noip", "-language", "english", "-windowed", "+mat_hdr_level", "0", "+mat_colorcorrection", "1");
+
+
+// Create gameinfo.txt for HL2
+Module.preRun.push(function() {
+  if (typeof FS !== "undefined") {
+    FS.mkdirTree("/hl2");
+    var gameinfo = '"GameInfo"\n{\n  game    "HALF-LIFE 2"\n  title   "HALF-LIFE 2"\n  type    singleplayer_only\n  nomodels 1\n  nohint 1\n  nodifficulty 1\n  gamedetail 1\n  GameData "hl2"\n  FileSystem\n  {\n    SteamAppId        2153\n    ToolsAppId         211\n    SearchPaths\n    {\n      Game                |gameinfo_path|.\n      Game                |all_source_engine_paths|hl2\n      Platform            |all_source_engine_paths|platform\n      GameBin             |gameinfo_path|bin\n    }\n  }\n}";
+    FS.writeFile("/hl2/gameinfo.txt", gameinfo);
+    console.log("[GAMEINFO] Created /hl2/gameinfo.txt");
+  }
+});
 
 class DataLoader {
   mapsOrdered=[ "background1", "testchmb_a_00", "testchmb_a_01", "testchmb_a_02", "testchmb_a_03", "testchmb_a_04", "testchmb_a_05", "testchmb_a_06", "testchmb_a_07", "testchmb_a_08", "testchmb_a_09", "testchmb_a_10", "testchmb_a_11", "testchmb_a_13", "testchmb_a_14", "testchmb_a_15" ];
