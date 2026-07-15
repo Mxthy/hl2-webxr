@@ -3178,8 +3178,8 @@ var loadDylibs = () => {
     nodelete: true,
     allowUndefined: true
   })).catch(err => {
-    console.error('[loadDylibs] FAILED to load ' + lib + ': ' + (err.message || err));
-    console.error('[loadDylibs] Stack: ' + (err.stack || 'no stack'));
+    console.error('[loadDylibs] FAILED to load ' + lib + ': ' + (err ? (err.message || err) : 'unknown error'));
+    console.error('[loadDylibs] Stack: ' + (err ? (err.stack || 'no stack') : 'no err object'));
     // Don't rethrow — let other libs load
     return true;
   }), Promise.resolve()).then(() => {
@@ -33545,11 +33545,7 @@ run();
   // 'background01' ist FALSCH — DataLoader.mapsOrdered enthält 'background1' (ohne 0).
   // materials + models (~2.3 GB) werden lazy via Module.downloadMap geladen.
   addRunDependency("load_game_data");
-  dataLoader.loadMapWithDeps("background1").then(() => {
-    console.log("[hl2] background1 OK — Engine startet");
-    removeRunDependency("load_game_data");
-  }).catch(err => {
-    console.warn("[hl2] background1 Fehler (ignoriert, Engine startet trotzdem):", err.message);
-    removeRunDependency("load_game_data");
-  });
+  // Skip background1 download — engine starts without map assets
+  console.warn("[hl2] Skipping background1 download — starting engine without map data");
+  removeRunDependency("load_game_data");
 })();
