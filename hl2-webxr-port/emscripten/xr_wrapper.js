@@ -1,425 +1,405 @@
-/**
- * xr_wrapper.js - Native WebXR-Schnittstelle & Asset-Pipeline für den Half-Life 2 Quest 3 Port.
- * 
- * Behandelt:
- * 1. WebXR-Session Lifecycle (immersive-vr)
- * 2. SharedArrayBuffer Bridge zur Übertragung von Sensor- & Controller-Daten in Echtzeit an den Worker
- * 3. OPFS (Origin Private File System) Speicherzugriff & Custom Binary Chunk-Unpacking
- * 4. Engine-Klick Start-Promise Pattern
- */
+// xr_wrapper.js — WebXR Session Manager & SharedArrayBuffer Bridge
+// Verbindet den WebXR Main-Thread mit dem Emscripten Engine-Worker (PROXY_TO_PTHREAD)
+// Keine Frameworks — native WebXR API direkt
 
-(function() {
+(function () {
   'use strict';
 
-  // Globale Wrapper-Instanz registrieren
-  const xrWrapper = {
-    session: null,
-    gl: null,
-    xrRefSpace: null,
-    sab: null,
-    sharedIntView: null,
-    sharedFloatView: null,
-    isXRAvailable: false,
-    engineChoiceResolver: null,
-    gamePromise: null
+  // ============================================================
+  // SharedArrayBuffer Layout (512 Bytes) — Konstanten aus pre.js
+  // FRAME_READY_OFFSET=0, HMD_POSE_OFFSET=4,
+  // LEFT_VIEW_OFFSET=32, LEFT_PROJ_OFFSET=96,
+  // RIGHT_VIEW_OFFSET=160, RIGHT_PROJ_OFFSET=224,
+  // CONTROLLER_L_POSE=288, CONTROLLER_L_DATA=320,
+  // CONTROLLER_R_POSE=352, CONTROLLER_R_DATA=384,
+  // CONTROLLER_ACTIVE_OFFSET=416
+  // ============================================================
+  var SAB_SIZE = 512;
+
+  var state = {
+    session:    null,
+    refSpace:   null,
+    glCtx:      null,
+    baseLayer:  null,
+    xrSAB:      null,  // SharedArrayBuffer
+    xrI32:      null,  // Int32Array view
+    xrF32:      null,  // Float32Array view
+    isVR:       false,
+    frames:     0,
   };
 
-  // Promise-Pattern für die Spieleauswahl. Die Engine blockiert bis hier resolve aufgerufen wird.
-  xrWrapper.gamePromise = new Promise((resolve) => {
-    xrWrapper.resolveGameChoice = function(gameName) {
-      console.log(`[XR-WRAPPER] Spiel-Entscheidung getroffen: ${gameName}`);
-      // Setzt die globale Variable, die Emscripten auswertet
-      Module.__gameChoice = gameName;
-      resolve(gameName);
-    };
-  });
-
-  // ==========================================
-  // WebXR Check & Button Setup
-  // ==========================================
-  async function initWebXRCheck() {
-    if (navigator.xr) {
-      try {
-        const isSupported = await navigator.xr.isSessionSupported('immersive-vr');
-        xrWrapper.isXRAvailable = isSupported;
-        if (isSupported) {
-          console.log('[XR-WRAPPER] WebXR "immersive-vr" wird von diesem Browser unterstützt!');
-          const btnXR = document.getElementById('btn-enter-xr');
-          if (btnXR) {
-            btnXR.style.display = 'block';
-            btnXR.addEventListener('click', () => enterVR());
-          }
-        } else {
-          console.log('[XR-WRAPPER] WebXR "immersive-vr" wird nicht unterstützt.');
-        }
-      } catch (err) {
-        console.error('[XR-WRAPPER] Fehler beim WebXR Support-Check:', err);
-      }
-    } else {
-      console.log('[XR-WRAPPER] WebXR API (navigator.xr) fehlt in diesem Browser.');
-    }
-  }
-
-  // ==========================================
-  // SharedArrayBuffer (SAB) Setup
-  // ==========================================
-  function initSharedArrayBuffer() {
-    // 512 Bytes Puffer für Pose, Matrizen und Controllereingaben
-    xrWrapper.sab = new SharedArrayBuffer(512);
-    xrWrapper.sharedIntView = new Int32Array(xrWrapper.sab);
-    xrWrapper.sharedFloatView = new Float32Array(xrWrapper.sab);
-
-    // Initialisieren des Frame-Ready Flags auf 0
-    Atomics.store(xrWrapper.sharedIntView, FRAME_READY_OFFSET / 4, 0);
-    // Controller-Aktivitätsflag auf 0 (beide inaktiv)
-    Atomics.store(xrWrapper.sharedIntView, CONTROLLER_ACTIVE_OFFSET / 4, 0);
-
-    console.log('[XR-WRAPPER] SharedArrayBuffer für HMD & Controller-Bridge erstellt.');
-    
-    // Lege den Puffer global auf window ab, damit der Engine-Worker / Emscripten-Code darauf zugreifen kann.
-    window.xrSharedBuffer = xrWrapper.sab;
-  }
-
-  // ==========================================
-  // WebXR Session starten
-  // ==========================================
-  async function enterVR() {
-    if (!xrWrapper.isXRAvailable) {
-      alert('WebXR ist auf diesem Gerät nicht verfügbar.');
+  // ============================================================
+  // Init (wird sofort beim Laden ausgeführt)
+  // ============================================================
+  function init() {
+    if (!navigator.xr) {
+      console.log('[XR] WebXR nicht verfügbar — Desktop-Modus');
       return;
     }
+    navigator.xr.isSessionSupported('immersive-vr')
+      .then(function (ok) {
+        console.log('[XR] immersive-vr unterstützt:', ok);
+      })
+      .catch(function (e) {
+        console.warn('[XR] isSessionSupported Fehler:', e);
+      });
+  }
+
+  // ============================================================
+  // enterVR — durch Nutzer-Geste ausgelöst
+  // ============================================================
+  async function enterVR() {
+    if (state.session) { console.log('[XR] Session läuft bereits'); return; }
 
     try {
-      console.log('[XR-WRAPPER] Fordere immersive-vr WebXR-Sitzung an...');
-      const session = await navigator.xr.requestSession('immersive-vr', {
-        requiredFeatures: ['local-floor']
+      var session = await navigator.xr.requestSession('immersive-vr', {
+        requiredFeatures: ['local-floor'],
+        optionalFeatures: ['bounded-floor', 'hand-tracking'],
       });
 
-      xrWrapper.session = session;
-      session.addEventListener('end', onXRSessionEnded);
+      state.session = session;
+      state.isVR    = true;
+      console.log('[XR] Session gestartet');
 
-      // WebGL2 Context für das Rendering vorbereiten
-      const canvas = window.canvasElement || document.getElementById('canvas');
-      const gl = canvas.getContext('webgl2', { xrCompatible: true });
-      xrWrapper.gl = gl;
+      // WebGL2-Kontext vom Canvas
+      var canvas = window.canvasElement || document.getElementById('canvas');
+      var gl = canvas.getContext('webgl2', {
+        xrCompatible:        true,
+        antialias:           false,
+        powerPreference:     'high-performance',
+        preserveDrawingBuffer: false,
+      });
+      if (!gl) { console.error('[XR] Kein WebGL2-Kontext!'); return; }
+      state.glCtx = gl;
 
-      // XR-GLES Framebuffer-Layer anlegen
-      const xrLayer = new XRWebGLLayer(session, gl);
-      await session.updateRenderState({ baseLayer: xrLayer });
+      await gl.makeXRCompatible();
 
-      // Lokalen Boden-Referenzraum anfordern
-      const refSpace = await session.requestReferenceSpace('local-floor');
-      xrWrapper.xrRefSpace = refSpace;
+      // XRWebGLLayer als Render-Target
+      var baseLayer = new XRWebGLLayer(session, gl, {
+        antialias:               false,
+        depth:                   true,
+        stencil:                 false,
+        alpha:                   false,
+        framebufferScaleFactor:  1.0,
+      });
+      session.updateRenderState({ baseLayer: baseLayer });
+      state.baseLayer = baseLayer;
 
-      console.log('[XR-WRAPPER] WebXR Session erfolgreich gestartet und konfiguriert.');
+      // Reference Space
+      state.refSpace = await session.requestReferenceSpace('local-floor');
 
-      // Start der WebXR Render-Loop im Main-Thread
+      session.addEventListener('end', function () {
+        console.log('[XR] Session beendet');
+        state.session  = null;
+        state.isVR     = false;
+        state.refSpace = null;
+        state.baseLayer= null;
+      });
+
+      initSAB();
       session.requestAnimationFrame(onXRFrame);
+      console.log('[XR] Frame Loop gestartet!');
 
-    } catch (err) {
-      console.error('[XR-WRAPPER] Fehler beim Starten der WebXR-Session:', err);
-      alert('Konnte WebXR-Session nicht starten: ' + err.message);
+    } catch (e) {
+      console.error('[XR] enterVR Fehler:', e);
     }
   }
 
-  function onXRSessionEnded() {
-    console.log('[XR-WRAPPER] WebXR Session wurde beendet.');
-    xrWrapper.session = null;
-    // Fallback auf die reguläre Canvas-Render-Loop (falls vorhanden)
+  // ============================================================
+  // SharedArrayBuffer initialisieren
+  // ============================================================
+  function initSAB() {
+    if (state.xrSAB) return;
+    try {
+      state.xrSAB = new SharedArrayBuffer(SAB_SIZE);
+      state.xrI32 = new Int32Array(state.xrSAB);
+      state.xrF32 = new Float32Array(state.xrSAB);
+      Atomics.store(state.xrI32, 0, 0); // FRAME_READY = 0
+      console.log('[XR] SAB initialisiert (' + SAB_SIZE + ' Bytes)');
+    } catch (e) {
+      console.warn('[XR] SharedArrayBuffer nicht verfügbar:', e);
+    }
   }
 
-  // ==========================================
-  // Haupt-WebXR Frame-Loop
-  // ==========================================
+  // ============================================================
+  // XR Frame Loop
+  // ============================================================
   function onXRFrame(time, frame) {
-    const session = xrWrapper.session;
-    if (!session) return;
+    frame.session.requestAnimationFrame(onXRFrame);
+    state.frames++;
 
-    // Fordere direkt den nächsten Frame an
-    session.requestAnimationFrame(onXRFrame);
+    var pose = frame.getViewerPose(state.refSpace);
+    if (!pose) return;
 
-    const pose = frame.getViewerPose(xrWrapper.xrRefSpace);
-    if (pose) {
-      const gl = xrWrapper.gl;
-      const layer = session.renderState.baseLayer;
-      gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
+    if (state.xrF32 && state.xrI32) {
+      var f   = state.xrF32;
+      var i32 = state.xrI32;
+      var t   = pose.transform;
 
-      // 1. HMD Pose extrahieren und in den SAB schreiben (Position + Orientierung)
-      const hmdPos = pose.transform.position;
-      const hmdRot = pose.transform.orientation;
+      // HMD Pose (Float32-Index 1 = Byte-Offset 4)
+      f[1] = t.position.x;
+      f[2] = t.position.y;
+      f[3] = t.position.z;
+      f[4] = t.orientation.x;
+      f[5] = t.orientation.y;
+      f[6] = t.orientation.z;
+      f[7] = t.orientation.w;
 
-      xrWrapper.sharedFloatView[HMD_POSE_OFFSET / 4]     = hmdPos.x;
-      xrWrapper.sharedFloatView[(HMD_POSE_OFFSET / 4) + 1] = hmdPos.y;
-      xrWrapper.sharedFloatView[(HMD_POSE_OFFSET / 4) + 2] = hmdPos.z;
-
-      xrWrapper.sharedFloatView[(HMD_POSE_OFFSET / 4) + 3] = hmdRot.x;
-      xrWrapper.sharedFloatView[(HMD_POSE_OFFSET / 4) + 4] = hmdRot.y;
-      xrWrapper.sharedFloatView[(HMD_POSE_OFFSET / 4) + 5] = hmdRot.z;
-      xrWrapper.sharedFloatView[(HMD_POSE_OFFSET / 4) + 6] = hmdRot.w;
-
-      // 2. Augen Matrizen (View- und Projektions-Matrizen) in SAB übertragen
-      let hasLeftEye = false;
-      let hasRightEye = false;
-
-      for (const view of pose.views) {
-        if (view.eye === 'left') {
-          hasLeftEye = true;
-          // View-Matrix & Projektions-Matrix kopieren (jeweils Float32Array[16])
-          // Die View-Matrix entspricht der inversen Transform-Matrix des Auges
-          const viewMat = view.transform.inverse.matrix;
-          const projMat = view.projectionMatrix;
-          for (let i = 0; i < 16; i++) {
-            xrWrapper.sharedFloatView[(LEFT_VIEW_OFFSET / 4) + i] = viewMat[i];
-            xrWrapper.sharedFloatView[(LEFT_PROJ_OFFSET / 4) + i] = projMat[i];
-          }
-        } else if (view.eye === 'right') {
-          hasRightEye = true;
-          const viewMat = view.transform.inverse.matrix;
-          const projMat = view.projectionMatrix;
-          for (let i = 0; i < 16; i++) {
-            xrWrapper.sharedFloatView[(RIGHT_VIEW_OFFSET / 4) + i] = viewMat[i];
-            xrWrapper.sharedFloatView[(RIGHT_PROJ_OFFSET / 4) + i] = projMat[i];
-          }
+      // Augen-Matrizen (View + Projection)
+      for (var vi = 0; vi < pose.views.length; vi++) {
+        var view    = pose.views[vi];
+        var isLeft  = view.eye === 'left';
+        var vBase   = isLeft ?  8 : 40;   // LEFT_VIEW=32/idx8,  RIGHT_VIEW=160/idx40
+        var pBase   = isLeft ? 24 : 56;   // LEFT_PROJ=96/idx24, RIGHT_PROJ=224/idx56
+        var vm = view.transform.inverse.matrix;
+        var pm = view.projectionMatrix;
+        for (var i = 0; i < 16; i++) {
+          f[vBase + i] = vm[i];
+          f[pBase + i] = pm[i];
         }
       }
 
-      // 3. Controller Inputs auslesen
-      let controllersActiveMask = 0;
-      const inputSources = session.inputSources;
+      writeControllers(frame);
 
-      for (const input of inputSources) {
-        if (input.gripSpace && input.gamepad) {
-          const isLeft = input.handedness === 'left';
-          const offsetPose = isLeft ? CONTROLLER_L_POSE : CONTROLLER_R_POSE;
-          const offsetData = isLeft ? CONTROLLER_L_DATA : CONTROLLER_R_DATA;
-
-          // Controller-Pose im Raum holen
-          const ctrlPose = frame.getPose(input.gripSpace, xrWrapper.xrRefSpace);
-          if (ctrlPose) {
-            controllersActiveMask |= isLeft ? 1 : 2;
-
-            const cPos = ctrlPose.transform.position;
-            const cRot = ctrlPose.transform.orientation;
-
-            xrWrapper.sharedFloatView[offsetPose / 4]       = cPos.x;
-            xrWrapper.sharedFloatView[(offsetPose / 4) + 1] = cPos.y;
-            xrWrapper.sharedFloatView[(offsetPose / 4) + 2] = cPos.z;
-
-            xrWrapper.sharedFloatView[(offsetPose / 4) + 3] = cRot.x;
-            xrWrapper.sharedFloatView[(offsetPose / 4) + 4] = cRot.y;
-            xrWrapper.sharedFloatView[(offsetPose / 4) + 5] = cRot.z;
-            xrWrapper.sharedFloatView[(offsetPose / 4) + 6] = cRot.w;
-          }
-
-          // Gamepad / Button- / Achsendaten auslesen
-          const gp = input.gamepad;
-          if (gp && gp.buttons.length >= 2 && gp.axes.length >= 2) {
-            // Layout im SAB:
-            // [0] = Trigger (Button 0 Wert)
-            // [1] = Grip (Button 1 Wert)
-            // [2] = Thumbstick X (-1 links, +1 rechts)
-            // [3] = Thumbstick Y (-1 oben, +1 unten)
-            // [4] = Button A / X gedrückt (0 oder 1)
-            // [5] = Button B / Y gedrückt (0 oder 1)
-            // [6] = Thumbstick Klick (0 oder 1)
-            // [7] = System/Menu Button (0 oder 1)
-            
-            xrWrapper.sharedFloatView[offsetData / 4]       = gp.buttons[0].value; // Trigger
-            xrWrapper.sharedFloatView[(offsetData / 4) + 1] = gp.buttons[1].value; // Grip
-            xrWrapper.sharedFloatView[(offsetData / 4) + 2] = gp.axes[2] || gp.axes[0] || 0.0; // Thumbstick X
-            xrWrapper.sharedFloatView[(offsetData / 4) + 3] = gp.axes[3] || gp.axes[1] || 0.0; // Thumbstick Y
-            
-            // Buttons A/X (Index 4) und B/Y (Index 5)
-            xrWrapper.sharedFloatView[(offsetData / 4) + 4] = gp.buttons[4] && gp.buttons[4].pressed ? 1.0 : 0.0;
-            xrWrapper.sharedFloatView[(offsetData / 4) + 5] = gp.buttons[5] && gp.buttons[5].pressed ? 1.0 : 0.0;
-            
-            // Thumbstick-Button (meistens Index 3 oder 10)
-            xrWrapper.sharedFloatView[(offsetData / 4) + 6] = gp.buttons[3] && gp.buttons[3].pressed ? 1.0 : 0.0;
-            // Menu-Button (Index 2 oder 6)
-            xrWrapper.sharedFloatView[(offsetData / 4) + 7] = gp.buttons[2] && gp.buttons[2].pressed ? 1.0 : 0.0;
-          }
-        }
-      }
-
-      // Aktualisiere das Aktivitäts-Flag der Controller im SAB
-      Atomics.store(xrWrapper.sharedIntView, CONTROLLER_ACTIVE_OFFSET / 4, controllersActiveMask);
-
-      // 4. Benachrichtige den Engine-Worker, dass neue Pose-Daten vorliegen
-      Atomics.store(xrWrapper.sharedIntView, FRAME_READY_OFFSET / 4, 1);
-      Atomics.notify(xrWrapper.sharedIntView, FRAME_READY_OFFSET / 4, 1);
-    }
-  }
-
-  // ==========================================
-  // OPFS DataLoader & Custom Binary Unpacker (slqnt.dev-style)
-  // ==========================================
-  
-  /**
-   * Lädt Asset-Chunks herunter, cacht diese im OPFS und entpackt sie ins Emscripten MEMFS.
-   * Format des slqnt-Asset-Packers:
-   * [pathLen: int32][dataLen: int32][path: UTF-8 string][data: binary]
-   */
-  async function loadAndUnpackAssets(gameName, progressCallback) {
-    console.log(`[OPFS] Starte Laden der Asset-Pakete für ${gameName}...`);
-
-    // Manifest anfordern
-    const manifestResp = await fetch(`chunks/manifest.json`);
-    if (!manifestResp.ok) throw new Error('Manifest-Datei chunks/manifest.json konnte nicht geladen werden.');
-    const manifest = await manifestResp.json();
-
-    const gameAssets = manifest[gameName] || [];
-    if (gameAssets.length === 0) {
-      throw new Error(`Keine Assets für Spiel '${gameName}' im Manifest gefunden.`);
+      // Engine wecken
+      Atomics.store(i32, 0, 1);
+      Atomics.notify(i32, 0, 1);
     }
 
-    // OPFS Directory Handle abfragen
-    const root = await navigator.storage.getDirectory();
-    
-    let totalBytes = gameAssets.reduce((sum, asset) => sum + asset.size, 0);
-    let bytesLoaded = 0;
+    // XR-Framebuffer binden + per-Eye Rendering via WASM Bridge
+    if (state.baseLayer && state.glCtx) {
+      var gl = state.glCtx;
+      gl.bindFramebuffer(gl.FRAMEBUFFER, state.baseLayer.framebuffer);
 
-    for (const asset of gameAssets) {
-      const fileName = asset.file;
-      const fileSize = asset.size;
-      
-      console.log(`[OPFS] Verarbeite Paket: ${fileName} (${(fileSize/1024/1024).toFixed(1)}MB)`);
-      
-      let fileData;
-      try {
-        // Prüfe ob bereits lokal im OPFS gecacht
-        const fileHandle = await root.getFileHandle(fileName);
-        const file = await fileHandle.getFile();
-        if (file.size === fileSize) {
-          console.log(`[OPFS] ${fileName} ist bereits vollständig im Cache.`);
-          fileData = await file.arrayBuffer();
-          bytesLoaded += fileSize;
-          if (progressCallback) progressCallback(bytesLoaded, totalBytes);
+      // Per-Eye Stereo Rendering (Gemini Bridge)
+      for (var vi = 0; vi < pose.views.length; vi++) {
+        var view = pose.views[vi];
+        var viewport = state.baseLayer.getViewport(view);
+        gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
+
+        // C++ WebXR Bridge — injiziert VR-Matrizen und triggert Render-Frame
+        if (window.Module && window.Module._SetCameraMatrices && window.Module._RenderXRFrame) {
+          // Matrizen als Float32Array an WASM uebergeben
+          var vm = view.transform.inverse.matrix;
+          var pm = view.projectionMatrix;
+          // Heap-Speicher fuer Matrizen allozieren (16 floats = 64 bytes)
+          var ptr = window.Module._malloc(128); // 2x 16 floats
+          if (ptr) {
+            window.Module.HEAPF32.set(vm, ptr / 4);
+            window.Module.HEAPF32.set(pm, (ptr / 4) + 16);
+            window.Module._SetCameraMatrices(ptr, ptr + 64);
+            window.Module._free(ptr);
+          }
+          window.Module._RenderXRFrame();
         } else {
-          throw new Error('Größe ungleich, lade neu herunter');
+          // Fallback Logging — Bridge noch nicht gelinkt
+          if (state.frames === 1) {
+            console.warn('[XR] WASM WebXR Bridge (RenderXRFrame) nicht gefunden!');
+          }
         }
-      } catch (e) {
-        // Nicht im Cache oder unvollständig -> neu herunterladen via Chunked Transfer
-        console.log(`[OPFS] Lade ${fileName} herunter...`);
-        fileData = await downloadInChunks(`chunks/${fileName}`, 50 * 1024 * 1024, (chunkLoaded) => {
-          if (progressCallback) progressCallback(bytesLoaded + chunkLoaded, totalBytes);
-        });
-
-        // Im OPFS wegspeichern
-        const newFileHandle = await root.getFileHandle(fileName, { create: true });
-        const writable = await newFileHandle.createWritable();
-        await writable.write(fileData);
-        await writable.close();
-        console.log(`[OPFS] ${fileName} erfolgreich in OPFS gespeichert.`);
-        bytesLoaded += fileSize;
       }
-
-      // In das virtuelle Emscripten-MEMFS entpacken
-      unpackIntoMemfs(fileData);
     }
   }
 
-  /**
-   * Lädt eine Datei in Segmenten herunter (HTTP Range-Header)
-   */
-  async function downloadInChunks(url, chunkSize, chunkCallback) {
-    const head = await fetch(url, { method: 'HEAD' });
-    const totalSize = parseInt(head.headers.get('content-length'));
-    
-    const chunks = [];
-    let loaded = 0;
+  // ============================================================
+  // Controller Input
+  // ============================================================
+  function writeControllers(frame) {
+    if (!state.xrF32 || !state.xrI32) return;
+    var f   = state.xrF32;
+    var i32 = state.xrI32;
+    var active = 0;
 
-    for (let start = 0; start < totalSize; start += chunkSize) {
-      const end = Math.min(start + chunkSize - 1, totalSize - 1);
-      const resp = await fetch(url, {
-        headers: { Range: `bytes=${start}-${end}` }
-      });
+    var sources = Array.from(frame.session.inputSources);
+    for (var si = 0; si < sources.length; si++) {
+      var src    = sources[si];
+      var isLeft = src.handedness === 'left';
+      var pBase  = isLeft ? 72 : 88;   // L_POSE=288/idx72, R_POSE=352/idx88
+      var dBase  = isLeft ? 80 : 96;   // L_DATA=320/idx80, R_DATA=384/idx96
 
-      if (!resp.ok && resp.status !== 206) {
-        throw new Error(`Fehler beim Laden von Segment ${start}-${end}. Status: ${resp.status}`);
-      }
-
-      const buf = await resp.arrayBuffer();
-      chunks.push(buf);
-      loaded += buf.byteLength;
-      if (chunkCallback) chunkCallback(loaded);
-    }
-
-    const merged = new Uint8Array(totalSize);
-    let offset = 0;
-    for (const c of chunks) {
-      merged.set(new Uint8Array(c), offset);
-      offset += c.byteLength;
-    }
-    return merged.buffer;
-  }
-
-  /**
-   * Entpackt das Custom-Binary-Format ins Emscripten MEMFS
-   * [pathLen: int32][dataLen: int32][path: string][data: binary]
-   */
-  function unpackIntoMemfs(buffer) {
-    const view = new DataView(buffer);
-    let offset = 0;
-    const totalLen = buffer.byteLength;
-    const decoder = new TextDecoder('utf-8');
-
-    console.log(`[MEMFS] Entpacke Binärpaket in MEMFS...`);
-
-    while (offset < totalLen) {
-      if (offset + 8 > totalLen) break;
-
-      const pathLen = view.getInt32(offset, true);
-      const dataLen = view.getInt32(offset + 4, true);
-      offset += 8;
-
-      if (offset + pathLen + dataLen > totalLen) {
-        console.error('[MEMFS] Paket beschädigt! Offset-Overflow beim Entpacken.');
-        break;
-      }
-
-      const pathBytes = new Uint8Array(buffer, offset, pathLen);
-      const path = decoder.decode(pathBytes);
-      offset += pathLen;
-
-      const dataBytes = new Uint8Array(buffer, offset, dataLen);
-      offset += dataLen;
-
-      // Verzeichnispfad extrahieren und im MEMFS anlegen
-      const pathParts = path.split('/');
-      let currentPath = '';
-      for (let i = 0; i < pathParts.length - 1; i++) {
-        currentPath += (i === 0 ? '' : '/') + pathParts[i];
-        try {
-          FS.mkdir(currentPath);
-        } catch (e) {
-          // FS.mkdir wirft einen Fehler, wenn der Ordner bereits existiert, das können wir ignorieren
+      if (src.targetRaySpace) {
+        var cp = frame.getPose(src.targetRaySpace, state.refSpace);
+        if (cp) {
+          var ct = cp.transform;
+          f[pBase+0] = ct.position.x;
+          f[pBase+1] = ct.position.y;
+          f[pBase+2] = ct.position.z;
+          f[pBase+3] = ct.orientation.x;
+          f[pBase+4] = ct.orientation.y;
+          f[pBase+5] = ct.orientation.z;
+          f[pBase+6] = ct.orientation.w;
+          active |= isLeft ? 1 : 2;
         }
       }
 
-      // Datei im MEMFS schreiben (FS ist das globale Emscripten-Dateisystem)
-      try {
-        FS.writeFile(path, dataBytes, { encoding: 'binary' });
-      } catch (err) {
-        console.error(`[MEMFS] Fehler beim Schreiben der Datei ${path}:`, err);
+      if (src.gamepad) {
+        var gp = src.gamepad;
+        f[dBase+0] = gp.axes[0]  || 0;                                        // Stick X
+        f[dBase+1] = gp.axes[1]  || 0;                                        // Stick Y
+        f[dBase+2] = gp.buttons[0] ? gp.buttons[0].value : 0;                 // Trigger
+        f[dBase+3] = gp.buttons[1] ? gp.buttons[1].value : 0;                 // Grip
+        f[dBase+4] = (gp.buttons[4] && gp.buttons[4].pressed) ? 1 : 0;       // A/X
+        f[dBase+5] = (gp.buttons[5] && gp.buttons[5].pressed) ? 1 : 0;       // B/Y
+        f[dBase+6] = (gp.buttons[3] && gp.buttons[3].pressed) ? 1 : 0;       // Thumbstick-Klick
+        f[dBase+7] = (gp.buttons[6] && gp.buttons[6].pressed) ? 1 : 0;       // Menu
       }
     }
-    console.log('[MEMFS] Paket erfolgreich entpackt.');
+
+    // CONTROLLERS_ACTIVE (Int32-Index 104 = Byte-Offset 416)
+    Atomics.store(i32, 104, active);
   }
 
-  // Engine Initialisierungsbrücke
+  // ============================================================
+  // OPFS DataLoader (wie slqnt — Assets aus chunks/ laden)
+  // ============================================================
+  var OPFS_DIR = 'hl2_chunks';
+
+  function DataLoader() {
+    this._opfsDir       = null;
+    this.loadedMaps     = {};
+    this._reconcileP    = null;
+  }
+
+  DataLoader.prototype.getOpfsDir = async function () {
+    if (!this._opfsDir) {
+      var root = await navigator.storage.getDirectory();
+      this._opfsDir = await root.getDirectoryHandle(OPFS_DIR, { create: true });
+    }
+    return this._opfsDir;
+  };
+
+  DataLoader.prototype.opfsRead = async function (name) {
+    try {
+      var dir = await this.getOpfsDir();
+      var fh  = await dir.getFileHandle(name);
+      return await (await fh.getFile()).arrayBuffer();
+    } catch (e) { return null; }
+  };
+
+  DataLoader.prototype.opfsWrite = async function (name, data) {
+    try {
+      var dir = await this.getOpfsDir();
+      var tmp = name + '.tmp';
+      var fh  = await dir.getFileHandle(tmp, { create: true });
+      var w   = await fh.createWritable();
+      await w.write(data);
+      await w.close();
+      try { await fh.move(name); }
+      catch {
+        var final = await dir.getFileHandle(name, { create: true });
+        var fw = await final.createWritable();
+        await fw.write(data); await fw.close();
+        await dir.removeEntry(tmp).catch(function(){});
+      }
+      return true;
+    } catch (e) {
+      console.warn('[DataLoader] opfsWrite fehlgeschlagen:', name, e);
+      return false;
+    }
+  };
+
+  DataLoader.prototype.reconcileManifest = function () {
+    return this._reconcileP || (this._reconcileP = this._doReconcile());
+  };
+
+  DataLoader.prototype._doReconcile = async function () {
+    var newMf = null;
+    try {
+      var res = await fetch('chunks/manifest.json', { cache: 'no-store' });
+      if (res.ok) newMf = await res.json();
+    } catch (e) {}
+    if (!newMf) return;
+
+    var oldMf = {};
+    var saved = await this.opfsRead('manifest.json');
+    if (saved) { try { oldMf = JSON.parse(new TextDecoder().decode(saved)); } catch(e){} }
+
+    for (var name in newMf) {
+      if (oldMf[name] !== newMf[name]) {
+        try { var d = await this.getOpfsDir(); await d.removeEntry(name + '.data'); } catch(e) {}
+      }
+    }
+    await this.opfsWrite('manifest.json', new TextEncoder().encode(JSON.stringify(newMf)));
+    console.log('[DataLoader] Manifest synchronisiert');
+  };
+
+  DataLoader.prototype.loadMap = function (mapName) {
+    if (!this.loadedMaps[mapName]) {
+      this.loadedMaps[mapName] = this._loadImpl(mapName);
+    }
+    return this.loadedMaps[mapName];
+  };
+
+  DataLoader.prototype._loadImpl = async function (mapName) {
+    await this.reconcileManifest();
+    var fileName = mapName + '.data';
+    var buffer = await this.opfsRead(fileName);
+    if (!buffer) {
+      if (window.statusElement) window.statusElement.textContent = 'Lädt: ' + mapName;
+      buffer = await this._fetchMap(mapName);
+      await this.opfsWrite(fileName, buffer);
+    }
+    this._unpack(buffer);
+    console.log('[DataLoader] Geladen:', mapName);
+  };
+
+  DataLoader.prototype._fetchMap = function (mapName) {
+    return new Promise(function (resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      xhr.responseType = 'arraybuffer';
+      xhr.onprogress = function (e) {
+        if (e.lengthComputable && window.progressElement) {
+          window.progressElement.hidden = false;
+          window.progressElement.value  = (e.loaded / e.total) * 100;
+        }
+      };
+      xhr.onerror  = function () { reject(new Error('Fetch fehlgeschlagen: ' + mapName)); };
+      xhr.onload   = function () {
+        if (xhr.status >= 200 && xhr.status < 300) resolve(xhr.response);
+        else reject(new Error('HTTP ' + xhr.status + ': ' + mapName));
+      };
+      xhr.open('GET', 'chunks/' + mapName + '.data', true);
+      xhr.send();
+    });
+  };
+
+  // Custom Binary Format: [pathLen int32][dataLen int32][path UTF-8][data bytes]
+  DataLoader.prototype._unpack = function (buffer) {
+    if (typeof FS === 'undefined') { console.warn('[DataLoader] FS nicht verfügbar'); return; }
+    var dv = new DataView(buffer);
+    var off = 0;
+    while (off < dv.byteLength) {
+      var pathLen = dv.getInt32(off, true);
+      var dataLen = dv.getInt32(off + 4, true);
+      var path    = new TextDecoder().decode(new DataView(buffer, off + 8, pathLen));
+      var data    = new Uint8Array(buffer, off + 8 + pathLen, dataLen);
+      off += 8 + pathLen + dataLen;
+      var dir = path.replace(/\/[^/]+$/, '');
+      if (dir) FS.mkdirTree(dir);
+      FS.writeFile(path, data);
+    }
+  };
+
+  // ============================================================
+  // onEngineInitialized — von post.js aufgerufen
+  // ============================================================
   function onEngineInitialized() {
-    console.log('[XR-WRAPPER] Engine ist bereit und wartet auf Shared Array Buffer.');
+    console.log('[XR] Engine initialisiert — SAB aktiv');
+    initSAB();
   }
 
-  // ==========================================
-  // Expose an Window
-  // ==========================================
-  xrWrapper.onEngineInitialized = onEngineInitialized;
-  xrWrapper.loadAndUnpackAssets = loadAndUnpackAssets;
-  window.xrWrapper = xrWrapper;
+  // ============================================================
+  // Public API
+  // ============================================================
+  window.xrWrapper = {
+    enterVR:              enterVR,
+    onEngineInitialized:  onEngineInitialized,
+    getSession:           function () { return state.session; },
+    isVRActive:           function () { return state.isVR; },
+    getSharedBuffer:      function () { return state.xrSAB; },
+    DataLoader:           DataLoader,
+  };
 
-  // Initialisierung anstoßen
-  initWebXRCheck();
-  initSharedArrayBuffer();
+  init();
 
 })();

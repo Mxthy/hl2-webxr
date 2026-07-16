@@ -566,6 +566,18 @@ emcc_link() {
     log "  stubs not found, skipping"
   fi
 
+  # WebXR Bridge — EMSCRIPTEN_KEEPALIVE functions for VR rendering loop
+  local webxr_bridge_src="$REPO_ROOT/emscripten/webxr_bridge.cpp"
+  local webxr_bridge_obj="$ENGINE_DIR/build/webxr_bridge.o"
+  if [ -f "$webxr_bridge_src" ]; then
+    log "Compiling webxr_bridge.cpp..."
+    emcc -O0 -fPIC -D__EMSCRIPTEN__ -c "$webxr_bridge_src" -o "$webxr_bridge_obj"
+    log "  webxr_bridge compiled: $webxr_bridge_obj"
+  else
+    webxr_bridge_obj=""
+    log "  webxr_bridge.cpp not found, skipping (Phase 2 bridge)"
+  fi
+
   log "Running: emcc link → hl2_launcher.html ..."
   emcc \
     -sUSE_BZIP2=1 -sUSE_SDL=2 -sUSE_FREETYPE=1 -sUSE_LIBJPEG=1 \
@@ -589,6 +601,7 @@ emcc_link() {
     build/launcher_main/libhl2_launcher.a \
     ${stubs_obj:+"$stubs_obj"} \
     ${ivp_vtable_obj:+"$ivp_vtable_obj"} \
+    ${webxr_bridge_obj:+"$webxr_bridge_obj"} \
     $link_libs \
     -o build/launcher_main/hl2_launcher.html \
     2>&1 | tee "$LOG_DIR/emcc_link.log"

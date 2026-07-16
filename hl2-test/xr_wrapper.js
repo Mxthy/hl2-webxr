@@ -166,9 +166,38 @@
       Atomics.notify(i32, 0, 1);
     }
 
-    // XR-Framebuffer binden (Engine rendert selbst hinein)
+    // XR-Framebuffer binden + per-Eye Rendering via WASM Bridge
     if (state.baseLayer && state.glCtx) {
-      state.glCtx.bindFramebuffer(state.glCtx.FRAMEBUFFER, state.baseLayer.framebuffer);
+      var gl = state.glCtx;
+      gl.bindFramebuffer(gl.FRAMEBUFFER, state.baseLayer.framebuffer);
+
+      // Per-Eye Stereo Rendering (Gemini Bridge)
+      for (var vi = 0; vi < pose.views.length; vi++) {
+        var view = pose.views[vi];
+        var viewport = state.baseLayer.getViewport(view);
+        gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
+
+        // C++ WebXR Bridge — injiziert VR-Matrizen und triggert Render-Frame
+        if (window.Module && window.Module._SetCameraMatrices && window.Module._RenderXRFrame) {
+          // Matrizen als Float32Array an WASM uebergeben
+          var vm = view.transform.inverse.matrix;
+          var pm = view.projectionMatrix;
+          // Heap-Speicher fuer Matrizen allozieren (16 floats = 64 bytes)
+          var ptr = window.Module._malloc(128); // 2x 16 floats
+          if (ptr) {
+            window.Module.HEAPF32.set(vm, ptr / 4);
+            window.Module.HEAPF32.set(pm, (ptr / 4) + 16);
+            window.Module._SetCameraMatrices(ptr, ptr + 64);
+            window.Module._free(ptr);
+          }
+          window.Module._RenderXRFrame();
+        } else {
+          // Fallback Logging — Bridge noch nicht gelinkt
+          if (state.frames === 1) {
+            console.warn('[XR] WASM WebXR Bridge (RenderXRFrame) nicht gefunden!');
+          }
+        }
+      }
     }
   }
 
