@@ -57,7 +57,7 @@ window.Module = {
 addLog('SYS', ['Loading engine...']);
 setTimeout(function() {
   var script = document.createElement('script');
-  script.src = 'hl2_launcher.js?v=20';
+  script.src = 'hl2_launcher.js?v=22';
   script.onload = function() { addLog('SYS', ['hl2_launcher.js loaded OK']); };
   script.onerror = function() { addLog('SYS', ['hl2_launcher.js FAILED to load']); };
   document.head.appendChild(script);

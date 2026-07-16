@@ -33832,7 +33832,16 @@ run();
   // 'background01' ist FALSCH — DataLoader.mapsOrdered enthält 'background1' (ohne 0).
   // materials + models (~2.3 GB) werden lazy via Module.downloadMap geladen.
   addRunDependency("load_game_data");
-  // Skip background1 download — engine starts without map assets
-  console.warn("[hl2] Skipping background1 download — starting engine without map data");
-  removeRunDependency("load_game_data");
+  console.log("[hl2] Loading background1 + materials chunks from R2...");
+  // Load both chunks in parallel before starting engine
+  Promise.all([
+    dataLoader.loadMap("background1"),
+    dataLoader.loadMap("materials")
+  ]).then(() => {
+    console.log("[hl2] All chunks loaded, starting engine...");
+    removeRunDependency("load_game_data");
+  }).catch((err) => {
+    console.error("[hl2] Chunk load error: " + err + " — starting with partial data");
+    removeRunDependency("load_game_data");
+  });
 })();
