@@ -893,7 +893,14 @@ write_build_manifest() {
   "asset_base_url": "https://hl2-assets-proxy.hl2-webxr.workers.dev/chunks/",
   "build_mode": "phase1-debug"
 }
+MANIFEST_EOF
 
+  log "  manifest: sha=$git_sha, wasm=${wasm_size}B, so=$so_count"
+}
+
+# ---------------------------------------------------------------------------
+# Main execution
+# ---------------------------------------------------------------------------
 main() {
   mkdir -p "$LOG_DIR" "$OUT_DIR"
   log "=== HL2 WebXR CI Build — $(date) ==="
@@ -956,10 +963,4 @@ fi
 main "$@"
 
 
-# ---------------------------------------------------------------------------
-# 10. Build-Manifest — immutable record of what was built
-# ---------------------------------------------------------------------------
-MANIFEST_EOF
 
-  log "  manifest: sha=$git_sha, wasm=${wasm_size}B, so=$so_count"
-}
