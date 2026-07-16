@@ -33,6 +33,8 @@ jobs:
       OUT_DIR: ${{ github.workspace }}/dist
       LOG_DIR: ${{ github.workspace }}/logs
       JOBS: 4
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
 
     steps:
       - name: Checkout repository

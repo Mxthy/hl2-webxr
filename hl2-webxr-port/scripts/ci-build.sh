@@ -577,6 +577,10 @@ emcc_link() {
     2>&1 | tee "$LOG_DIR/emcc_link.log"
 
   cp build/launcher_main/hl2_launcher.{html,js,wasm} build/install/
+
+  # GL stubs + dlsym/dlopen intercept + GL version spoof
+  python3 "$REPO_ROOT/scripts/gl_stubs_patch.py" build/launcher_main/hl2_launcher.js || true
+  python3 "$REPO_ROOT/scripts/gl_stubs_patch.py" build/install/hl2_launcher.js || true
   cp -r emscripten/assets build/install/ 2>/dev/null || true
 
   checkpoint_mark "emcc_link"
@@ -790,6 +794,39 @@ NODEJS
   fi
 
   checkpoint_mark "repackage"
+
+# ---------------------------------------------------------------------------
+# R2 Upload: Upload chunks to Cloudflare R2
+if [ -n "${R2_ACCESS_KEY_ID:-}" ] && [ -n "${R2_SECRET_ACCESS_KEY:-}" ] && [ -d "${OUT_DIR}/chunks" ]; then
+  log "Uploading chunks to Cloudflare R2..."
+  pip3 install -q boto3 2>/dev/null || true
+  R2_ENDPOINT="https://bdeeeb229289da950d71472c4c4bab76.r2.cloudflarestorage.com"
+  for f in "${OUT_DIR}"/chunks/*.data "${OUT_DIR}"/chunks/*.json; do
+    [ -f "$f" ] || continue
+    fname=$(basename "$f")
+    size_mb=$(du -m "$f" | cut -f1)
+    log "  Uploading $fname (${size_mb}MB)..."
+    python3 -c "
+import sys, os, boto3
+from botocore.config import Config
+s3 = boto3.client('s3',
+    endpoint_url='$R2_ENDPOINT',
+    aws_access_key_id=os.environ['R2_ACCESS_KEY_ID'],
+    aws_secret_access_key=os.environ['R2_SECRET_ACCESS_KEY'],
+    config=Config(signature_version='s3v4'),
+    region_name='auto'
+)
+s3.upload_file(sys.argv[1], 'hl2-webxr-assets', 'chunks/' + os.path.basename(sys.argv[1]),
+    ExtraArgs={'ContentType': 'application/octet-stream'})
+print('OK')
+" "$f" || log "  FAILED: $fname"
+  done
+  log "R2 upload complete"
+else
+  log "R2 credentials not set or no chunks dir — skipping R2 upload"
+fi
+
+
 }
 
 # ---------------------------------------------------------------------------
