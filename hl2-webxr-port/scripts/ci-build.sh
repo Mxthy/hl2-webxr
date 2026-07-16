@@ -122,32 +122,25 @@ clone_engine() {
   checkpoint_done "repo_clone" && { log "repo_clone: skip"; return; }
 
   log "Cloning source-engine (weliveinhell fork)..."
-  # Check if source code is present (wscript = waf build config file)
-  # The waf build cache may create engine/portal-port/build/ without source code
-  if [ -f "$ENGINE_DIR/wscript" ]; then
-    log "  engine source code present (wscript found) — skipping clone"
+
+  # Only a git repo with a valid HEAD counts as cloned source.
+  # A restored build/ dir from the waf cache must NOT fool us.
+  if [ -d "$ENGINE_DIR/.git" ] && \
+     git -C "$ENGINE_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1 && \
+     git -C "$ENGINE_DIR" rev-parse HEAD >/dev/null 2>&1; then
+    local sha
+    sha=$(git -C "$ENGINE_DIR" rev-parse --short HEAD)
+    log "  source checkout exists: $sha"
   else
-    # Directory may exist from waf cache restore (build/ only) but no source code
-    # Use git init approach to avoid rm -rf
-    mkdir -p "$ENGINE_DIR"
-    cd "$ENGINE_DIR"
-    git init 2>/dev/null || true
-    git remote remove origin 2>/dev/null || true
-    git remote add origin "$ENGINE_REPO"
-    git fetch --depth=1 origin HEAD
-    git checkout FETCH_HEAD
-    git submodule update --init --recursive --depth=1
-    cd "$REPO_ROOT"
-  fi
-
-  checkpoint_mark "repo_clone"
-}
-
-  log "Cloning source-engine (weliveinhell fork)..."
-  # Check if directory already has content (from cache restore)
-  if [ -d "$ENGINE_DIR" ] && [ -n "$(ls -A "$ENGINE_DIR" 2>/dev/null)" ]; then
-    log "  engine directory already populated (cache restore) — skipping clone"
-  elif [ ! -d "$ENGINE_DIR/.git" ]; then
+    log "  removing incomplete/stale source directory"
+    # Stale dir (maybe build/ only from waf cache) — clear and clone fresh
+    if [ -d "$ENGINE_DIR" ]; then
+      find "$ENGINE_DIR" -mindepth 1 -maxdepth 1 ! -name build -exec rm -rf {} + 2>/dev/null || true
+      # If build/ is all that remains and no source, remove it too
+      if [ ! -f "$ENGINE_DIR/wscript" ]; then
+        find "$ENGINE_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null || true
+      fi
+    fi
     git clone --depth=1 \
               --recurse-submodules \
               --shallow-submodules \
@@ -158,7 +151,6 @@ clone_engine() {
   checkpoint_mark "repo_clone"
 }
 
-# ---------------------------------------------------------------------------
 # 5. Source-Patches
 # ---------------------------------------------------------------------------
 apply_source_patches() {
@@ -920,9 +912,53 @@ else
   log "R2 credentials not set or no chunks dir — skipping R2 upload"
 fi
 
+  write_build_manifest
   log ""
   log "=== BUILD COMPLETE — $(date) ==="
   log "Outputs: $OUT_DIR"
 }
 
 main "$@"
+
+
+# ---------------------------------------------------------------------------
+# 10. Build-Manifest — immutable record of what was built
+# ---------------------------------------------------------------------------
+write_build_manifest() {
+  log "Writing build-manifest.json..."
+
+  local web_dir="$OUT_DIR/web"
+  mkdir -p "$web_dir"
+
+  local git_sha
+  git_sha=$(git -C "$ENGINE_DIR" rev-parse --short HEAD 2>/dev/null || echo "unknown")
+
+  local wasm_size js_size html_size
+  wasm_size=$(stat -c%s "$web_dir/hl2_launcher.wasm" 2>/dev/null || echo 0)
+  js_size=$(stat -c%s "$web_dir/hl2_launcher.js" 2>/dev/null || echo 0)
+  html_size=$(stat -c%s "$web_dir/hl2_launcher.html" 2>/dev/null || echo 0)
+
+  local so_count
+  so_count=$(find "$web_dir" -maxdepth 1 -type f -name '*.so' | wc -l)
+
+  local wasm_hash
+  wasm_hash=$(sha256sum "$web_dir/hl2_launcher.wasm" 2>/dev/null | cut -d' ' -f1 || echo "")
+
+  cat > "$web_dir/build-manifest.json" << MANIFEST_EOF
+{
+  "git_sha": "$git_sha",
+  "emsdk": "3.1.72",
+  "build_type": "$BUILDTYPE",
+  "main_module": "hl2_launcher.wasm",
+  "main_module_size": $wasm_size,
+  "main_module_sha256": "$wasm_hash",
+  "js_size": $js_size,
+  "html_size": $html_size,
+  "side_module_count": $so_count,
+  "asset_base_url": "https://hl2-assets-proxy.hl2-webxr.workers.dev/chunks/",
+  "build_mode": "phase1-debug"
+}
+MANIFEST_EOF
+
+  log "  manifest: sha=$git_sha, wasm=${wasm_size}B, so=$so_count"
+}

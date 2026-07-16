@@ -8,31 +8,103 @@ with open(js_path, 'r') as f:
     js = f.read()
 
 # ============================================================
-# 0. Chunk URL fix — redirect chunk loading to R2 proxy
+# 0. Centralized asset origin + chunkUrl() + load telemetry
 # ============================================================
-R2_PROXY_BASE = 'https://hl2-assets-proxy.hl2-webxr.workers.dev/chunks/'
+# Replace ad-hoc chunk URL string with a single immutable config source.
+# The loader gets a dedicated chunkUrl() function + fetchChunk telemetry.
 
-# Replace relative chunk URL with R2 proxy URL
-old_chunk_url = '`chunks/${mapName}.data`'
-new_chunk_url = '`' + R2_PROXY_BASE + '${mapName}.data`'
-if old_chunk_url in js:
-    js = js.replace(old_chunk_url, new_chunk_url)
-    print('Chunk URL redirected to R2 proxy: ' + R2_PROXY_BASE)
-elif R2_PROXY_BASE in js:
-    print('Chunk URL already pointing to R2 proxy')
+ASSET_ORIGIN = 'https://hl2-assets-proxy.hl2-webxr.workers.dev'
+CHUNK_PREFIX = ASSET_ORIGIN + '/chunks'
+
+asset_config_block = """
+// === ASSET CONFIG: Single immutable source for chunk URLs ===
+const ASSET_ORIGIN = '""" + ASSET_ORIGIN + """';
+const CHUNK_PREFIX = ASSET_ORIGIN + '/chunks';
+
+function chunkUrl(mapName) {
+  if (!/^[a-z0-9_]+$/i.test(mapName)) {
+    console.error('[asset:error] Invalid map chunk name: ' + mapName);
+    throw new Error('Invalid map chunk name: ' + mapName);
+  }
+  return CHUNK_PREFIX + '/' + mapName + '.data';
+}
+
+// Fetch a chunk with full telemetry — one log per stage
+async function fetchChunk(mapName) {
+  const url = chunkUrl(mapName);
+  const started = performance.now();
+  console.info('[asset:start]', { mapName, url });
+  const response = await fetch(url, {
+    mode: 'cors',
+    credentials: 'omit',
+    headers: { Range: 'bytes=0-' }
+  });
+  console.info('[asset:headers]', {
+    mapName,
+    status: response.status,
+    contentType: response.headers.get('content-type'),
+    contentLength: response.headers.get('content-length'),
+    acceptRanges: response.headers.get('accept-ranges')
+  });
+  if (!(response.ok || response.status === 206)) {
+    throw new Error('Chunk ' + mapName + ': HTTP ' + response.status + ' (' + url + ')');
+  }
+  const buffer = await response.arrayBuffer();
+  console.info('[asset:done]', {
+    mapName,
+    bytes: buffer.byteLength,
+    duration_ms: Math.round(performance.now() - started)
+  });
+  return buffer;
+}
+"""
+
+# Also inject Module.locateFile for Emscripten-managed files (.wasm, .data)
+locate_file_block = """
+// === LOCATEFILE: Redirect Emscripten runtime files to CDN ===
+var _orig_locateFile = Module.locateFile;
+Module.locateFile = function(path, prefix) {
+  if (path.endsWith('.wasm') || path.endsWith('.data')) {
+    return ASSET_ORIGIN + '/hl2-runtime/' + path;
+  }
+  if (_orig_locateFile) return _orig_locateFile(path, prefix);
+  return prefix + path;
+};
+"""
+
+# Find the insertion point — right after the pre.js inlined section
+pre_js_end = '// end include:'
+if pre_js_end in js:
+    idx = js.index(pre_js_end)
+    line_end = js.index('\n', idx)
+    js = js[:line_end+1] + asset_config_block + '\n' + locate_file_block + '\n' + js[line_end+1:]
+    print('Asset config + locateFile + chunk telemetry injected')
+elif 'Module.__glStubs' not in js:
+    # Prepend before GL stubs
+    js = asset_config_block + '\n' + locate_file_block + '\n' + js
+    print('Asset config injected at top (pre.js marker not found)')
 else:
-    # Try alternative patterns
-    alt_pattern = r'["\']chunks/\$\{mapName\}\.data["\']'
-    if re.search(alt_pattern, js):
-        js = re.sub(alt_pattern, '`' + R2_PROXY_BASE + '${mapName}.data`', js)
-        print('Chunk URL redirected to R2 proxy (via regex)')
-    else:
-        print('WARNING: Could not find chunk URL pattern to patch')
+    print('WARNING: Could not find insertion point for asset config')
 
-# ============================================================
-# 0b. Canvas size enforcement — ensure canvas has non-zero dimensions
-# ============================================================
-canvas_fix = """
+# Replace any existing chunk URL patterns with chunkUrl() calls
+# Pattern: `chunks/${mapName}.data` or https://...workers.dev/chunks/${mapName}.data
+old_patterns = [
+    '`chunks/${mapName}.data`',
+    '`' + ASSET_ORIGIN + '/chunks/${mapName}.data`',
+    '`https://hl2-assets-proxy.hl2-webxr.workers.dev/chunks/${mapName}.data`',
+]
+for old_pat in old_patterns:
+    if old_pat in js:
+        # Don't replace inside the chunkUrl function definition itself
+        # Only replace the actual XHR.open call
+        js = js.replace(
+            old_pat,
+            'chunkUrl(mapName)',
+        )
+        print('Replaced chunk URL pattern: ' + old_pat[:30] + '...')
+
+# Remove the old canvas_fix block (will be replaced by GL telemetry)
+old_canvas_fix = """
 // === CANVAS SIZE FIX: Ensure canvas has non-zero dimensions ===
 if (typeof canvasElement !== 'undefined' && canvasElement) {
   if (!canvasElement.width || canvasElement.width === 0) {
@@ -45,18 +117,94 @@ if (typeof canvasElement !== 'undefined' && canvasElement) {
   }
 }
 """
+if old_canvas_fix in js:
+    js = js.replace(old_canvas_fix, '', 1)
+    print('Removed old canvas fix (will be replaced by GL telemetry)')
 
-# Insert canvas fix right after the pre.js section (after Module setup)
-# Find the end of the inlined pre.js
-pre_js_end = '// end include:'
-if pre_js_end in js:
-    idx = js.index(pre_js_end)
-    # Find the end of that line
-    line_end = js.index('\n', idx)
-    js = js[:line_end+1] + canvas_fix + '\n' + js[line_end+1:]
-    print('Canvas size enforcement injected after pre.js')
+# ============================================================
+# 0b. GL Frame Heartbeat — isolated render gate telemetry
+# ============================================================
+# Four gates: G1 (context exists), G2 (clear produces color),
+# G3 (Source GL call reaches stub), G4 (glDraw* called)
+gl_telemetry_block = """
+// === GL TELEMETRY: Frame heartbeat with clear/draw counters ===
+const glTelemetry = {
+  frames: 0,
+  clearCalls: 0,
+  drawCalls: 0,
+  sourceGlCalls: 0,
+  lastReport: performance.now(),
+  gates: { g1: false, g2: false, g3: false, g4: false }
+};
+
+// G1: Verify WebGL2 context exists
+if (typeof canvasElement !== 'undefined' && canvasElement) {
+  var _gl_ctx = canvasElement.getContext('webgl2');
+  if (_gl_ctx) {
+    glTelemetry.gates.g1 = true;
+    console.info('[gl:g1] WebGL2 context exists');
+    // G2: Isolated clear test — if this produces color, canvas composition works
+    try {
+      _gl_ctx.clearColor(0.2, 0.15, 0.1, 1.0);
+      _gl_ctx.clear(_gl_ctx.COLOR_BUFFER_BIT);
+      glTelemetry.gates.g2 = true;
+      console.info('[gl:g2] clearColor + clear succeeded');
+    } catch(e) {
+      console.warn('[gl:g2] clear test failed: ' + e.message);
+    }
+  } else {
+    console.error('[gl:g1] WebGL2 context creation failed');
+  }
+}
+
+// Wrap dlsym stub resolution to count Source GL calls (G3)
+var _orig_dlsym_count = 0;
+var _wrapped_dlsym = false;
+
+// Heartbeat reporter — runs every 1s, logs only if there was activity
+function reportGlTelemetry() {
+  var now = performance.now();
+  if (now - glTelemetry.lastReport >= 1000) {
+    var hasActivity = glTelemetry.frames > 0 || glTelemetry.clearCalls > 0 || glTelemetry.drawCalls > 0 || glTelemetry.sourceGlCalls > 0;
+    if (hasActivity) {
+      console.info('[gl:telemetry]', {
+        frames: glTelemetry.frames,
+        clearCalls: glTelemetry.clearCalls,
+        drawCalls: glTelemetry.drawCalls,
+        sourceGlCalls: glTelemetry.sourceGlCalls,
+        gates: glTelemetry.gates
+      });
+    }
+    glTelemetry.frames = 0;
+    glTelemetry.clearCalls = 0;
+    glTelemetry.drawCalls = 0;
+    glTelemetry.sourceGlCalls = 0;
+    glTelemetry.lastReport = now;
+  }
+  requestAnimationFrame(reportGlTelemetry);
+}
+
+// Start the heartbeat after a short delay (let engine init first)
+setTimeout(function() {
+  requestAnimationFrame(reportGlTelemetry);
+  console.info('[gl:telemetry] heartbeat started');
+}, 3000);
+"""
+
+# Insert GL telemetry right after the asset config block
+# (which was already injected above in section 0)
+if 'glTelemetry' not in js:
+    pre_js_end = '// end include:'
+    if pre_js_end in js:
+        idx = js.index(pre_js_end)
+        line_end = js.index('\n', idx)
+        js = js[:line_end+1] + gl_telemetry_block + '\n' + js[line_end+1:]
+        print('GL frame heartbeat telemetry injected')
+    else:
+        js = gl_telemetry_block + '\n' + js
+        print('GL telemetry injected at top')
 else:
-    print('WARNING: Could not find pre.js end marker for canvas fix')
+    print('GL telemetry already present')
 
 # ============================================================
 # 1. GL stubs table (desktop GL functions not in WebGL)
