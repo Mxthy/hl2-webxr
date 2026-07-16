@@ -1,0 +1,182 @@
+name: HL2 WebXR WASM Build
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'scripts/ci-build.sh'
+      - '.github/workflows/build.yml'
+  workflow_dispatch:
+    inputs:
+      buildtype:
+        description: 'Build type: release or debug'
+        required: false
+        default: 'release'
+
+concurrency:
+  group: hl2-wasm-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: WASM Build
+    runs-on: ubuntu-latest
+
+    env:
+      BUILDTYPE: ${{ github.event.inputs.buildtype || 'release' }}
+      ENGINE_REPO: https://github.com/weliveinhell/source-engine
+      EMSDK_COMMIT: 2d480a1b7c7a34a354188d93f3e89190a44a1d21
+      EMSDK_DIR: ${{ github.workspace }}/tools/emsdk
+      ENGINE_DIR: ${{ github.workspace }}/engine/portal-port
+      ASSETS_ARCHIVE_URL: "https://archive.org/download/Half-Life-2-Retail-2153/Half-Life%202.7z"
+      ASSETS_ROOT: ${{ github.workspace }}/assets/game/Half-Life 2
+      OUT_DIR: ${{ github.workspace }}/dist
+      LOG_DIR: ${{ github.workspace }}/logs
+      JOBS: 4
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts/
+            .github/
+
+      - name: Cache emsdk
+        id: cache-emsdk
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.EMSDK_DIR }}
+          key: emsdk-${{ env.EMSDK_COMMIT }}-v2
+
+      - name: Cache source-engine clone (ohne build/)
+        id: cache-engine
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.ENGINE_DIR }}
+          key: source-engine-weliveinhell-${{ hashFiles('.github/workflows/build.yml') }}-v4
+          restore-keys: |
+            source-engine-weliveinhell-
+
+      - name: Clear stale waf build objects (force full recompile)
+        run: |
+          rm -rf "$ENGINE_DIR/build/waf-2.0.7-1.8.14"
+          rm -rf "$ENGINE_DIR/build/.wafpickle-*"
+          find "$ENGINE_DIR/build" -name "*.o" -delete 2>/dev/null || true
+          echo "Stale waf build objects cleared"
+
+      - name: Cache waf build objects
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.ENGINE_DIR }}/build
+          key: waf-build-${{ env.BUILDTYPE }}-${{ env.EMSDK_COMMIT }}-${{ hashFiles('scripts/ci-build.sh') }}-${{ github.run_id }}
+          restore-keys: |
+            waf-build-${{ env.BUILDTYPE }}-${{ env.EMSDK_COMMIT }}-${{ hashFiles('scripts/ci-build.sh') }}-
+            waf-build-${{ env.BUILDTYPE }}-${{ env.EMSDK_COMMIT }}-
+
+      - name: Cache HL2 assets (extracted)
+        id: cache-assets
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.ASSETS_ROOT }}
+          key: hl2-assets-retail-2153-v1
+
+      - name: Download & extract HL2 assets
+        if: steps.cache-assets.outputs.cache-hit != 'true'
+        run: |
+          echo "Installing 7zip..."
+          sudo apt-get install -y p7zip-full
+
+          echo "Downloading HL2 Retail 2153 from Archive.org (~1.7 GB)..."
+          mkdir -p "$ASSETS_ROOT"
+          curl -fL --retry 3 --retry-delay 5 \
+            "$ASSETS_ARCHIVE_URL" \
+            -o /tmp/hl2_assets.7z \
+            --progress-bar
+
+          echo "Extracting 7z archive..."
+          7z x /tmp/hl2_assets.7z -o"$(dirname "$ASSETS_ROOT")" -y
+          rm -f /tmp/hl2_assets.7z
+
+          echo "Assets extracted: $(find "$ASSETS_ROOT" -type f | wc -l) files"
+          ls -la "$ASSETS_ROOT/"
+
+      - name: Run CI build
+        run: |
+          chmod +x scripts/ci-build.sh
+          bash scripts/ci-build.sh
+        timeout-minutes: 180
+
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs-${{ github.run_id }}
+          path: |
+            ${{ env.LOG_DIR }}/*.log
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Upload web outputs
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hl2-webxr-web-${{ github.run_id }}
+          path: |
+            ${{ env.OUT_DIR }}/web/hl2_launcher.html
+            ${{ env.OUT_DIR }}/web/hl2_launcher.js
+            ${{ env.OUT_DIR }}/web/hl2_launcher.wasm
+            ${{ env.OUT_DIR }}/web/*.so
+            ${{ env.OUT_DIR }}/web/assets/
+          retention-days: 30
+          compression-level: 0
+          if-no-files-found: warn
+
+      - name: Upload data chunks
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hl2-webxr-chunks-${{ github.run_id }}
+          path: |
+            ${{ env.OUT_DIR }}/chunks/*.data
+            ${{ env.OUT_DIR }}/chunks/*.json
+          retention-days: 30
+          compression-level: 0
+          if-no-files-found: warn
+
+      - name: Report chunk sizes
+        if: success()
+        run: |
+          echo "## Data Chunks" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Chunk | Size |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          for f in "$OUT_DIR/chunks/"*.data; do
+            [ -f "$f" ] || continue
+            name=$(basename "$f")
+            size=$(du -h "$f" | cut -f1)
+            echo "| \`$name\` | \`$size\` |" >> $GITHUB_STEP_SUMMARY
+          done
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f "$OUT_DIR/chunks/shader-manifest.json" ]; then
+            count=$(python3 -c "import json; print(len(json.load(open('$OUT_DIR/chunks/shader-manifest.json'))['files']))" 2>/dev/null || echo "?")
+            echo "Shader manifest: \`$count\` shader files" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Write job summary
+        if: always()
+        run: |
+          echo "## HL2 WebXR Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Key | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| Build Type | \`$BUILDTYPE\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| emsdk commit | \`$EMSDK_COMMIT\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Run ID | \`${{ github.run_id }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Output files" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          ls -lh "$OUT_DIR/web/" 2>/dev/null || echo "(no web outputs)"
+          ls -lh "$OUT_DIR/chunks/" 2>/dev/null || echo "(no chunks)"
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
