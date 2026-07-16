@@ -122,6 +122,28 @@ clone_engine() {
   checkpoint_done "repo_clone" && { log "repo_clone: skip"; return; }
 
   log "Cloning source-engine (weliveinhell fork)..."
+  # Check if source code is present (wscript = waf build config file)
+  # The waf build cache may create engine/portal-port/build/ without source code
+  if [ -f "$ENGINE_DIR/wscript" ]; then
+    log "  engine source code present (wscript found) — skipping clone"
+  else
+    # Directory may exist from waf cache restore (build/ only) but no source code
+    # Use git init approach to avoid rm -rf
+    mkdir -p "$ENGINE_DIR"
+    cd "$ENGINE_DIR"
+    git init 2>/dev/null || true
+    git remote remove origin 2>/dev/null || true
+    git remote add origin "$ENGINE_REPO"
+    git fetch --depth=1 origin HEAD
+    git checkout FETCH_HEAD
+    git submodule update --init --recursive --depth=1
+    cd "$REPO_ROOT"
+  fi
+
+  checkpoint_mark "repo_clone"
+}
+
+  log "Cloning source-engine (weliveinhell fork)..."
   # Check if directory already has content (from cache restore)
   if [ -d "$ENGINE_DIR" ] && [ -n "$(ls -A "$ENGINE_DIR" 2>/dev/null)" ]; then
     log "  engine directory already populated (cache restore) — skipping clone"
