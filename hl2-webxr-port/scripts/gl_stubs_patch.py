@@ -246,30 +246,57 @@ if dlsym_marker in js:
 else:
     print('WARNING: Could not find dlsym insertion point')
 
-# Patch glGetString to spoof GL version
-# Find: var glVersion = `3.0.0 (${webGLVersion})`;
-# Replace with: var glVersion = `3.3.0 (${webGLVersion})`;
-old_version = 'var glVersion = `3.0.0'
-new_version = 'var glVersion = `3.3.0'
-if old_version in js:
-    js = js.replace(old_version, new_version)
-    print('GL version spoofed to 3.3.0')
-elif new_version in js:
-    print('GL version already spoofed to 3.3.0')
+# Patch glGetString to spoof GL version from OpenGL ES 3.0 to 3.3.0
+# The Source Engine requires GL >= 3.2, but WebGL2 reports OpenGL ES 3.0
+# Pattern 1: glVersion = `OpenGL ES 3.0 (${webGLVersion})`
+# Pattern 2: glVersion = `3.0.0 (${webGLVersion})`
+import re as re_mod
+
+# Try to find and replace the OpenGL ES 3.0 version string
+patterns_replaced = 0
+
+# Pattern: glVersion = `OpenGL ES 3.0 (${webGLVersion})`
+old_es3 = 'glVersion = `OpenGL ES 3.0 (${webGLVersion})`'
+new_es3 = 'glVersion = `3.3.0 (${webGLVersion})`'
+if old_es3 in js:
+    js = js.replace(old_es3, new_es3)
+    patterns_replaced += 1
+    print('GL version spoofed: OpenGL ES 3.0 -> 3.3.0')
+
+# Pattern: glVersion = `OpenGL ES 2.0 (${webGLVersion})`
+old_es2 = 'glVersion = `OpenGL ES 2.0 (${webGLVersion})`'
+new_es2 = 'glVersion = `3.3.0 (${webGLVersion})`'
+if old_es2 in js:
+    js = js.replace(old_es2, new_es2)
+    patterns_replaced += 1
+    print('GL version spoofed: OpenGL ES 2.0 -> 3.3.0')
+
+# Pattern: any remaining 3.0.0 in glVersion
+old_300 = 'var glVersion = `3.0.0'
+if old_300 in js:
+    js = js.replace(old_300, 'var glVersion = `3.3.0')
+    patterns_replaced += 1
+    print('GL version spoofed: 3.0.0 -> 3.3.0')
+
+# Regex fallback for any glVersion pattern
+if patterns_replaced == 0:
+    m = re_mod.search(r'(glVersion\s*=\s*["`])OpenGL ES (\d+\.\d+)', js)
+    if m:
+        js = js[:m.start(2)] + '3.3.0' + js[m.end(2):]
+        patterns_replaced += 1
+        print(f'GL version spoofed via regex: OpenGL ES {m.group(2)} -> 3.3.0')
+    
+if patterns_replaced == 0:
+    m = re_mod.search(r'(glVersion\s*=\s*["`])(\d+\.\d+\.\d+)', js)
+    if m:
+        js = js[:m.start(2)] + '3.3.0' + js[m.end(2):]
+        patterns_replaced += 1
+        print(f'GL version spoofed via regex: {m.group(2)} -> 3.3.0')
+
+if patterns_replaced == 0:
+    print('WARNING: Could not find glVersion to spoof')
 else:
-    # Try alternate pattern
-    old2 = 'var glVersion = "3.0.0'
-    if old2 in js:
-        js = js.replace(old2, 'var glVersion = "3.3.0')
-        print('GL version spoofed to 3.3.0 (alternate)')
-    else:
-        # Try to find any glVersion assignment
-        m = re.search(r'(var\s+glVersion\s*=\s*)["`](\d+\.\d+\.\d+)', js)
-        if m:
-            js = js[:m.start(2)] + '3.3.0' + js[m.end(2):]
-            print(f'GL version spoofed from {m.group(2)} to 3.3.0 (regex)')
-        else:
-            print('WARNING: Could not find glVersion to spoof')
+    print(f'Total GL version patterns replaced: {patterns_replaced}')
 
 with open(js_path, 'w') as f:
     f.write(js)

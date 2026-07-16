@@ -672,7 +672,14 @@ function addFileFromTree(chunks, srcDir, vpath, filename) {
     }
     return null
   }
-  const found = findFile(srcDir, filename)
+  // Try original assets dir first
+  let found = findFile(srcDir, filename)
+  // Fallback: search in build/install (where dummy VTFs are created)
+  if (!found) {
+    const buildDir = path.join(process.cwd(), 'build/install/hl2/materials')
+    found = findFile(buildDir, filename)
+    if (found) console.log(`  Found in build/install: ${found}`)
+  }
   if (found) {
     console.log(`  Found bootstrap file: ${found} -> ${vpath}`)
     return addFile(chunks, found, vpath, true)
@@ -800,35 +807,6 @@ NODEJS
   checkpoint_mark "repackage"
 
 # ---------------------------------------------------------------------------
-# R2 Upload: Upload chunks to Cloudflare R2
-if [ -n "${R2_ACCESS_KEY_ID:-}" ] && [ -n "${R2_SECRET_ACCESS_KEY:-}" ] && [ -d "${OUT_DIR}/chunks" ]; then
-  log "Uploading chunks to Cloudflare R2..."
-  pip3 install -q boto3 2>/dev/null || true
-  R2_ENDPOINT="https://bdeeeb229289da950d71472c4c4bab76.r2.cloudflarestorage.com"
-  for f in "${OUT_DIR}"/chunks/*.data "${OUT_DIR}"/chunks/*.json; do
-    [ -f "$f" ] || continue
-    fname=$(basename "$f")
-    size_mb=$(du -m "$f" | cut -f1)
-    log "  Uploading $fname (${size_mb}MB)..."
-    python3 -c "
-import sys, os, boto3
-from botocore.config import Config
-s3 = boto3.client('s3',
-    endpoint_url='$R2_ENDPOINT',
-    aws_access_key_id=os.environ['R2_ACCESS_KEY_ID'],
-    aws_secret_access_key=os.environ['R2_SECRET_ACCESS_KEY'],
-    config=Config(signature_version='s3v4'),
-    region_name='auto'
-)
-s3.upload_file(sys.argv[1], 'hl2-webxr-assets', 'chunks/' + os.path.basename(sys.argv[1]),
-    ExtraArgs={'ContentType': 'application/octet-stream'})
-print('OK')
-" "$f" || log "  FAILED: $fname"
-  done
-  log "R2 upload complete"
-else
-  log "R2 credentials not set or no chunks dir — skipping R2 upload"
-fi
 
 
 }
@@ -886,6 +864,36 @@ main() {
   emcc_link
   repackage_assets
   collect_outputs
+
+# R2 Upload: Upload chunks to Cloudflare R2
+if [ -n "${R2_ACCESS_KEY_ID:-}" ] && [ -n "${R2_SECRET_ACCESS_KEY:-}" ] && [ -d "${OUT_DIR}/chunks" ]; then
+  log "Uploading chunks to Cloudflare R2..."
+  pip3 install -q boto3 2>/dev/null || true
+  R2_ENDPOINT="https://bdeeeb229289da950d71472c4c4bab76.r2.cloudflarestorage.com"
+  for f in "${OUT_DIR}"/chunks/*.data "${OUT_DIR}"/chunks/*.json; do
+    [ -f "$f" ] || continue
+    fname=$(basename "$f")
+    size_mb=$(du -m "$f" | cut -f1)
+    log "  Uploading $fname (${size_mb}MB)..."
+    python3 -c "
+import sys, os, boto3
+from botocore.config import Config
+s3 = boto3.client('s3',
+    endpoint_url='$R2_ENDPOINT',
+    aws_access_key_id=os.environ['R2_ACCESS_KEY_ID'],
+    aws_secret_access_key=os.environ['R2_SECRET_ACCESS_KEY'],
+    config=Config(signature_version='s3v4'),
+    region_name='auto'
+)
+s3.upload_file(sys.argv[1], 'hl2-webxr-assets', 'chunks/' + os.path.basename(sys.argv[1]),
+    ExtraArgs={'ContentType': 'application/octet-stream'})
+print('OK')
+" "$f" || log "  FAILED: $fname"
+  done
+  log "R2 upload complete"
+else
+  log "R2 credentials not set or no chunks dir — skipping R2 upload"
+fi
 
   log ""
   log "=== BUILD COMPLETE — $(date) ==="
