@@ -6,6 +6,7 @@ on:
     paths:
       - 'scripts/ci-build.sh'
       - '.github/workflows/build.yml'
+      - 'scripts/gl_stubs_patch.py'
   workflow_dispatch:
     inputs:
       buildtype:
@@ -51,23 +52,13 @@ jobs:
           path: ${{ env.EMSDK_DIR }}
           key: emsdk-${{ env.EMSDK_COMMIT }}-v2
 
-      - name: Cache source-engine clone (ohne build/)
-        id: cache-engine
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.ENGINE_DIR }}
-          key: source-engine-weliveinhell-${{ hashFiles('.github/workflows/build.yml') }}-v4
-          restore-keys: |
-            source-engine-weliveinhell-
+      # Source-engine checkout is NOT cached — it is always cloned fresh.
+      # Only the waf build output (ENGINE_DIR/build) is cached separately.
+      # This prevents the ownership conflict where a restored build/ dir
+      # makes clone_engine think the source is present.
 
-      - name: Clear stale waf build objects (force full recompile)
-        run: |
-          rm -rf "$ENGINE_DIR/build/waf-2.0.7-1.8.14"
-          rm -rf "$ENGINE_DIR/build/.wafpickle-*"
-          find "$ENGINE_DIR/build" -name "*.o" -delete 2>/dev/null || true
-          echo "Stale waf build objects cleared"
-
-      - name: Cache waf build objects
+      - name: Cache waf build objects (build/ only)
+        id: cache-waf
         uses: actions/cache@v4
         with:
           path: ${{ env.ENGINE_DIR }}/build
@@ -109,6 +100,19 @@ jobs:
           bash scripts/ci-build.sh
         timeout-minutes: 180
 
+      - name: Checkout gate
+        run: |
+          set -euo pipefail
+          echo "=== Build Gate ==="
+          test -f "$ENGINE_DIR/wscript" || { echo "FAIL: wscript not found"; exit 1; }
+          test -f "$OUT_DIR/web/hl2_launcher.js" || { echo "FAIL: hl2_launcher.js not found"; exit 1; }
+          test -f "$OUT_DIR/web/hl2_launcher.wasm" || { echo "FAIL: hl2_launcher.wasm not found"; exit 1; }
+          SO_COUNT=$(find "$OUT_DIR/web" -maxdepth 1 -type f -name '*.so' | wc -l)
+          echo "Side modules found: $SO_COUNT"
+          test "$SO_COUNT" -eq 25 || { echo "FAIL: expected 25 .so files, got $SO_COUNT"; exit 1; }
+          find "$OUT_DIR/web" -maxdepth 1 -type f -name '*.so' -printf '%f\n' | sort | tee "$OUT_DIR/web/side-modules.txt"
+          echo "=== Gate passed ==="
+
       - name: Upload build logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -130,6 +134,8 @@ jobs:
             ${{ env.OUT_DIR }}/web/hl2_launcher.wasm
             ${{ env.OUT_DIR }}/web/*.so
             ${{ env.OUT_DIR }}/web/assets/
+            ${{ env.OUT_DIR }}/web/build-manifest.json
+            ${{ env.OUT_DIR }}/web/side-modules.txt
           retention-days: 30
           compression-level: 0
           if-no-files-found: warn
