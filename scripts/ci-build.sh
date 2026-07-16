@@ -859,6 +859,41 @@ collect_outputs() {
 # ---------------------------------------------------------------------------
 # main
 # ---------------------------------------------------------------------------
+write_build_manifest() {
+  log "Writing build-manifest.json..."
+
+  local web_dir="$OUT_DIR/web"
+  mkdir -p "$web_dir"
+
+  local git_sha
+  git_sha=$(git -C "$ENGINE_DIR" rev-parse --short HEAD 2>/dev/null || echo "unknown")
+
+  local wasm_size js_size html_size
+  wasm_size=$(stat -c%s "$web_dir/hl2_launcher.wasm" 2>/dev/null || echo 0)
+  js_size=$(stat -c%s "$web_dir/hl2_launcher.js" 2>/dev/null || echo 0)
+  html_size=$(stat -c%s "$web_dir/hl2_launcher.html" 2>/dev/null || echo 0)
+
+  local so_count
+  so_count=$(find "$web_dir" -maxdepth 1 -type f -name '*.so' | wc -l)
+
+  local wasm_hash
+  wasm_hash=$(sha256sum "$web_dir/hl2_launcher.wasm" 2>/dev/null | cut -d' ' -f1 || echo "")
+
+  cat > "$web_dir/build-manifest.json" << MANIFEST_EOF
+{
+  "git_sha": "$git_sha",
+  "emsdk": "3.1.72",
+  "build_type": "$BUILDTYPE",
+  "main_module": "hl2_launcher.wasm",
+  "main_module_size": $wasm_size,
+  "main_module_sha256": "$wasm_hash",
+  "js_size": $js_size,
+  "html_size": $html_size,
+  "side_module_count": $so_count,
+  "asset_base_url": "https://hl2-assets-proxy.hl2-webxr.workers.dev/chunks/",
+  "build_mode": "phase1-debug"
+}
+
 main() {
   mkdir -p "$LOG_DIR" "$OUT_DIR"
   log "=== HL2 WebXR CI Build — $(date) ==="
@@ -924,40 +959,6 @@ main "$@"
 # ---------------------------------------------------------------------------
 # 10. Build-Manifest — immutable record of what was built
 # ---------------------------------------------------------------------------
-write_build_manifest() {
-  log "Writing build-manifest.json..."
-
-  local web_dir="$OUT_DIR/web"
-  mkdir -p "$web_dir"
-
-  local git_sha
-  git_sha=$(git -C "$ENGINE_DIR" rev-parse --short HEAD 2>/dev/null || echo "unknown")
-
-  local wasm_size js_size html_size
-  wasm_size=$(stat -c%s "$web_dir/hl2_launcher.wasm" 2>/dev/null || echo 0)
-  js_size=$(stat -c%s "$web_dir/hl2_launcher.js" 2>/dev/null || echo 0)
-  html_size=$(stat -c%s "$web_dir/hl2_launcher.html" 2>/dev/null || echo 0)
-
-  local so_count
-  so_count=$(find "$web_dir" -maxdepth 1 -type f -name '*.so' | wc -l)
-
-  local wasm_hash
-  wasm_hash=$(sha256sum "$web_dir/hl2_launcher.wasm" 2>/dev/null | cut -d' ' -f1 || echo "")
-
-  cat > "$web_dir/build-manifest.json" << MANIFEST_EOF
-{
-  "git_sha": "$git_sha",
-  "emsdk": "3.1.72",
-  "build_type": "$BUILDTYPE",
-  "main_module": "hl2_launcher.wasm",
-  "main_module_size": $wasm_size,
-  "main_module_sha256": "$wasm_hash",
-  "js_size": $js_size,
-  "html_size": $html_size,
-  "side_module_count": $so_count,
-  "asset_base_url": "https://hl2-assets-proxy.hl2-webxr.workers.dev/chunks/",
-  "build_mode": "phase1-debug"
-}
 MANIFEST_EOF
 
   log "  manifest: sha=$git_sha, wasm=${wasm_size}B, so=$so_count"
