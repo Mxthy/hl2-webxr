@@ -122,7 +122,10 @@ clone_engine() {
   checkpoint_done "repo_clone" && { log "repo_clone: skip"; return; }
 
   log "Cloning source-engine (weliveinhell fork)..."
-  if [ ! -d "$ENGINE_DIR/.git" ]; then
+  # Check if directory already has content (from cache restore)
+  if [ -d "$ENGINE_DIR" ] && [ -n "$(ls -A "$ENGINE_DIR" 2>/dev/null)" ]; then
+    log "  engine directory already populated (cache restore) — skipping clone"
+  elif [ ! -d "$ENGINE_DIR/.git" ]; then
     git clone --depth=1 \
               --recurse-submodules \
               --shallow-submodules \
