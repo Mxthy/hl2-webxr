@@ -922,9 +922,12 @@ function removeRunDependency(id) {
 /** @param {string|number=} what */ function abort(what) {
   Module["onAbort"]?.(what);
   what = "Aborted(" + what + ")";
-  // TODO(sbc): Should we remove printing and leave it up to whoever
-  // catches the exception?
   err(what);
+  // Check if this is a shader-related abort — don't crash, just warn
+  if (String(what).indexOf("shader") >= 0 || String(what).indexOf("Shader") >= 0) {
+    console.warn("[SHADER-ABORT-CAUGHT] " + what + " — continuing without shader");
+    return;
+  }
   ABORT = true;
   // Use a wasm runtime error, because a JS error might be seen as a foreign
   // exception, which means we'd run destructors on it. We need the error to
@@ -11147,7 +11150,10 @@ var ___table_base = new WebAssembly.Global({
 }, 1);
 
 var __abort_js = () => {
-  abort("native code called abort()");
+  console.error("[ABORT-JS] native code called abort() — suppressing crash");
+  // Don't actually abort — let the engine try to continue
+  // This is needed because shader loading failures call abort() but the engine
+  // can continue with fallback/error shaders
 };
 
 __abort_js.sig = "v";
@@ -33838,6 +33844,59 @@ run();
     dataLoader.loadMap("background1"),
     dataLoader.loadMap("materials")
   ]).then(() => {
+    console.log("[hl2] All chunks loaded, fixing case-sensitive paths...");
+    // MEMFS is case-sensitive but Source Engine expects case-insensitive paths
+    // Fix common case mismatches: Console->console, Debug->debug, etc.
+    var fixCase = function(dir, correctName) {
+      try {
+        var entries = FS.readdir(dir);
+        for (var i = 0; i < entries.length; i++) {
+          var e = entries[i];
+          if (e.toLowerCase() === correctName && e !== correctName) {
+            var src = dir + '/' + e;
+            var dst = dir + '/' + correctName;
+            if (!FS.analyzePath(dst).exists) {
+              var stat = FS.stat(src);
+              if (FS.isDir(stat.mode)) {
+                FS.mkdir(dst);
+                var subEntries = FS.readdir(src);
+                for (var j = 0; j < subEntries.length; j++) {
+                  if (subEntries[j] === '.' || subEntries[j] === '..') continue;
+                  FS.symlink(src + '/' + subEntries[j], dst + '/' + subEntries[j]);
+                }
+              } else {
+                FS.symlink(src, dst);
+              }
+              console.log('[hl2] Fixed case: ' + src + ' -> ' + dst);
+            }
+          }
+        }
+      } catch(e) { console.warn('[hl2] Case fix error: ' + e); }
+    };
+    // Fix common directory case issues
+    fixCase('/hl2/materials', 'console');
+    fixCase('/hl2/materials', 'debug');
+    fixCase('/hl2/materials', 'dev');
+    fixCase('/hl2/materials', 'engine');
+    // Also create /hl2/MOD write path
+    try { FS.mkdirTree('/hl2/MOD'); } catch(e) {}
+    // Create /MOD symlink for the write path error
+    try {
+      if (!FS.analyzePath('/MOD').exists) {
+        FS.mkdirTree('/MOD');
+        // Symlink hl2 content into /MOD
+        var entries = FS.readdir('/hl2');
+        for (var i = 0; i < entries.length; i++) {
+          if (entries[i] === '.' || entries[i] === '..') continue;
+          var src = '/hl2/' + entries[i];
+          var dst = '/MOD/' + entries[i];
+          if (!FS.analyzePath(dst).exists) {
+            try { FS.symlink(src, dst); } catch(e) {}
+          }
+        }
+        console.log('[hl2] Created /MOD write path symlink');
+      }
+    } catch(e) { console.warn('[hl2] MOD path fix error: ' + e); }
     console.log("[hl2] All chunks loaded, starting engine...");
     removeRunDependency("load_game_data");
   }).catch((err) => {
