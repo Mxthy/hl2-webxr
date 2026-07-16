@@ -606,6 +606,10 @@ repackage_assets() {
   if [ -d "$ASSETS_ROOT/platform" ]; then
     mkdir -p build/install/platform
     cp -r "$ASSETS_ROOT/platform/." build/install/platform/
+
+  # Create missing bootstrap VTFs (not in Retail 2153)
+  python3 "$REPO_ROOT/scripts/create_dummy_vtfs.py" build/install/hl2/materials
+  log "Bootstrap VTFs ensured"
   fi
 
   # repackage.js braucht map-*.txt Asset-Trace-Logs (via get_logs.sh + echte HL2-Installation)
