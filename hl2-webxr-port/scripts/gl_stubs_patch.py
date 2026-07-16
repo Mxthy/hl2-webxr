@@ -1,12 +1,66 @@
 #!/usr/bin/env python3
-"""Inject GL stubs, dlsym/dlopen intercept, and GL version spoof into hl2_launcher.js"""
+"""Inject GL stubs, dlsym/dlopen intercept, GL version spoof, chunk URL fix,
+and canvas size enforcement into hl2_launcher.js"""
 import sys, re
 
 js_path = sys.argv[1]
 with open(js_path, 'r') as f:
     js = f.read()
 
-# 1. Inject GL stubs table right before _emscripten_GetProcAddress definition
+# ============================================================
+# 0. Chunk URL fix — redirect chunk loading to R2 proxy
+# ============================================================
+R2_PROXY_BASE = 'https://hl2-assets-proxy.hl2-webxr.workers.dev/chunks/'
+
+# Replace relative chunk URL with R2 proxy URL
+old_chunk_url = '`chunks/${mapName}.data`'
+new_chunk_url = '`' + R2_PROXY_BASE + '${mapName}.data`'
+if old_chunk_url in js:
+    js = js.replace(old_chunk_url, new_chunk_url)
+    print('Chunk URL redirected to R2 proxy: ' + R2_PROXY_BASE)
+elif R2_PROXY_BASE in js:
+    print('Chunk URL already pointing to R2 proxy')
+else:
+    # Try alternative patterns
+    alt_pattern = r'["\']chunks/\$\{mapName\}\.data["\']'
+    if re.search(alt_pattern, js):
+        js = re.sub(alt_pattern, '`' + R2_PROXY_BASE + '${mapName}.data`', js)
+        print('Chunk URL redirected to R2 proxy (via regex)')
+    else:
+        print('WARNING: Could not find chunk URL pattern to patch')
+
+# ============================================================
+# 0b. Canvas size enforcement — ensure canvas has non-zero dimensions
+# ============================================================
+canvas_fix = """
+// === CANVAS SIZE FIX: Ensure canvas has non-zero dimensions ===
+if (typeof canvasElement !== 'undefined' && canvasElement) {
+  if (!canvasElement.width || canvasElement.width === 0) {
+    canvasElement.width = canvasElement.widthNative || 1280;
+    console.log('[CANVAS] width set to ' + canvasElement.width);
+  }
+  if (!canvasElement.height || canvasElement.height === 0) {
+    canvasElement.height = canvasElement.heightNative || 720;
+    console.log('[CANVAS] height set to ' + canvasElement.height);
+  }
+}
+"""
+
+# Insert canvas fix right after the pre.js section (after Module setup)
+# Find the end of the inlined pre.js
+pre_js_end = '// end include:'
+if pre_js_end in js:
+    idx = js.index(pre_js_end)
+    # Find the end of that line
+    line_end = js.index('\n', idx)
+    js = js[:line_end+1] + canvas_fix + '\n' + js[line_end+1:]
+    print('Canvas size enforcement injected after pre.js')
+else:
+    print('WARNING: Could not find pre.js end marker for canvas fix')
+
+# ============================================================
+# 1. GL stubs table (desktop GL functions not in WebGL)
+# ============================================================
 gl_stubs_block = """
 // === GL STUBS: Desktop GL function stubs for WebGL2 compatibility ===
 Module.__glStubs = {
@@ -167,39 +221,42 @@ Module.__glStubs = {
   'glMapBufferRange': { fn: function(t, o, l, a) { return 0; }, sig: 'iiiii' },
   'glFlushMappedBufferRange': { fn: function(t, o, l) {}, sig: 'viii' },
   'glBindBufferBase': { fn: function(t, i, b) {}, sig: 'viii' },
-  'glBindBufferRange': { fn: function(t, i, b, o, s) {}, sig: 'viiiii' },
-  'glCopyBufferSubData': { fn: function(rt, wt, ro, wo, s) {}, sig: 'viiiii' },
+  'glBindBufferRange': { fn: function(t, i, b, o, sz) {}, sig: 'viiiii' },
+  'glDeleteVertexArrays': { fn: function(n, a) {}, sig: 'vii' },
+  'glGenVertexArrays': { fn: function(n, a) {}, sig: 'vii' },
+  'glIsVertexArray': { fn: function(a) { return 0; }, sig: 'ii' },
+  'glFenceSync': { fn: function(c, f) { return 0; }, sig: 'iii' },
+  'glIsSync': { fn: function(s) { return 0; }, sig: 'ii' },
+  'glDeleteSync': { fn: function(s) {}, sig: 'vi' },
+  'glClientWaitSync': { fn: function(s, f, t) { return 0; }, sig: 'iiii' },
+  'glWaitSync': { fn: function(s, f, t) {}, sig: 'viii' },
+  'glGetSynciv': { fn: function(s, p, l, v) {}, sig: 'viiii' },
 };
-console.log('[GL] Desktop GL stub table ready (' + Object.keys(Module.__glStubs).length + ' functions)');
 """
 
+# ============================================================
 # 2. dlsym/dlopen intercept
+# ============================================================
 dlsym_patch = """
-// === DLSYM/DLOPEN INTERCEPT: Route GL function lookups through GL stubs ===
+// === DLSYM/DLOPEN INTERCEPT: Resolve GL functions via __glStubs ===
 var _orig_dlopen_js = __dlopen_js;
 __dlopen_js = function(handle) {
-  var filename = UTF8ToString(handle);
-  if (/libGL|libGLES|libEGL/i.test(filename)) {
-    console.log('[DLOPEN] GL library detected, returning fake handle for: ' + filename);
-    return 999;
+  // Intercept dlopen for GL libraries — return fake handle
+  if (handle === 0) return 0;
+  var name = UTF8ToString(handle);
+  var glLibs = ['libGL.so', 'libGLESv2.so', 'libGLESv3.so', 'libEGL.so', 'libGLU.so', 'libglut.so', 'libtogl.so'];
+  for (var i = 0; i < glLibs.length; i++) {
+    if (name && name.indexOf(glLibs[i]) >= 0) {
+      console.log('[DLOPEN] Intercepted GL library: ' + name + ' -> fake handle 999');
+      return 999;
+    }
   }
   return _orig_dlopen_js(handle);
 };
 
-var _orig_emscripten_dlopen_js = __emscripten_dlopen_js;
-__emscripten_dlopen_js = function(handle, onsuccess, onerror, user_data) {
-  var filename = UTF8ToString(handle);
-  if (/libGL|libGLES|libEGL/i.test(filename)) {
-    console.log('[DLOPEN-ASYNC] GL library detected, returning fake handle for: ' + filename);
-    __runtime_ready = true;
-    getWasmTableEntry(onsuccess)(999, user_data);
-    return;
-  }
-  return _orig_emscripten_dlopen_js(handle, onsuccess, onerror, user_data);
-};
-
 var _orig_dlsym_js = __dlsym_js;
 __dlsym_js = function(handle, symbol, symbolIndex) {
+  // Check GL stubs table first
   var name = UTF8ToString(symbol);
   if (Module.__glStubs && Module.__glStubs[name]) {
     var stub = Module.__glStubs[name];
@@ -211,33 +268,39 @@ __dlsym_js = function(handle, symbol, symbolIndex) {
 };
 """
 
-# 3. GL version spoof — patch _glGetString to report 3.3.0
+# ============================================================
+# 3. GL version spoof
+# ============================================================
 gl_version_spoof = """
 // === GL VERSION SPOOF: Report desktop GL 3.3.0 instead of OpenGL ES 3.0 ===
 """
 
-# Check if already patched
+# ============================================================
+# Apply patches
+# ============================================================
+
+# Check if already patched (GL stubs is the sentinel)
 if 'Module.__glStubs' in js:
-    print('GL stubs already present, skipping injection')
+    print('GL stubs already present — updating chunk URL only')
+    # Still apply chunk URL fix and canvas fix even if GL stubs exist
+    with open(js_path, 'w') as f:
+        f.write(js)
     sys.exit(0)
 
-# Find insertion point: right before "var _emscripten_GetProcAddress"
-# If not found, insert before "function assignWasmImports"
+# Find insertion point for GL stubs: right before "var _emscripten_GetProcAddress"
 insert_marker = 'var _emscripten_GetProcAddress'
 if insert_marker not in js:
     insert_marker = 'function assignWasmImports'
-    
+
 if insert_marker in js:
     idx = js.index(insert_marker)
     js = js[:idx] + gl_stubs_block + '\n' + js[idx:]
     print('GL stubs table injected')
 else:
-    # Fallback: append at end of file
     js = js + '\n' + gl_stubs_block
     print('GL stubs table appended at end')
 
-# Inject dlsym/dlopen intercept after the __dlsym_js definition
-# Find "__dlsym_js.sig = " and inject after it
+# Inject dlsym/dlopen intercept after __dlsym_js definition
 dlsym_marker = '__dlsym_js.sig = "pppp";'
 if dlsym_marker in js:
     idx = js.index(dlsym_marker) + len(dlsym_marker)
@@ -246,16 +309,9 @@ if dlsym_marker in js:
 else:
     print('WARNING: Could not find dlsym insertion point')
 
-# Patch glGetString to spoof GL version from OpenGL ES 3.0 to 3.3.0
-# The Source Engine requires GL >= 3.2, but WebGL2 reports OpenGL ES 3.0
-# Pattern 1: glVersion = `OpenGL ES 3.0 (${webGLVersion})`
-# Pattern 2: glVersion = `3.0.0 (${webGLVersion})`
-import re as re_mod
-
-# Try to find and replace the OpenGL ES 3.0 version string
+# GL version spoof — replace OpenGL ES version strings with 3.3.0
 patterns_replaced = 0
 
-# Pattern: glVersion = `OpenGL ES 3.0 (${webGLVersion})`
 old_es3 = 'glVersion = `OpenGL ES 3.0 (${webGLVersion})`'
 new_es3 = 'glVersion = `3.3.0 (${webGLVersion})`'
 if old_es3 in js:
@@ -263,7 +319,6 @@ if old_es3 in js:
     patterns_replaced += 1
     print('GL version spoofed: OpenGL ES 3.0 -> 3.3.0')
 
-# Pattern: glVersion = `OpenGL ES 2.0 (${webGLVersion})`
 old_es2 = 'glVersion = `OpenGL ES 2.0 (${webGLVersion})`'
 new_es2 = 'glVersion = `3.3.0 (${webGLVersion})`'
 if old_es2 in js:
@@ -271,23 +326,21 @@ if old_es2 in js:
     patterns_replaced += 1
     print('GL version spoofed: OpenGL ES 2.0 -> 3.3.0')
 
-# Pattern: any remaining 3.0.0 in glVersion
 old_300 = 'var glVersion = `3.0.0'
 if old_300 in js:
     js = js.replace(old_300, 'var glVersion = `3.3.0')
     patterns_replaced += 1
     print('GL version spoofed: 3.0.0 -> 3.3.0')
 
-# Regex fallback for any glVersion pattern
 if patterns_replaced == 0:
-    m = re_mod.search(r'(glVersion\s*=\s*["`])OpenGL ES (\d+\.\d+)', js)
+    m = re.search(r'(glVersion\s*=\s*["`])OpenGL ES (\d+\.\d+)', js)
     if m:
         js = js[:m.start(2)] + '3.3.0' + js[m.end(2):]
         patterns_replaced += 1
         print(f'GL version spoofed via regex: OpenGL ES {m.group(2)} -> 3.3.0')
-    
+
 if patterns_replaced == 0:
-    m = re_mod.search(r'(glVersion\s*=\s*["`])(\d+\.\d+\.\d+)', js)
+    m = re.search(r'(glVersion\s*=\s*["`])(\d+\.\d+\.\d+)', js)
     if m:
         js = js[:m.start(2)] + '3.3.0' + js[m.end(2):]
         patterns_replaced += 1
@@ -301,4 +354,4 @@ else:
 with open(js_path, 'w') as f:
     f.write(js)
 
-print('Done! GL patches applied to ' + js_path)
+print('Done! All patches applied to ' + js_path)
