@@ -1,49 +1,6 @@
 <!DOCTYPE HTML>
 <html lang="en-us">
   <head>
-<script>
-// Error capture overlay - runs BEFORE Module definition
-window.__hl2_errors = [];
-window.__showErrors = function() {
-    var box = document.getElementById('__error_box');
-    if (!box) {
-        box = document.createElement('pre');
-        box.id = '__error_box';
-        box.style.cssText = 'position:fixed;bottom:0;left:0;right:0;max-height:50%;overflow:auto;background:#1a1a1a;color:#ff4444;font-family:monospace;font-size:11px;padding:10px;z-index:99999;border-top:2px solid #f00;white-space:pre-wrap;';
-        document.body.appendChild(box);
-    }
-    box.textContent = window.__hl2_errors.join('\n');
-};
-
-// Capture console.error
-var origErr = console.error;
-console.error = function() {
-    var msg = Array.from(arguments).map(function(a) {
-        if (a instanceof Error) return a.stack || a.message;
-        if (a && a.stack) return a.stack;
-        return String(a);
-    }).join(' ');
-    window.__hl2_errors.push('[ERROR] ' + msg);
-    origErr.apply(console, arguments);
-    window.__showErrors();
-};
-
-// Capture uncaught errors
-window.addEventListener('error', function(e) {
-    var msg = e.message + ' at ' + (e.filename||'').split('/').pop() + ':' + e.lineno + ':' + e.colno;
-    if (e.error && e.error.stack) msg += '\n' + e.error.stack;
-    window.__hl2_errors.push('[UNCAUGHT] ' + msg);
-    window.__showErrors();
-    return false;
-});
-
-// Capture unhandled rejections
-window.addEventListener('unhandledrejection', function(e) {
-    window.__hl2_errors.push('[REJECT] ' + (e.reason ? (e.reason.stack || e.reason.message || String(e.reason)) : 'unknown'));
-    window.__showErrors();
-});
-</script>
-
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>yikes!</title>
@@ -249,6 +206,6 @@ canvas.emscripten { border: 0px none; background-color: black; }
         };
       };
     </script>
-    <script async type="text/javascript" src="hl2_launcher.js?v=13"></script>
+    <script async type="text/javascript" src="hl2_launcher.js"></script>
   </body>
 </html>

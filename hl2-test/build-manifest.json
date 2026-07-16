@@ -1,0 +1,13 @@
+{
+  "git_sha": "63f8364",
+  "emsdk": "3.1.72",
+  "build_type": "release",
+  "main_module": "hl2_launcher.wasm",
+  "main_module_size": 4036131,
+  "main_module_sha256": "688225f2f391b83b6051ddf48168dfe76f1bb3f32beddc764d84212514e41a3c",
+  "js_size": 1388185,
+  "html_size": 6628,
+  "side_module_count": 25,
+  "asset_base_url": "https://hl2-assets-proxy.hl2-webxr.workers.dev/chunks/",
+  "build_mode": "phase1-debug"
+}
