@@ -28,8 +28,6 @@ jobs:
       EMSDK_COMMIT: 2d480a1b7c7a34a354188d93f3e89190a44a1d21
       EMSDK_DIR: ${{ github.workspace }}/tools/emsdk
       ENGINE_DIR: ${{ github.workspace }}/engine/portal-port
-      # Archive.org public URL — Retail 2153 (~1.7 GB)
-      ASSETS_ARCHIVE_URL: "https://archive.org/download/Half-Life-2-Retail-2153/Half-Life%202.7z"
       ASSETS_ROOT: ${{ github.workspace }}/assets/game/Half-Life 2
       OUT_DIR: ${{ github.workspace }}/dist
       LOG_DIR: ${{ github.workspace }}/logs
@@ -48,61 +46,43 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.EMSDK_DIR }}
-          key: emsdk-${{ env.EMSDK_COMMIT }}-v2
+          key: emsdk-${{ env.EMSDK_COMMIT }}-v1
 
-      - name: Cache source-engine clone (ohne build/)
+      - name: Cache source-engine clone
         id: cache-engine
         uses: actions/cache@v4
         with:
           path: ${{ env.ENGINE_DIR }}
-          # v3: build/ wird nach Restore explizit geleert — verhindert stale-.o Timestamp-Bug
-          key: source-engine-weliveinhell-${{ hashFiles('.github/workflows/build.yml') }}-v4
+          key: source-engine-weliveinhell-${{ hashFiles('.github/workflows/build.yml') }}-v1
           restore-keys: |
             source-engine-weliveinhell-
 
-      - name: Clear stale waf build objects (force full recompile)
-        run: |
-          # build/ aus altem Cache-Restore entfernen — waf muss frisch kompilieren.
-          # Ohne diesen Schritt werden gecachte .o Files wiederverwendet,
-          # selbst wenn gepatchte Quellen neuer sind (Timestamp-Kollision).
-          BUILD_DIR="${{ env.ENGINE_DIR }}/build"
-          if [ -d "$BUILD_DIR" ]; then
-            echo "Removing stale build/ dir ($BUILD_DIR) ..."
-            find "$BUILD_DIR" -mindepth 1 -delete 2>/dev/null || true
-            echo "build/ cleared."
-          else
-            echo "build/ not present — nothing to clear."
-          fi
-
-      # waf-build Cache DEAKTIVIERT (dauerhaft): stale-.o Timestamp-Bug
-      # Vollständiger Compile dauert ~25 min aber ist korrekt und reproduzierbar.
-
-      - name: Cache HL2 assets (extracted)
-        id: cache-assets
+      - name: Cache waf build objects
         uses: actions/cache@v4
         with:
-          path: ${{ env.ASSETS_ROOT }}
-          key: hl2-assets-retail-2153-v1
+          path: ${{ env.ENGINE_DIR }}/build
+          key: waf-build-${{ env.BUILDTYPE }}-${{ env.EMSDK_COMMIT }}-${{ hashFiles('scripts/ci-build.sh') }}-${{ github.run_id }}
+          restore-keys: |
+            waf-build-${{ env.BUILDTYPE }}-${{ env.EMSDK_COMMIT }}-${{ hashFiles('scripts/ci-build.sh') }}-
+            waf-build-${{ env.BUILDTYPE }}-${{ env.EMSDK_COMMIT }}-
 
-      - name: Download & extract HL2 assets
-        if: steps.cache-assets.outputs.cache-hit != 'true'
+      - name: Restore HL2 assets
+        env:
+          ASSETS_URL: ${{ secrets.ASSETS_ARCHIVE_URL }}
         run: |
-          echo "Installing 7zip..."
-          sudo apt-get install -y p7zip-full
-
-          echo "Downloading HL2 Retail 2153 from Archive.org (~1.7 GB)..."
           mkdir -p "$ASSETS_ROOT"
-          curl -fL --retry 3 --retry-delay 5 \
-            "$ASSETS_ARCHIVE_URL" \
-            -o /tmp/hl2_assets.7z \
-            --progress-bar
-
-          echo "Extracting 7z archive..."
-          7z x /tmp/hl2_assets.7z -o"$(dirname "$ASSETS_ROOT")" -y
-          rm -f /tmp/hl2_assets.7z
-
-          echo "Assets extracted: $(find "$ASSETS_ROOT" -type f | wc -l) files"
-          ls -la "$ASSETS_ROOT/"
+          if [ -n "${ASSETS_URL:-}" ]; then
+            echo "Downloading assets..."
+            curl -fL "$ASSETS_URL" -o /tmp/assets.tar.zst
+            if file /tmp/assets.tar.zst | grep -q "Zstandard"; then
+              tar --zstd -xf /tmp/assets.tar.zst -C "$(dirname "$ASSETS_ROOT")"
+            else
+              tar -xzf /tmp/assets.tar.zst -C "$(dirname "$ASSETS_ROOT")"
+            fi
+            echo "Assets: $(find "$ASSETS_ROOT" -type f | wc -l) files"
+          else
+            echo "::warning::ASSETS_ARCHIVE_URL not set — building without assets"
+          fi
 
       - name: Run CI build
         run: |
@@ -121,7 +101,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Upload web outputs
-        if: always()
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: hl2-webxr-web-${{ github.run_id }}
@@ -129,10 +109,6 @@ jobs:
             ${{ env.OUT_DIR }}/web/hl2_launcher.html
             ${{ env.OUT_DIR }}/web/hl2_launcher.js
             ${{ env.OUT_DIR }}/web/hl2_launcher.wasm
-            ${{ env.OUT_DIR }}/web/index.html
-            ${{ env.OUT_DIR }}/web/xr_wrapper.js
-            ${{ env.OUT_DIR }}/web/sw.js
-            ${{ env.OUT_DIR }}/web/pre.js
             ${{ env.OUT_DIR }}/web/*.so
             ${{ env.OUT_DIR }}/web/assets/
           retention-days: 30
@@ -148,16 +124,6 @@ jobs:
           retention-days: 30
           compression-level: 0
           if-no-files-found: warn
-
-      - name: Report chunk sizes
-        if: always()
-        run: |
-          echo "### Chunk sizes" >> $GITHUB_STEP_SUMMARY
-          echo "| File | Size |" >> $GITHUB_STEP_SUMMARY
-          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
-          for f in "$OUT_DIR/chunks/"*.data; do
-            [ -f "$f" ] && echo "| $(basename $f) | $(du -sh $f | cut -f1) |" >> $GITHUB_STEP_SUMMARY
-          done
 
       - name: Write job summary
         if: always()

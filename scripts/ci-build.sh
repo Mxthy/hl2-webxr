@@ -177,69 +177,58 @@ unsigned long GetRam() { return 4096UL; }
 int futimes(int fd, const struct timeval tv[2]) { return 0; }
 
 // -----------------------------------------------------------------------
-// IVP_Mindist vtable + symbol stubs for Emscripten MAIN_MODULE
+// IVP_Mindist vtable stubs
 // -----------------------------------------------------------------------
-// libvphysics.so (SIDE_MODULE) imports these via GOT. The MAIN_MODULE
-// must export them with EXACTLY the signatures libvphysics.so expects.
-//
-// CRITICAL: libvphysics.so imports init_mms_function_table as () -> void
-// (no this pointer). The main module must match this exactly or
-// WebAssembly.instantiate() throws a LinkError type-mismatch.
+// Emscripten MAIN_MODULE must provide these symbols so that SIDE_MODULEs
+// (libvphysics.so) can resolve them via GOT at dlopen time.
+// We declare them as C-linkage weak stubs so they don't conflict with
+// the real definitions inside libvphysics.so's private TU.
 // -----------------------------------------------------------------------
+extern "C" {
 
-// Define IVP_Mindist class with matching vtable layout
-// CRITICAL: The destructor is declared OUT-OF-LINE (not inline).
-// This makes it the "key function" in C++ ABI, which forces the
-// compiler to emit the vtable (_ZTV11IVP_Mindist) in THIS TU.
-// All-inline virtual methods would NOT emit a vtable.
-class __attribute__((visibility("default"))) IVP_Mindist {
-public:
-    virtual ~IVP_Mindist();  // out-of-line declaration = key function
+// vtable + typeinfo: provided by defining the class with virtual methods
+struct __attribute__((visibility("default"))) IVP_Mindist_Stub {
+    virtual ~IVP_Mindist_Stub() {}
     virtual int recalc_mindist() { return 0; }
     virtual int recalc_invalid_mindist() { return 0; }
 };
 
-// Out-of-line definition — this is the key function that forces vtable emission
-IVP_Mindist::~IVP_Mindist() {}
-
-// Force the vtable symbol to not be stripped by the linker
-__attribute__((used, visibility("default")))
-extern "C" void* _ZTV11IVP_Mindist_anchor = nullptr;
+// Force-instantiate so the vtable symbol is emitted into main.wasm
+static IVP_Mindist_Stub* __ivp_mindist_vtable_anchor = nullptr;
 __attribute__((constructor)) static void __ivp_mindist_init() {
-    // Create an instance to ensure the vtable is referenced
-    static IVP_Mindist __ivp_instance;
-    _ZTV11IVP_Mindist_anchor = *(void**)&__ivp_instance;
+    (void)__ivp_mindist_vtable_anchor;
 }
 
-// init_mms_function_table — () -> void (NO this pointer, matches libvphysics.so)
-extern "C" __attribute__((visibility("default")))
-void _ZN27IVP_Mindist_Minimize_Solver23init_mms_function_tableEv() {
-    // no-op stub — real implementation lives in libvphysics.so
+// init_mms_function_table weak stub
+__attribute__((weak))
+void _ZN27IVP_Mindist_Minimize_Solver23init_mms_function_tableEv(void* self) {
+    (void)self;
 }
 
-// IVP_Mindist::recalc_mindist — (i32) -> i32 (has this pointer)
-extern "C" __attribute__((visibility("default")))
+// IVP_Mindist::recalc_mindist weak stub — (i32)->i32 matches libvphysics.so type[2]
+__attribute__((weak))
 int _ZN11IVP_Mindist14recalc_mindistEv(void* self) {
     (void)self;
     return 0;
 }
 
-// IVP_Mindist::recalc_invalid_mindist — (i32) -> i32 (has this pointer)
-extern "C" __attribute__((visibility("default")))
+// IVP_Mindist::recalc_invalid_mindist weak stub — (i32)->i32 matches libvphysics.so type[2]
+__attribute__((weak))
 int _ZN11IVP_Mindist22recalc_invalid_mindistEv(void* self) {
     (void)self;
     return 0;
 }
+
+} // extern "C"
 
 #endif // __EMSCRIPTEN__
 EOF
   log "  patch: emscripten_stubs.cpp (with IVP_Mindist weak stubs)"
   
 
-  # Patch 6 (post): post.js — Multi-Chunk Loading für HL2 Retail
+  # Patch 6 (post): post.js — Shader + Asset Chunk Loading vor callMain()
   POST_JS="$ENGINE_DIR/emscripten/post.js"
   if [ -f "$POST_JS" ]; then
-    # Schreibe neuen post.js Content der alle 3 Chunks lädt
     cat > "$POST_JS" << 'POST_JS_EOF'
 ;(() => {
   if(typeof window === 'undefined') return;
@@ -248,22 +237,120 @@ EOF
     canvasElement.onkeypress = e => e.preventDefault()
   }
 
-  // Nur background1 beim Start laden (803 MB).
-  // 'background01' ist FALSCH — DataLoader.mapsOrdered enthält 'background1' (ohne 0).
-  // materials + models (~2.3 GB) werden lazy via Module.downloadMap geladen.
+  // ---- /MOD/ writable directory (IDBFS-backed) ----
+  // Source Engine writes to /MOD/ — create real writable mount
+  try {
+    FS.mkdirTree('/MOD');
+    FS.mkdirTree('/hl2');
+    // Mount IDBFS at /MOD for persistent writes (savegames, configs, etc.)
+    if (typeof IDBFS !== 'undefined') {
+      FS.mount(IDBFS, {}, '/MOD');
+      FS.syncfs(true, function(err) {
+        if (err) console.warn('[hl2] IDBFS syncfs error:', err);
+        else console.log('[hl2] /MOD/ IDBFS mount ready');
+      });
+    }
+    // Symlink hl2 content into /MOD so engine can find gameinfo etc.
+    var entries = FS.readdir('/hl2');
+    for (var i = 0; i < entries.length; i++) {
+      if (entries[i] === '.' || entries[i] === '..') continue;
+      var src = '/hl2/' + entries[i];
+      var dst = '/MOD/' + entries[i];
+      if (!FS.analyzePath(dst).exists) {
+        try { FS.symlink(src, dst); } catch(e) {}
+      }
+    }
+    console.log('[hl2] /MOD/ write path initialized');
+  } catch(e) { console.warn('[hl2] /MOD/ setup error:', e); }
+
+  // ---- Shader + Asset chunk loading ----
+  // Load order: shaders → background1 + materials → engine start
+  // Shaders MUST be in MEMFS before callMain() — without them the engine aborts
   addRunDependency('load_game_data')
-  dataLoader.loadMapWithDeps('background1')
-    .then(() => {
-      console.log('[hl2] background1 OK — Engine startet')
-      removeRunDependency('load_game_data')
-    })
-    .catch(err => {
-      console.warn('[hl2] background1 Fehler (ignoriert, Engine startet trotzdem):', err.message)
-      removeRunDependency('load_game_data')
-    })
+
+  // Load shaders chunk first (critical, non-optional)
+  var loadShaders = (typeof dataLoader !== 'undefined' && dataLoader.loadMapCached)
+    ? dataLoader.loadMapCached('shaders')
+    : Promise.reject(new Error('dataLoader not available'))
+
+  loadShaders.then(function() {
+    console.log('[hl2] shaders.data loaded — ' +
+      FS.readdir('/hl2/shaders').length + ' shader dirs in MEMFS')
+    // Preflight: verify critical shader families exist
+    var criticalShaders = [
+      'vertexlit_and_unlit_generic_vs20',
+      'vertexlit_and_unlit_generic_ps20b',
+      'lightmappedgeneric_vs20',
+      'lightmappedgeneric_ps20b',
+    ]
+    var missing = []
+    try {
+      var fxcDir = '/hl2/shaders/fxc'
+      if (FS.analyzePath(fxcDir).exists) {
+        var files = FS.readdir(fxcDir)
+        for (var i = 0; i < criticalShaders.length; i++) {
+          var found = false
+          for (var j = 0; j < files.length; j++) {
+            if (files[j].indexOf(criticalShaders[i]) >= 0) { found = true; break }
+          }
+          if (!found) missing.push(criticalShaders[i])
+        }
+      } else {
+        console.warn('[hl2] /hl2/shaders/fxc not found — shaders may not be loaded')
+      }
+    } catch(e) { console.warn('[hl2] shader preflight error:', e) }
+    if (missing.length > 0) {
+      console.error('[hl2] MISSING SHADERS: ' + missing.join(', '))
+      console.error('[hl2] Engine will crash on shader loading!')
+    } else {
+      console.log('[hl2] Shader preflight OK ✓')
+    }
+
+    // Now load background1 + materials in parallel
+    return Promise.all([
+      dataLoader.loadMap('background1'),
+      dataLoader.loadMap('materials')
+    ])
+  }).then(function() {
+    // Fix case-sensitive directory names (MEMFS is case-sensitive)
+    var fixCase = function(dir, correctName) {
+      try {
+        var entries = FS.readdir(dir)
+        for (var i = 0; i < entries.length; i++) {
+          var e = entries[i]
+          if (e.toLowerCase() === correctName && e !== correctName) {
+            var src = dir + '/' + e
+            var dst = dir + '/' + correctName
+            if (!FS.analyzePath(dst).exists) {
+              var stat = FS.stat(src)
+              if (FS.isDir(stat.mode)) {
+                FS.mkdir(dst)
+                var subEntries = FS.readdir(src)
+                for (var j = 0; j < subEntries.length; j++) {
+                  if (subEntries[j] === '.' || subEntries[j] === '..') continue
+                  FS.symlink(src + '/' + subEntries[j], dst + '/' + subEntries[j])
+                }
+              } else { FS.symlink(src, dst) }
+              console.log('[hl2] Fixed case: ' + src + ' -> ' + dst)
+            }
+          }
+        }
+      } catch(e) { console.warn('[hl2] Case fix error: ' + e) }
+    }
+    fixCase('/hl2/materials', 'console')
+    fixCase('/hl2/materials', 'debug')
+    fixCase('/hl2/materials', 'dev')
+    fixCase('/hl2/materials', 'engine')
+    fixCase('/hl2/materials', 'effects')
+    console.log('[hl2] All chunks loaded, starting engine...')
+    removeRunDependency('load_game_data')
+  }).catch(function(err) {
+    console.error('[hl2] Chunk load error: ' + err + ' — starting with partial data')
+    removeRunDependency('load_game_data')
+  })
 })();
 POST_JS_EOF
-    log "  patch: post.js background1 lazy-load (materials/models via downloadMap)"
+    log "  patch: post.js shader+asset loading with preflight + /MOD/ IDBFS mount"
   fi
 
   checkpoint_mark "source_patches"
@@ -371,23 +458,9 @@ waf_build() {
 # und in den emcc-Link-Schritt eingebunden → vtable landet in main.wasm.
 compile_ivp_vtable_stub() {
   checkpoint_done "ivp_vtable_stub" && { log "ivp_vtable_stub: skip"; return; }
-  # SKIPPED: compiling real ivp_mindist*.cxx produces (i32)->void signatures
-  # for init_mms_function_table, but libvphysics.so expects () -> void.
-  # The emscripten_stubs.cpp now provides correct signatures + vtable.
-  # Creating an empty .o so the emcc_link step's file check passes.
   emsdk_env
   cd "$ENGINE_DIR"
-  mkdir -p build/ivp_vtable_stub
-  echo "" | em++ -x c++ -c - -o build/ivp_vtable_stub/ivp_mindist_vtable.o 2>/dev/null || true
-  if [ ! -f build/ivp_vtable_stub/ivp_mindist_vtable.o ]; then
-    # Fallback: create empty file — emcc_link checks existence
-    touch build/ivp_vtable_stub/ivp_mindist_vtable.o
-  fi
-  log "  ivp vtable stub: using emscripten_stubs.cpp signatures (skip real .cxx)"
-  checkpoint_mark "ivp_vtable_stub"
-  return
 
-  # --- OLD CODE BELOW (not executed) ---
   local main_src="ivp/ivp_collision/ivp_mindist.cxx"
   if [ ! -f "$main_src" ]; then
     log "WARNING: $main_src nicht gefunden — ivp_vtable_stub übersprungen"
@@ -469,7 +542,7 @@ emcc_link() {
     log "  ivp vtable stub gefunden: $ivp_vtable_obj"
   fi
   if [ -f "$stubs_src" ]; then
-    emcc -O0 -fPIC -D__EMSCRIPTEN__ -c "$stubs_src" -o "$stubs_obj"  # -O0 prevents vtable DCE
+    emcc -O2 -fPIC -D__EMSCRIPTEN__ -c "$stubs_src" -o "$stubs_obj"
     log "  stubs compiled: $stubs_obj"
   else
     stubs_obj=""
@@ -478,13 +551,13 @@ emcc_link() {
 
   log "Running: emcc link → hl2_launcher.html ..."
   emcc \
-    -msimd128 -DWEBXR=1 -sUSE_BZIP2=1 -sUSE_SDL=2 -sUSE_FREETYPE=1 -sUSE_LIBJPEG=1 \
+    -sUSE_BZIP2=1 -sUSE_SDL=2 -sUSE_FREETYPE=1 -sUSE_LIBJPEG=1 \
     -sUSE_LIBPNG -sMALLOC=mimalloc \
     -sMAIN_MODULE \
-    -sINITIAL_MEMORY=2048mb \
+    -sINITIAL_MEMORY=1024mb \
     -sALLOW_MEMORY_GROWTH=1 \
-    -sMAXIMUM_MEMORY=3gb \
-    -sSHARED_MEMORY=1 -sUSE_PTHREADS -sPTHREAD_POOL_SIZE=4 \
+    -sMAXIMUM_MEMORY=4gb \
+    -sSHARED_MEMORY=1 -sUSE_PTHREADS -sPTHREAD_POOL_SIZE=8 \
     -sPTHREAD_POOL_SIZE_STRICT=2 \
     -sFULL_ES3 -sSTACK_SIZE=64mb \
     --shell-file=emscripten/shell.html \
@@ -544,7 +617,10 @@ const baseGamePath = process.env.ASSETS_ROOT || ''
 const outDir = './chunks'
 fs.mkdirSync(outDir, {recursive: true})
 
-function addFile(chunks, src, vpath) {
+// Track all shader files for manifest generation
+let shaderManifest = []
+
+function addFile(chunks, src, vpath, trackShader = false) {
   let blob
   try { blob = fs.readFileSync(src) } catch { return 0 }
   const dst = Buffer.from(vpath)
@@ -552,31 +628,60 @@ function addFile(chunks, src, vpath) {
   hdr.writeUint32LE(dst.length, 0)
   hdr.writeUint32LE(blob.length, 4)
   chunks.push(hdr, dst, blob)
+  if (trackShader) {
+    shaderManifest.push({ path: vpath, bytes: blob.length })
+  }
   return blob.length
 }
 
-function walk(chunks, dir, vBase, srcRel) {
+function walk(chunks, dir, vBase, srcRel, trackShader = false) {
   let entries
   try { entries = fs.readdirSync(dir, {withFileTypes: true}) } catch { return 0 }
   let total = 0
   for (const e of entries) {
     const full = path.join(dir, e.name)
     const rel  = srcRel ? srcRel + '/' + e.name : e.name
-    if (e.isDirectory()) total += walk(chunks, full, vBase, rel)
-    else total += addFile(chunks, full, vBase + '/' + rel)
+    if (e.isDirectory()) total += walk(chunks, full, vBase, rel, trackShader)
+    else total += addFile(chunks, full, vBase + '/' + rel, trackShader)
   }
   return total
 }
 
-function writeChunk(name, dirPairs) {
+// Add individual files (for bootstrap VTFs that may be in subdirectories)
+function addFileFromTree(chunks, srcDir, vpath, filename) {
+  // Search recursively for filename in srcDir
+  function findFile(dir, name) {
+    let entries
+    try { entries = fs.readdirSync(dir, {withFileTypes: true}) } catch { return null }
+    for (const e of entries) {
+      const full = path.join(dir, e.name)
+      if (e.isDirectory()) {
+        const found = findFile(full, name)
+        if (found) return found
+      } else if (e.name.toLowerCase() === name.toLowerCase()) {
+        return full
+      }
+    }
+    return null
+  }
+  const found = findFile(srcDir, filename)
+  if (found) {
+    console.log(`  Found bootstrap file: ${found} -> ${vpath}`)
+    return addFile(chunks, found, vpath, true)
+  }
+  console.log(`  WARNING: bootstrap file not found: ${filename}`)
+  return 0
+}
+
+function writeChunk(name, dirPairs, trackShader = false) {
   const chunks = []
   let totalBytes = 0, fileCount = 0
   for (const [srcDir, vBase] of dirPairs) {
     if (fs.existsSync(srcDir)) {
       const before = chunks.length
-      const bytes = walk(chunks, srcDir, vBase, path.basename(srcDir))
+      const bytes = walk(chunks, srcDir, vBase, path.basename(srcDir), trackShader)
       totalBytes += bytes
-      const added = (chunks.length - before) / 3  // hdr+dst+blob = 3 per file
+      const added = (chunks.length - before) / 3
       fileCount += added
       console.log(`  ${srcDir}: ${Math.round(bytes/1024/1024)}MB, ${added} files`)
     } else {
@@ -590,13 +695,80 @@ function writeChunk(name, dirPairs) {
   return buf.length
 }
 
-console.log('=== Chunk 1: background1.data (Maps + Config) ===')
-writeChunk('background1.data', [
+console.log('=== Chunk 0: shaders.data (Pre-compiled Shader Cache) ===')
+// Shader cache files from HL2 Retail 2153 — pre-compiled by Valve
+// These are .vsh/.psh files in hl2/shaders/fxc/
+// The engine REQUIRES these before callMain() — without them, shader loading aborts
+writeChunk('shaders.data', [
+  [baseGamePath + '/hl2/shaders', '/hl2'],
+], true)  // trackShader = true for manifest
+
+// Verify critical shader files exist
+const criticalShaders = [
+  'vertexlit_and_unlit_generic_vs20',
+  'vertexlit_and_unlit_generic_ps20',
+  'vertexlit_and_unlit_generic_ps20b',
+  'unlitgeneric_vs20',
+  'unlitgeneric_ps20',
+  'lightmappedgeneric_vs20',
+  'lightmappedgeneric_ps20',
+  'lightmappedgeneric_ps20b',
+]
+const shaderPaths = shaderManifest.map(f => f.path.toLowerCase())
+let missingShaders = []
+for (const s of criticalShaders) {
+  const found = shaderPaths.some(p => p.includes(s.toLowerCase()))
+  if (!found) missingShaders.push(s)
+  else console.log(`  ✓ ${s}`)
+}
+if (missingShaders.length > 0) {
+  console.log(`  WARNING: ${missingShaders.length} critical shaders not found:`)
+  missingShaders.forEach(s => console.log(`    - ${s}`))
+  console.log('  Engine will crash on shader loading!')
+} else {
+  console.log('  All critical shader families found ✓')
+}
+
+// Write shader manifest for preflight validation
+fs.writeFileSync(
+  path.join(outDir, 'shader-manifest.json'),
+  JSON.stringify({
+    format: 1,
+    branch: 'source-build-2153',
+    shader_count: shaderManifest.length,
+    files: shaderManifest,
+  }, null, 2)
+)
+console.log(`  Manifest: ${shaderManifest.length} shader files`)
+
+console.log('\n=== Chunk 1: background1.data (Maps + Config + Bootstrap VTFs) ===')
+const bgChunks = []
+// Maps + config + resource
+const bgDirs = [
   [baseGamePath + '/hl2/cfg',           '/hl2'],
   [baseGamePath + '/hl2/resource',      '/hl2'],
   [baseGamePath + '/platform/resource', '/platform'],
   [baseGamePath + '/hl2/maps',          '/hl2'],
-])
+]
+for (const [srcDir, vBase] of bgDirs) {
+  if (fs.existsSync(srcDir)) {
+    const bytes = walk(bgChunks, srcDir, vBase, path.basename(srcDir))
+    console.log(`  ${srcDir}: ${Math.round(bytes/1024/1024)}MB`)
+  } else {
+    console.log(`  SKIP: ${srcDir}`)
+  }
+}
+// Bootstrap VTFs — critical for engine init, must be in background1 chunk
+console.log('  Adding bootstrap VTFs...')
+addFileFromTree(bgChunks, baseGamePath + '/hl2/materials', '/hl2/materials/dev/identitylightwarp.vtf', 'identitylightwarp.vtf')
+addFileFromTree(bgChunks, baseGamePath + '/hl2/materials', '/hl2/materials/engine/normalizedrandomdirections2d.vtf', 'normalizedrandomdirections2d.vtf')
+addFileFromTree(bgChunks, baseGamePath + '/hl2/materials', '/hl2/materials/effects/flashlight_border.vtf', 'flashlight_border.vtf')
+addFileFromTree(bgChunks, baseGamePath + '/hl2/materials', '/hl2/materials/debug/debugluxelsnoalpha.vtf', 'debugluxelsnoalpha.vtf')
+
+// Write background1 chunk
+const bgBuf = Buffer.concat(bgChunks)
+fs.writeFileSync(path.join(outDir, 'background1.data'), bgBuf)
+console.log(`-> background1.data: ${Math.round(bgBuf.length/1024/1024)}MB`)
 
 console.log('\n=== Chunk 2: materials.data (Texturen) ===')
 writeChunk('materials.data', [
@@ -632,15 +804,12 @@ collect_outputs() {
   cp "$ENGINE_DIR/build/install/hl2_launcher.js"   "$OUT_DIR/web/" 2>/dev/null || true
   cp "$ENGINE_DIR/build/install/hl2_launcher.wasm" "$OUT_DIR/web/" 2>/dev/null || true
   find "$ENGINE_DIR/build/install/" -name '*.so' -exec cp {} "$OUT_DIR/web/" \; 2>/dev/null || true
-  # WebXR Frontend-Dateien
-  for xr_file in xr_wrapper.js index.html sw.js pre.js; do
-    cp "$ENGINE_DIR/emscripten/$xr_file" "$OUT_DIR/web/" 2>/dev/null || true
-  done
-  log "  WebXR Frontend-Dateien kopiert"
   cp -r "$ENGINE_DIR/build/install/assets"          "$OUT_DIR/web/" 2>/dev/null || true
 
   # Data-Chunks (only if present)
   find "$ENGINE_DIR/chunks/" -name '*.data' -exec cp {} "$OUT_DIR/chunks/" \; 2>/dev/null || true
+  # Shader manifest
+  cp "$ENGINE_DIR/chunks/shader-manifest.json" "$OUT_DIR/chunks/" 2>/dev/null || true
 
   # Logs
   find "$LOG_DIR/" -name '*.log' -exec cp {} "$OUT_DIR/logs/" \; 2>/dev/null || true
