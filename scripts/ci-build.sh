@@ -531,6 +531,11 @@ compile_ivp_vtable_stub() {
 # 10. emcc link (Haupt-WASM-Bundle)
 # ---------------------------------------------------------------------------
 emcc_link() {
+  # Force re-link if webxr_bridge.cpp exists but was never compiled (e.g. checkpoint from older build)
+  if [ -f "$REPO_ROOT/emscripten/webxr_bridge.cpp" ] && [ ! -f "$ENGINE_DIR/build/webxr_bridge.o" ]; then
+    log "webxr_bridge.cpp present but not compiled — clearing emcc_link checkpoint"
+    sed -i '/emcc_link/d' "$checkpoint_file" 2>/dev/null || true
+  fi
   checkpoint_done "emcc_link" && { log "emcc_link: skip"; return; }
   emsdk_env
   cd "$ENGINE_DIR"
