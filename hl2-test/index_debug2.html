@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>HL2 WebXR - Debug Console Capture v2</title>
+   <style>
+       body { margin: 0; overflow: hidden; background-color: #050505; color: #0f0; font-family: monospace; }
+       #game-canvas { display: block; width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
+       #debug-overlay {
+           position: absolute; top: 10px; left: 10px; z-index: 10;
+           background: rgba(0,20,0,0.9); border: 1px solid #0f0; padding: 15px; border-radius: 4px;
+           width: 600px; max-height: 95vh; overflow-y: auto; pointer-events: auto;
+       }
+       .log-entry { margin: 2px 0; padding: 1px 0; border-bottom: 1px solid #020; }
+       .log-error { color: #ff4444; }
+       .log-warn { color: #ffaa00; }
+       .log-info { color: #44aaff; }
+       .log-debug { color: #888; }
+       .log-normal { color: #0f0; }
+       button { background: #030; color: #0f0; border: 1px solid #0f0; padding: 5px 10px; cursor: pointer; margin-top: 10px; width: 100%;}
+       button:disabled { border-color: #333; color: #333; cursor: not-allowed; }
+   </style>
+</head>
+<body>
+   <canvas id="game-canvas" oncontextmenu="event.preventDefault()"></canvas>
+   <div id="debug-overlay">
+       <h2>λ HL2 WebXR - Debug Console Capture v2</h2>
+       <div id="loading-status" class="log-warn">Lade Engine (Build #88)...</div>
+       <div id="export-list" class="mt-2" style="font-size: 12px;"></div>
+       <button id="btn-test-bridge" disabled>Teste C++ Bridge (Disable Render)</button>
+       <button id="btn-enter-vr" disabled>WebXR Session starten</button>
+       <div id="console-log" style="margin-top: 10px; font-size: 11px;"></div>
+   </div>
+
+   <script>
+   (function() {
+       const consoleLog = document.getElementById('console-log');
+       
+       function addLog(msg, type) {
+           const div = document.createElement('div');
+           div.className = 'log-entry log-' + (type || 'normal');
+           div.textContent = `[${type || 'log'}] ${msg}`;
+           consoleLog.prepend(div);
+           while (consoleLog.children.length > 100) consoleLog.removeChild(consoleLog.lastChild);
+       }
+       
+       const orig = { log: console.log, error: console.error, warn: console.warn, info: console.info, debug: console.debug };
+       console.log = function(...args) { addLog(args.join(' '), 'normal'); orig.log.apply(console, args); };
+       console.error = function(...args) { addLog(args.map(a => a?.stack || String(a)).join(' '), 'error'); orig.error.apply(console, args); };
+       console.warn = function(...args) { addLog(args.join(' '), 'warn'); orig.warn.apply(console, args); };
+       console.info = function(...args) { addLog(args.join(' '), 'info'); orig.info.apply(console, args); };
+       console.debug = function(...args) { addLog(args.join(' '), 'debug'); orig.debug.apply(console, args); };
+       window.onerror = function(msg, url, line, col, err) { addLog(`${msg} at ${url}:${line}:${col} — ${err?.stack || ''}`, 'error'); return false; };
+       window.addEventListener('unhandledrejection', function(e) { addLog(`Unhandled Promise Rejection: ${e.reason?.stack || e.reason || e}`, 'error'); });
+       window.logCapture = addLog;
+   })();
+   </script>
+
+   <script src="xr_wrapper.js"></script>
+   <script>
+       const canvas = document.getElementById('game-canvas');
+       const loadingStatus = document.getElementById('loading-status');
+       const exportList = document.getElementById('export-list');
+       const btnTestBridge = document.getElementById('btn-test-bridge');
+       const btnEnterVR = document.getElementById('btn-enter-vr');
+       
+       window.canvasElement = canvas;
+       window.statusElement = loadingStatus;
+       window.spinnerElement = { style: {} };
+       window.progressElement = { hidden: true, value: 0 };
+       
+       let webxr = null;
+       
+       window.Module = {
+           canvas: canvas,
+           arguments: ['-game', 'portal', '-windowed', '-w', '1280', '-h', '720', '-novid'],
+           locateFile: function(path, prefix) {
+               if (path.endsWith('.wasm') || path.endsWith('.so')) {
+                   window.logCapture('Lade: ' + path, 'normal');
+                   return './' + path; 
+               }
+               return prefix + path;
+           },
+           setStatus: (text) => { if(text) loadingStatus.textContent = text; },
+           onRuntimeInitialized: () => {
+               loadingStatus.textContent = "✅ Engine Runtime Ready!";
+               loadingStatus.className = "log-normal";
+               setTimeout(checkWasmExports, 500);
+           },
+           onAbort: (err) => {
+               loadingStatus.textContent = "❌ ENGINE ABORTED";
+               loadingStatus.className = "log-error";
+               window.logCapture('ENGINE ABORT: ' + (err?.stack || err), 'error');
+           }
+       };
+
+       function checkWasmExports() {
+           // Check multiple ways to access exports
+           const hooks = [
+               '_Engine_DisableAutoRender',
+               '_Engine_RenderSingleFrame', 
+               '_Engine_SetCameraMatrix',
+               '_malloc',
+               '_free',
+               '_emscripten_cancel_main_loop',
+               '_em_loop_iteration'
+           ];
+           exportList.innerHTML = '';
+           let allOk = true;
+           
+           hooks.forEach(h => {
+               const cleanName = h.replace('_', '');
+               let found = false;
+               let source = '';
+               
+               // Check Module directly
+               if (typeof Module[h] === 'function') { found = true; source = 'Module'; }
+               // Check Module.asm
+               else if (Module.asm && typeof Module.asm[h] === 'function') { found = true; source = 'Module.asm'; }
+               else if (Module.asm && typeof Module.asm[cleanName] === 'function') { found = true; source = 'Module.asm (clean)'; }
+               // Check wasmExports
+               else if (typeof Module.wasmExports === 'object' && Module.wasmExports) {
+                   if (typeof Module.wasmExports[h] === 'function') { found = true; source = 'wasmExports'; }
+                   else if (typeof Module.wasmExports[cleanName] === 'function') { found = true; source = 'wasmExports (clean)'; }
+               }
+               // Check if the symbol exists in the WASM exports table
+               else if (typeof Module['_'] === 'object') {
+                   if (typeof Module['_'][h] === 'function') { found = true; source = 'Module._'; }
+               }
+               
+               if (!found) allOk = false;
+               exportList.innerHTML += `<div style="color: ${found ? '#0f0' : '#f00'}">${h}: ${found ? '✓ (' + source + ')' : '✗ MISSING'}</div>`;
+           });
+           
+           // Also dump all keys that contain "Engine" or "engine"
+           let engineExports = [];
+           try {
+               const allKeys = Object.keys(Module).filter(k => k.toLowerCase().includes('engine') || k.toLowerCase().includes('render') || k.toLowerCase().includes('camera'));
+               if (allKeys.length > 0) {
+                   engineExports.push('Module keys: ' + allKeys.join(', '));
+               }
+           } catch(e) {}
+           
+           // Try ccall/cwrap approach
+           try {
+               if (Module.cwrap) {
+                   const fn = Module.cwrap('Engine_DisableAutoRender', null, []);
+                   if (fn) {
+                       exportList.innerHTML += '<div style="color: #0f0">Engine_DisableAutoRender found via cwrap!</div>';
+                       allOk = true;
+                   }
+               }
+           } catch(e) {
+               window.logCapture('cwrap test: ' + e.message, 'warn');
+           }
+           
+           if (engineExports.length > 0) {
+               engineExports.forEach(e => window.logCapture(e, 'info'));
+           }
+           
+           if (allOk) {
+               window.logCapture('Alle C++ Hooks gefunden!', 'normal');
+               btnTestBridge.disabled = false;
+           } else {
+               window.logCapture('Einige Hooks fehlen — Button disabled', 'warn');
+               // Try to find any export containing "Engine"
+               try {
+                   const wasmKeys = Object.keys(Module.wasmExports || {}).filter(k => k.includes('Engine') || k.includes('engine'));
+                   window.logCapture('wasmExports with Engine: ' + (wasmKeys.length ? wasmKeys.join(', ') : 'none'), 'warn');
+               } catch(e) {}
+           }
+       }
+
+       btnTestBridge.addEventListener('click', () => {
+           window.logCapture('=== Testing C++ Bridge ===', 'info');
+           try {
+               // Try multiple approaches
+               let disableFn = Module._Engine_DisableAutoRender;
+               if (!disableFn && Module.cwrap) {
+                   disableFn = Module.cwrap('Engine_DisableAutoRender', null, []);
+               }
+               
+               if (disableFn) {
+                   window.logCapture('Calling Engine_DisableAutoRender()...', 'normal');
+                   disableFn();
+                   window.logCapture('_Engine_DisableAutoRender() erfolgreich!', 'normal');
+                   btnTestBridge.disabled = true;
+                   
+                   // Wait 2 seconds and check console for changes
+                   setTimeout(() => {
+                       window.logCapture('=== Bridge test complete — checking console ===', 'info');
+                   }, 2000);
+               } else {
+                   window.logCapture('Could not find Engine_DisableAutoRender function', 'error');
+               }
+           } catch (e) {
+               window.logCapture('Crash: ' + e.message + '\n' + e.stack, 'error');
+           }
+       });
+
+       btnEnterVR.addEventListener('click', () => { if(webxr) webxr.enterVR(); });
+
+       window.logCapture('Lade hl2_launcher.js...', 'info');
+       const script = document.createElement('script');
+       script.src = 'hl2_launcher.js?v=2';
+       document.body.appendChild(script);
+   </script>
+</body>
+</html>

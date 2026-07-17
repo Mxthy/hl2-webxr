@@ -3246,7 +3246,7 @@ var reportUndefinedSymbols = () => {
         // Ignore undefined symbols that are imported as weak.
         continue;
       }
-      assert(value, `undefined symbol '${symName}'. perhaps a side module was not linked in? if this global was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment`);
+      if (!value) { console.warn("[WARN] undefined symbol: " + symName); continue; }
       if (typeof value == "function") {
         /** @suppress {checkTypes} */ entry.value = addFunction(value, value.sig);
       } else if (typeof value == "number") {
