@@ -3,7 +3,7 @@
 <head>
    <meta charset="UTF-8">
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>HL2 WebXR - PThread Export Discovery v3.1</title>
+   <title>HL2 WebXR - Export Discovery v3.2</title>
    <style>
        body { margin: 0; overflow: hidden; background-color: #050505; color: #0f0; font-family: monospace; }
        #game-canvas { display: block; width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
@@ -26,11 +26,11 @@
 <body>
    <canvas id="game-canvas" oncontextmenu="event.preventDefault()"></canvas>
    <div id="debug-overlay">
-       <h2>HL2 WebXR - PThread Export Discovery v3.1</h2>
-       <div id="loading-status" class="log-warn">Lade Engine (Build #88, non-fatal, no pre-getContext)...</div>
+       <h2>HL2 WebXR - Export Discovery v3.2</h2>
+       <div id="loading-status" class="log-warn">Lade Engine...</div>
        <div id="export-list" style="font-size: 12px; margin-top: 8px;"></div>
        <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
-           <button id="btn-test-bridge" disabled style="width: auto;">Teste C++ Bridge (Disable Render)</button>
+           <button id="btn-test-bridge" disabled style="width: auto;">Teste C++ Bridge</button>
            <button id="btn-dump-exports" disabled style="width: auto;">Dump alle Exports</button>
        </div>
        <div id="console-log" style="margin-top: 10px; font-size: 11px;"></div>
@@ -52,17 +52,14 @@
        console.warn = function() { addLog(Array.from(arguments).join(' '), 'warn'); orig.warn.apply(console, arguments); };
        console.info = function() { addLog(Array.from(arguments).join(' '), 'info'); orig.info.apply(console, arguments); };
        console.debug = function() { addLog(Array.from(arguments).join(' '), 'debug'); orig.debug.apply(console, arguments); };
-       window.onerror = function(msg, url, line, col, err) { addLog(msg + ' at ' + url + ':' + line + ':' + col + ' - ' + (err && err.stack || ''), 'error'); return false; };
-       window.addEventListener('unhandledrejection', function(e) { addLog('Unhandled Rejection: ' + (e.reason && e.reason.stack || e.reason || e), 'error'); });
+       window.onerror = function(msg, url, line, col, err) { addLog(msg + ' at ' + url + ':' + line, 'error'); return false; };
+       window.addEventListener('unhandledrejection', function(e) { addLog('Unhandled: ' + (e.reason && e.reason.stack || e.reason || e), 'error'); });
        window.logCapture = addLog;
    })();
    </script>
 
    <script src="xr_wrapper.js"></script>
    <script>
-       // CRITICAL: No canvas.getContext() before engine starts!
-       // PROXY_TO_PTHREAD needs transferControlToOffscreen()
-
        var canvas = document.getElementById('game-canvas');
        var loadingStatus = document.getElementById('loading-status');
        var exportList = document.getElementById('export-list');
@@ -79,7 +76,7 @@
            arguments: ['-game', 'portal', '-windowed', '-w', '1280', '-h', '720', '-novid'],
            locateFile: function(path, prefix) {
                if (path.endsWith('.wasm') || path.endsWith('.so')) {
-                   window.logCapture('Lade lokale Datei: ' + path, 'normal');
+                   window.logCapture('Lade: ' + path, 'normal');
                    return './' + path;
                }
                return (prefix || '') + path;
@@ -88,45 +85,79 @@
            onRuntimeInitialized: function() {
                loadingStatus.textContent = "Engine Runtime Ready!";
                loadingStatus.className = "log-success";
-               window.logCapture('=== onRuntimeInitialized gefeuert ===', 'success');
-               setTimeout(checkWasmExports, 800);
+               window.logCapture('=== onRuntimeInitialized ===', 'success');
+               setTimeout(checkWasmExports, 500);
            },
            onAbort: function(err) {
                loadingStatus.textContent = "ENGINE ABORTED";
                loadingStatus.className = "log-error";
-               window.logCapture('ENGINE ABORT: ' + (err && err.stack || err), 'error');
+               window.logCapture('ABORT: ' + (err && err.stack || err), 'error');
            }
        };
 
-       // Export discovery — NO Module.asm access (it triggers abort in this Emscripten version)
+       // Safe export lookup — never triggers abort()
+       // Uses Object.getOwnPropertyDescriptor to check if property is a real value
        function findExport(name) {
            var cleanName = name.replace(/^_/, '');
 
-           // Path 1: Module._FunctionName
+           // Path 1: Module[name] — check via hasOwnProperty to avoid getters
            try {
-               if (typeof Module[name] === 'function')
-                   return { found: true, source: 'Module', fn: Module[name] };
-           } catch(e) {}
-
-           // Path 2: Module.wasmExports (NOT Module.asm — that triggers abort)
-           try {
-               if (Module.wasmExports) {
-                   if (typeof Module.wasmExports[name] === 'function')
-                       return { found: true, source: 'wasmExports', fn: Module.wasmExports[name] };
-                   if (typeof Module.wasmExports[cleanName] === 'function')
-                       return { found: true, source: 'wasmExports (clean)', fn: Module.wasmExports[cleanName] };
+               var desc = Object.getOwnPropertyDescriptor(Module, name);
+               if (desc && typeof desc.value === 'function')
+                   return { found: true, source: 'Module', fn: desc.value };
+               if (desc && typeof desc.get === 'function') {
+                   // It's a getter — try to call it safely
+                   try {
+                       var val = desc.get.call(Module);
+                       if (typeof val === 'function')
+                           return { found: true, source: 'Module getter', fn: val };
+                   } catch(e) {
+                       // Getter aborts — skip this path
+                   }
                }
            } catch(e) {}
 
-           // Path 3: Module.ccall / Module.cwrap (official PThread proxy)
+           // Path 2: Module.wasmExports — check via keys, not getter
            try {
-               if (typeof Module.ccall === 'function') {
+               var weDesc = Object.getOwnPropertyDescriptor(Module, 'wasmExports');
+               if (weDesc && weDesc.value && typeof weDesc.value === 'object') {
+                   if (typeof weDesc.value[name] === 'function')
+                       return { found: true, source: 'wasmExports', fn: weDesc.value[name] };
+                   if (typeof weDesc.value[cleanName] === 'function')
+                       return { found: true, source: 'wasmExports (clean)', fn: weDesc.value[cleanName] };
+               }
+               if (weDesc && typeof weDesc.get === 'function') {
+                   try {
+                       var we = weDesc.get.call(Module);
+                       if (we && typeof we === 'object') {
+                           if (typeof we[name] === 'function')
+                               return { found: true, source: 'wasmExports getter', fn: we[name] };
+                           if (typeof we[cleanName] === 'function')
+                               return { found: true, source: 'wasmExports getter (clean)', fn: we[cleanName] };
+                       }
+                   } catch(e) {}
+               }
+           } catch(e) {}
+
+           // Path 3: ccall/cwrap — check via hasOwnProperty
+           try {
+               var ccallDesc = Object.getOwnPropertyDescriptor(Module, 'ccall');
+               if (ccallDesc && typeof ccallDesc.value === 'function') {
                    var fn = Module.cwrap(cleanName, null, []);
-                   if (fn) return { found: true, source: 'ccall/cwrap', fn: fn };
+                   if (fn) return { found: true, source: 'cwrap', fn: fn };
+               }
+               if (ccallDesc && typeof ccallDesc.get === 'function') {
+                   try {
+                       var ccall = ccallDesc.get.call(Module);
+                       if (typeof ccall === 'function') {
+                           var fn = Module.cwrap(cleanName, null, []);
+                           if (fn) return { found: true, source: 'ccall getter', fn: fn };
+                       }
+                   } catch(e) {}
                }
            } catch(e) {}
 
-           // Path 4: Global scope
+           // Path 4: window scope
            try {
                if (typeof window[name] === 'function')
                    return { found: true, source: 'window', fn: window[name] };
@@ -142,132 +173,160 @@
                '_Engine_SetCameraMatrix',
                '_Engine_SetProjectionMatrix',
                '_Engine_ResetCameraMatrix',
+               '_DisableAutoRenderLoop',
+               '_SetCameraMatrices',
+               '_RenderXRFrame',
+               '_EnableAutoRenderLoop',
                '_malloc',
-               '_free',
-               '_emscripten_cancel_main_loop'
+               '_free'
            ];
 
            exportList.innerHTML = '';
+           var foundCount = 0;
 
            hooks.forEach(function(h) {
                var result = findExport(h);
-               var color = result.found ? '#0f0' : (h.indexOf('Engine') >= 0 ? '#fa0' : '#f00');
-               exportList.innerHTML += '<div style="color:' + color + '">' + h + ': ' + (result.found ? 'FOUND via ' + result.source : 'MISSING') + '</div>';
+               if (result.found) foundCount++;
+               var color = result.found ? '#0f0' : (h.indexOf('Engine') >= 0 || h.indexOf('Render') >= 0 ? '#fa0' : '#f00');
+               exportList.innerHTML += '<div style="color:' + color + '">' + h + ': ' + (result.found ? '✓ ' + result.source : 'MISSING') + '</div>';
            });
 
-           // Search Module.wasmExports for Engine/Render/Camera keys
+           // Check what's available on Module
            try {
-               if (Module.wasmExports) {
-                   var weKeys = Object.keys(Module.wasmExports).filter(function(k) {
-                       return k.indexOf('Engine') >= 0 || k.indexOf('Render') >= 0 || k.indexOf('Camera') >= 0;
-                   });
-                   if (weKeys.length > 0) {
-                       exportList.innerHTML += '<div style="color:#08a;">wasmExports Engine/Render/Camera: ' + weKeys.join(', ') + '</div>';
-                   } else {
-                       exportList.innerHTML += '<div style="color:#f00;">wasmExports: KEINE Engine/Render/Camera Symbole gefunden!</div>';
-                   }
+               var modKeys = Object.keys(Module).filter(function(k) {
+                   return k.startsWith('_') && (k.indexOf('Engine') >= 0 || k.indexOf('Render') >= 0 || k.indexOf('Disable') >= 0 || k.indexOf('Camera') >= 0 || k === '_malloc' || k === '_free');
+               });
+               if (modKeys.length > 0)
+                   exportList.innerHTML += '<div style="color:#08a;">Module._ keys: ' + modKeys.join(', ') + '</div>';
 
-                   // Also search for malloc
-                   var mallocKeys = Object.keys(Module.wasmExports).filter(function(k) {
-                       return k.indexOf('malloc') >= 0 || k.indexOf('free') >= 0;
-                   });
-                   if (mallocKeys.length > 0) {
-                       exportList.innerHTML += '<div style="color:#08a;">wasmExports malloc/free: ' + mallocKeys.join(', ') + '</div>';
+               var allUnderscoreKeys = Object.keys(Module).filter(function(k) { return k.startsWith('_'); }).sort();
+               exportList.innerHTML += '<div style="color:#666;">Module._ total: ' + allUnderscoreKeys.length + ' keys</div>';
+               if (allUnderscoreKeys.length > 0)
+                   exportList.innerHTML += '<div style="color:#666;">First 20: ' + allUnderscoreKeys.slice(0, 20).join(', ') + '</div>';
+           } catch(e) {
+               exportList.innerHTML += '<div style="color:#f00;">Module keys error: ' + e.message + '</div>';
+           }
+
+           // Check wasmExports
+           try {
+               var weDesc = Object.getOwnPropertyDescriptor(Module, 'wasmExports');
+               if (weDesc) {
+                   if (weDesc.value && typeof weDesc.value === 'object') {
+                       var weKeys = Object.keys(weDesc.value).filter(function(k) {
+                           return k.indexOf('Engine') >= 0 || k.indexOf('Render') >= 0 || k.indexOf('Disable') >= 0 || k.indexOf('Camera') >= 0;
+                       });
+                       if (weKeys.length > 0)
+                           exportList.innerHTML += '<div style="color:#0f0;">wasmExports hooks: ' + weKeys.join(', ') + '</div>';
+                       else
+                           exportList.innerHTML += '<div style="color:#f00;">wasmExports: no hook symbols</div>';
+                   } else if (weDesc.get) {
+                       try {
+                           var we = weDesc.get.call(Module);
+                           if (we && typeof we === 'object') {
+                               var weKeys = Object.keys(we).filter(function(k) {
+                                   return k.indexOf('Engine') >= 0 || k.indexOf('Render') >= 0 || k.indexOf('Disable') >= 0;
+                               });
+                               if (weKeys.length > 0)
+                                   exportList.innerHTML += '<div style="color:#0f0;">wasmExports (getter) hooks: ' + weKeys.join(', ') + '</div>';
+                               else
+                                   exportList.innerHTML += '<div style="color:#f00;">wasmExports (getter): no hook symbols (' + Object.keys(we).length + ' total)</div>';
+                           }
+                       } catch(e) {
+                           exportList.innerHTML += '<div style="color:#f00;">wasmExports getter aborts</div>';
+                       }
                    }
                } else {
-                   exportList.innerHTML += '<div style="color:#f00;">Module.wasmExports: undefined</div>';
+                   exportList.innerHTML += '<div style="color:#f00;">wasmExports: not on Module</div>';
                }
-           } catch(e) {
-               exportList.innerHTML += '<div style="color:#f00;">wasmExports access error: ' + e.message + '</div>';
-           }
+           } catch(e) {}
 
-           // ccall check
-           if (typeof Module.ccall === 'function') {
-               exportList.innerHTML += '<div style="color:#0f0;">Module.ccall: verfuegbar (PThread proxy aktiv)</div>';
-           } else {
-               exportList.innerHTML += '<div style="color:#f00;">Module.ccall: NICHT verfuegbar</div>';
-           }
+           // ccall availability
+           try {
+               var ccallDesc = Object.getOwnPropertyDescriptor(Module, 'ccall');
+               if (ccallDesc && (typeof ccallDesc.value === 'function' || typeof ccallDesc.get === 'function')) {
+                   exportList.innerHTML += '<div style="color:#0f0;">ccall: available</div>';
+               } else {
+                   exportList.innerHTML += '<div style="color:#f00;">ccall: not available (needs EXPORTED_RUNTIME_METHODS)</div>';
+               }
+           } catch(e) {}
+
+           window.logCapture('Found ' + foundCount + '/' + hooks.length + ' hooks', foundCount > 0 ? 'success' : 'warn');
 
            var engineDisable = findExport('_Engine_DisableAutoRender');
-           if (engineDisable.found) {
-               window.logCapture('C++ Bridge Hook gefunden via ' + engineDisable.source + '!', 'success');
+           var bridgeDisable = findExport('_DisableAutoRenderLoop');
+           if (engineDisable.found || bridgeDisable.found) {
+               window.logCapture('Bridge hook found via ' + (engineDisable.found ? engineDisable.source : bridgeDisable.source) + '!', 'success');
                btnTestBridge.disabled = false;
            } else {
-               window.logCapture('Engine_DisableAutoRender nicht gefunden - alle Pfade geprueft', 'warn');
-               window.logCapture('Klicke "Dump alle Exports" fuer Details', 'info');
+               window.logCapture('No bridge hooks found — awaiting Build #89+', 'warn');
            }
            btnDumpExports.disabled = false;
        }
 
-       // Bridge Test
        btnTestBridge.addEventListener('click', function() {
-           window.logCapture('=== Teste C++ Bridge (Disable Render) ===', 'info');
+           window.logCapture('=== Test C++ Bridge ===', 'info');
            try {
-               var result = findExport('_Engine_DisableAutoRender');
-
-               if (result.found) {
-                   window.logCapture('Aufruf via ' + result.source + '...', 'normal');
-                   result.fn();
-                   window.logCapture('_Engine_DisableAutoRender() erfolgreich!', 'success');
-                   btnTestBridge.textContent = 'Render disabled - Engine haelt';
-                   btnTestBridge.disabled = true;
-               } else if (typeof Module.ccall === 'function') {
-                   window.logCapture('Versuche ccall("Engine_DisableAutoRender")...', 'normal');
-                   Module.ccall('Engine_DisableAutoRender', 'v', [], []);
-                   window.logCapture('ccall erfolgreich!', 'success');
-                   btnTestBridge.textContent = 'Render disabled via ccall';
-                   btnTestBridge.disabled = true;
-               } else {
-                   window.logCapture('FEHLER: Konnte Hook nicht finden!', 'error');
+               var hooks = ['_Engine_DisableAutoRender', '_DisableAutoRenderLoop'];
+               var called = false;
+               for (var i = 0; i < hooks.length; i++) {
+                   var r = findExport(hooks[i]);
+                   if (r.found) {
+                       window.logCapture('Calling ' + hooks[i] + ' via ' + r.source + '...', 'normal');
+                       r.fn();
+                       window.logCapture(hooks[i] + '() success!', 'success');
+                       called = true;
+                       break;
+                   }
                }
+               if (!called) window.logCapture('No hook available to call', 'error');
            } catch (e) {
-               window.logCapture('Crash beim Aufruf: ' + e.message + ' ' + (e.stack || ''), 'error');
+               window.logCapture('Bridge call failed: ' + e.message, 'error');
            }
-
-           setTimeout(function() {
-               window.logCapture('=== 2s nach Bridge-Test ===', 'info');
-           }, 2000);
        });
 
-       // Dump Exports
        btnDumpExports.addEventListener('click', function() {
-           window.logCapture('=== Dump aller Exports ===', 'info');
-
-           var modKeys = Object.keys(Module).filter(function(k){ return k.startsWith('_'); }).sort();
-           window.logCapture('Module._ exports (' + modKeys.length + '): ' + modKeys.slice(0, 30).join(', ') + (modKeys.length > 30 ? '...' : ''), 'normal');
+           window.logCapture('=== Dump Exports ===', 'info');
+           try {
+               var modKeys = Object.keys(Module).filter(function(k){ return k.startsWith('_'); }).sort();
+               window.logCapture('Module._ (' + modKeys.length + '): ' + modKeys.slice(0, 40).join(', '), 'normal');
+           } catch(e) { window.logCapture('Module keys error: ' + e.message, 'error'); }
 
            try {
-               if (Module.wasmExports) {
-                   var weKeys = Object.keys(Module.wasmExports).sort();
-                   window.logCapture('wasmExports (' + weKeys.length + ' total): ' + weKeys.slice(0, 50).join(', ') + (weKeys.length > 50 ? '...' : ''), 'normal');
-                   var engineKeys = weKeys.filter(function(k){ return k.indexOf('Engine') >= 0 || k.indexOf('Render') >= 0 || k.indexOf('Camera') >= 0; });
-                   if (engineKeys.length > 0)
-                       window.logCapture('wasmExports Engine/Render/Camera: ' + engineKeys.join(', '), 'success');
-                   else
-                       window.logCapture('wasmExports: KEINE Engine/Render/Camera Symbole!', 'error');
+               var weDesc = Object.getOwnPropertyDescriptor(Module, 'wasmExports');
+               if (weDesc && weDesc.get) {
+                   try {
+                       var we = weDesc.get.call(Module);
+                       if (we) {
+                           var weKeys = Object.keys(we).sort();
+                           window.logCapture('wasmExports (' + weKeys.length + '): ' + weKeys.slice(0, 50).join(', '), 'normal');
+                           var hooks = weKeys.filter(function(k) {
+                               return k.indexOf('Engine') >= 0 || k.indexOf('Render') >= 0 || k.indexOf('Camera') >= 0 || k.indexOf('Disable') >= 0;
+                           });
+                           if (hooks.length > 0)
+                               window.logCapture('Hook symbols: ' + hooks.join(', '), 'success');
+                           else
+                               window.logCapture('No hook symbols in wasmExports', 'error');
+                       }
+                   } catch(e) { window.logCapture('wasmExports getter failed: ' + e.message, 'error'); }
+               } else if (weDesc && weDesc.value) {
+                   var weKeys = Object.keys(weDesc.value).sort();
+                   window.logCapture('wasmExports (' + weKeys.length + '): ' + weKeys.slice(0, 50).join(', '), 'normal');
                } else {
-                   window.logCapture('Module.wasmExports: undefined', 'warn');
+                   window.logCapture('wasmExports not available', 'warn');
                }
-           } catch(e) {
-               window.logCapture('wasmExports error: ' + e.message, 'error');
-           }
+           } catch(e) { window.logCapture('wasmExports error: ' + e.message, 'error'); }
 
-           if (typeof Module.ccall === 'function') {
-               window.logCapture('Module.ccall: verfuegbar', 'info');
-               try {
-                   var fn = Module.cwrap('Engine_DisableAutoRender', null, []);
-                   window.logCapture('cwrap("Engine_DisableAutoRender") erfolgreich!', 'success');
-               } catch(e) {
-                   window.logCapture('cwrap fehlgeschlagen: ' + e.message, 'warn');
-               }
-           } else {
-               window.logCapture('Module.ccall: NICHT verfuegbar (braucht -sEXPORTED_RUNTIME_METHODS in CI)', 'error');
-           }
+           // Window scope
+           var winHooks = Object.keys(window).filter(function(k) {
+               return k.startsWith('_Engine') || k.startsWith('_Disable') || k.startsWith('_RenderXR') || k.startsWith('_SetCamera') || k.startsWith('_Enable') || k.startsWith('_malloc') || k.startsWith('_free');
+           }).sort();
+           if (winHooks.length > 0)
+               window.logCapture('window._ hooks: ' + winHooks.join(', '), 'normal');
        });
 
-       window.logCapture('Lade hl2_launcher.js (v3.1, GL telemetry disabled for PThread)...', 'info');
+       window.logCapture('Lade hl2_launcher.js (v3.2)...', 'info');
        var script = document.createElement('script');
-       script.src = 'hl2_launcher.js?v=31';
+       script.src = 'hl2_launcher.js?v=32';
        document.body.appendChild(script);
    </script>
 </body>
