@@ -30,6 +30,7 @@ const server = http.createServer((req, res) => {
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
 
   let urlPath = req.url.split('?')[0]
+  console.log(`[REQ] ${urlPath}`)
 
   // TESTMODUS: Chunks durch Stub ersetzen für schnelles Testing
   const STUB_CHUNKS = process.env.STUB_CHUNKS === '1';
