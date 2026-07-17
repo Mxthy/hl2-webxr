@@ -1,199 +1,153 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#111">
-  <title>Half-Life 2 WebXR</title>
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{background:#111;color:#fff;font-family:Arial,sans-serif;overflow:hidden;height:100vh;width:100vw}
-    #canvas{display:block;width:100%;height:100%;background:#000;touch-action:none;position:absolute;top:0;left:0}
-    #overlay{position:fixed;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;background:rgba(0,0,0,.9);z-index:10}
-    #overlay.hidden{display:none}
-    .game-btn{display:block;margin:8px auto;width:360px;max-width:90vw;cursor:pointer;border-radius:4px;overflow:hidden;background:#1a1a1a;border:2px solid #333;padding:18px 24px;font-size:16px;color:#ccc;transition:border-color .1s,transform .1s;text-align:left}
-    .game-btn:hover{border-color:#ff6600;transform:scale(1.02);color:#fff}
-    #enter-vr-btn{background:linear-gradient(135deg,#ff6600,#cc4400);border:none;color:#fff;padding:14px 32px;border-radius:6px;font-size:18px;font-weight:bold;cursor:pointer;display:none;box-shadow:0 4px 20px rgba(255,100,0,.5);transition:transform .1s}
-    #enter-vr-btn:hover{transform:scale(1.05)}
-    #enter-vr-btn.visible{display:block}
-    #xr-status{font-size:12px;color:#555}
-    #loading{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);text-align:center;display:none;z-index:11}
-    #loading.visible{display:block}
-    #status{font-weight:bold;color:#aaa;margin-bottom:8px;font-size:13px}
-    #progress{width:280px;height:5px;border-radius:3px;background:#333;border:none;-webkit-appearance:none}
-    #progress::-webkit-progress-bar{background:#333;border-radius:3px}
-    #progress::-webkit-progress-value{background:#ff6600;border-radius:3px}
-    .spinner{width:28px;height:28px;border:3px solid #333;border-top-color:#ff6600;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    #controls{position:fixed;top:10px;right:10px;display:none;gap:6px;z-index:20;flex-direction:row}
-    .ctrl-btn{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:11px}
-    .ctrl-btn:hover{background:rgba(255,255,255,.2)}
-    h1{font-size:26px;font-weight:bold;letter-spacing:3px;color:#ff6600}
-    .subtitle{font-size:11px;color:#444;margin-top:4px}
-  </style>
-
-  <!-- Console Log Capture für Debugging -->
-  <style>
-    #console-log {
-      position: fixed; bottom: 0; left: 0; right: 0;
-      height: 160px; overflow-y: auto;
-      background: rgba(0,0,0,0.85); color: #0f0;
-      font-family: monospace; font-size: 10px;
-      padding: 4px 8px; z-index: 9999;
-      border-top: 1px solid #333;
-      display: none; /* Standardmäßig versteckt */
-    }
-    #console-log.visible { display: block; }
-    #console-log .err { color: #f44; }
-    #console-log .warn { color: #fa0; }
-    #log-toggle {
-      position: fixed; bottom: 165px; right: 8px; z-index: 10000;
-      background: #333; color: #fff; border: 1px solid #555;
-      padding: 2px 6px; font-size: 10px; cursor: pointer;
-      font-family: monospace;
-    }
-  </style>
-  <script>
-  (function() {
-    // Log-Panel Setup
-    const panel = document.createElement('div');
-    panel.id = 'console-log';
-    const btn = document.createElement('button');
-    btn.id = 'log-toggle';
-    btn.textContent = 'LOG';
-    btn.onclick = () => panel.classList.toggle('visible');
-    
-    document.addEventListener('DOMContentLoaded', () => {
-      document.body.appendChild(panel);
-      document.body.appendChild(btn);
-    });
-    
-    let count = 0;
-    function addLine(type, args) {
-      const line = document.createElement('div');
-      if (type !== 'log') line.className = type;
-      const t = new Date().toISOString().slice(11,19);
-      const text = Array.from(args).map(a => {
-        try { return typeof a === 'object' ? JSON.stringify(a).slice(0,200) : String(a).slice(0,500); }
-        catch(e) { return String(a).slice(0,200); }
-      }).join(' ');
-      line.textContent = `[${t}] ${text}`;
-      panel.appendChild(line);
-      panel.scrollTop = panel.scrollHeight;
-      if (++count === 1) panel.classList.add('visible'); // Zeige beim ersten Log
-      if (type === 'err') panel.classList.add('visible'); // Zeige immer bei Fehlern
-    }
-    
-    const _log = console.log.bind(console);
-    const _err = console.error.bind(console);
-    const _warn = console.warn.bind(console);
-    console.log = (...a) => { _log(...a); addLine('log', a); };
-    console.error = (...a) => { _err(...a); addLine('err', a); };
-    console.warn = (...a) => { _warn(...a); addLine('warn', a); };
-    window.addEventListener('error', e => addLine('err', [`UNCAUGHT: ${e.message} @ ${e.filename}:${e.lineno}`]));
-    window.addEventListener('unhandledrejection', e => addLine('err', [`PROMISE REJECT: ${e.reason}`]));
-  })();
-  </script>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+   <title>HL2 WebXR - Build #88 Debug</title>
+   <script src="https://cdn.tailwindcss.com"></script>
+   <style>
+       body { margin: 0; overflow: hidden; background-color: #050505; color: #0f0; font-family: monospace; }
+       #game-canvas { display: block; width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
+       
+       #debug-overlay {
+           position: absolute; top: 10px; left: 10px; z-index: 10;
+           background: rgba(0,20,0,0.8); border: 1px solid #0f0; padding: 15px; border-radius: 4px;
+           width: 400px; max-height: 90vh; overflow-y: auto; pointer-events: none;
+       }
+       
+       .hook-status { display: flex; justify-content: space-between; margin-bottom: 4px; border-bottom: 1px dashed #030; padding-bottom: 2px;}
+       .status-ok { color: #0f0; font-weight: bold; }
+       .status-fail { color: #f00; font-weight: bold; }
+       
+       button { pointer-events: auto; background: #030; color: #0f0; border: 1px solid #0f0; padding: 5px 10px; cursor: pointer; margin-top: 10px; width: 100%;}
+       button:hover { background: #050; }
+       button:disabled { border-color: #333; color: #333; cursor: not-allowed; }
+   </style>
 </head>
 <body>
-  <canvas id="canvas" oncontextmenu="return false;" tabindex="-1"></canvas>
 
-  <div id="overlay">
-    <h1>HALF-LIFE 2</h1>
-    <div class="subtitle">WebXR Port — Quest 3</div>
+   <canvas id="game-canvas" oncontextmenu="event.preventDefault()"></canvas>
 
-    <div id="game-select">
-      <div class="game-btn" onclick="pickGame('hl2')">▶ Half-Life 2</div>
-      <div class="game-btn" onclick="pickGame('ep1')">▶ Episode One</div>
-      <div class="game-btn" onclick="pickGame('ep2')">▶ Episode Two</div>
-    </div>
+   <div id="debug-overlay">
+       <h2 class="text-xl font-bold mb-2">λ HL2 WebXR - Debugger</h2>
+       <div id="loading-status" class="text-yellow-400 mb-4 animate-pulse">Lade Engine (Build #88)...</div>
+       
+       <div class="mb-4">
+           <strong>WASM Exports Checker:</strong>
+           <div id="export-list" class="mt-2 text-sm">
+               <!-- Wird via JS befüllt -->
+           </div>
+       </div>
 
-    <button id="enter-vr-btn" onclick="window.xrWrapper && window.xrWrapper.enterVR()">🥽 Enter VR</button>
-    <div id="xr-status">WebXR wird geprüft...</div>
-  </div>
+       <button id="btn-test-bridge" disabled>Teste C++ Bridge (Disable Render)</button>
+       <button id="btn-enter-vr" disabled>WebXR Session starten</button>
+       
+       <div id="console-log" class="mt-4 text-xs font-mono" style="color: #888;"></div>
+   </div>
 
-  <div id="loading">
-    <div class="spinner" id="spinner"></div>
-    <div id="status">Lädt...</div>
-    <progress id="progress" max="100" value="0" hidden></progress>
-  </div>
+   <!-- Dein aktualisierter WebXR Wrapper -->
+   <script src="xr_wrapper.js"></script>
 
-  <div id="controls">
-    <button class="ctrl-btn" onclick="document.getElementById('canvas').requestFullscreen()">Fullscreen</button>
-    <button class="ctrl-btn" onclick="clearCacheAndReload()">Cache leeren</button>
-  </div>
+   <script>
+       const canvas = document.getElementById('game-canvas');
+       const loadingStatus = document.getElementById('loading-status');
+       const exportList = document.getElementById('export-list');
+       const btnTestBridge = document.getElementById('btn-test-bridge');
+       const btnEnterVR = document.getElementById('btn-enter-vr');
+       const consoleLog = document.getElementById('console-log');
+       
+       let webxr = null;
 
-  <script>
-    // DOM-Referenzen global (für pre.js / post.js)
-    window.canvasElement = document.getElementById('canvas');
-    window.statusElement  = document.getElementById('status');
-    window.progressElement= document.getElementById('progress');
-    window.spinnerElement = document.getElementById('spinner');
+       function log(msg) {
+           const div = document.createElement('div');
+           div.textContent = `> ${msg}`;
+           consoleLog.prepend(div);
+           console.log(msg);
+       }
 
-    // Canvas auf Viewport-Größe
-    canvasElement.width  = screen.availWidth;
-    canvasElement.height = screen.availHeight;
+       // Module Konfiguration für Emscripten
+       window.Module = {
+           canvas: canvas,
+           arguments: ['-game', 'portal', '-windowed', '-w', '1280', '-h', '720', '-novid'],
+           
+           setStatus: (text) => {
+               if(text) loadingStatus.textContent = text;
+           },
+           
+           onRuntimeInitialized: () => {
+               loadingStatus.textContent = "Engine Runtime Ready!";
+               loadingStatus.className = "text-green-400 font-bold mb-4";
+               checkWasmExports();
+           }
+       };
 
-    function pickGame(game) {
-      try { sessionStorage.setItem('ep', game); } catch(e) {}
-      document.getElementById('overlay').classList.add('hidden');
-      document.getElementById('loading').classList.add('visible');
-      document.getElementById('controls').style.display = 'flex';
-      if (window.__resolveGame) window.__resolveGame(game);
-      else if (window.Module && Module.__resolveGame) Module.__resolveGame(game);
-    }
+       // Prüft, ob die C++ Hooks erfolgreich ins JS exportiert wurden
+       function checkWasmExports() {
+           const requiredHooks = [
+               '_Engine_DisableAutoRender',
+               '_Engine_RenderSingleFrame',
+               '_Engine_SetCameraMatrix',
+               '_malloc' // Wichtig für Speicherallokation
+           ];
 
-    async function clearCacheAndReload() {
-      try {
-        if (caches) for (const k of await caches.keys()) await caches.delete(k);
-        if (navigator.serviceWorker) {
-          for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister();
-        }
-      } catch(e) {}
-      location.reload();
-    }
+           exportList.innerHTML = '';
+           let allPassed = true;
 
-    // WebXR Check
-    (async () => {
-      const xrStatus = document.getElementById('xr-status');
-      const enterVr  = document.getElementById('enter-vr-btn');
-      if (navigator.xr) {
-        try {
-          if (await navigator.xr.isSessionSupported('immersive-vr')) {
-            xrStatus.textContent = '✓ Quest 3 WebXR verfügbar';
-            xrStatus.style.color = '#4a4';
-            enterVr.classList.add('visible');
-          } else {
-            xrStatus.textContent = '⚠ WebXR nicht unterstützt — Desktop-Modus aktiv';
-            xrStatus.style.color = '#a84';
-          }
-        } catch(e) {
-          xrStatus.textContent = '✗ WebXR-Fehler: ' + e.message;
-          xrStatus.style.color = '#a44';
-        }
-      } else {
-        xrStatus.textContent = '✗ Kein WebXR — Desktop-Modus';
-        xrStatus.style.color = '#555';
-      }
-    })();
+           requiredHooks.forEach(hook => {
+               const isPresent = typeof Module[hook] === 'function';
+               if (!isPresent) allPassed = false;
+               
+               exportList.innerHTML += `
+                   <div class="hook-status">
+                       <span>${hook}</span>
+                       <span class="${isPresent ? 'status-ok' : 'status-fail'}">
+                           ${isPresent ? 'FOUND' : 'MISSING'}
+                       </span>
+                   </div>
+               `;
+           });
 
-    // Service Worker
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js')
-        .then(() => navigator.serviceWorker.ready)
-        .then(() => {
-          if (!self.crossOriginIsolated && !sessionStorage.getItem('__coiReloaded')) {
-            sessionStorage.setItem('__coiReloaded', '1');
-            location.reload();
-          } else {
-            sessionStorage.removeItem('__coiReloaded');
-          }
-        })
-        .catch(e => console.warn('[SW] Fehler:', e));
-    }
-  </script>
+           if (allPassed) {
+               log("Alle C++ Hooks im WASM gefunden!");
+               btnTestBridge.disabled = false;
+               initWebXR();
+           } else {
+               log("FEHLER: Nicht alle C++ Hooks wurden exportiert. Ist MAIN_MODULE=1 aktiv?");
+           }
+       }
 
-  <script src="xr_wrapper.js" defer></script>
-  <script src="hl2_launcher.js" async></script>
+       // Initialisiere die XR-Klasse
+       async function initWebXR() {
+           webxr = new HL2WebXR(canvas.getContext('webgl2', { xrCompatible: true }), canvas);
+           const isReady = await webxr.init();
+           if (isReady) {
+               btnEnterVR.disabled = false;
+               log("WebXR Wrapper initialisiert.");
+           }
+       }
+
+       // UI Event Listener
+       btnTestBridge.addEventListener('click', () => {
+           log("Führe C++ Bridge Test aus...");
+           try {
+               Module._Engine_DisableAutoRender();
+               log("Erfolg: _Engine_DisableAutoRender ausgeführt. Engine sollte jetzt pausiert sein.");
+               btnTestBridge.disabled = true;
+           } catch (e) {
+               log(`Crash beim Aufruf: ${e.message}`);
+           }
+       });
+
+       btnEnterVR.addEventListener('click', () => {
+           if(webxr) webxr.enterVR();
+       });
+
+       // Lade die von Build #88 kompilierte Engine
+       log("Lade hl2_launcher.js...");
+       const script = document.createElement('script');
+       script.src = 'hl2_launcher.js';
+       document.body.appendChild(script);
+
+   </script>
 </body>
 </html>

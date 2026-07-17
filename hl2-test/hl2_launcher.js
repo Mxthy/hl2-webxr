@@ -24931,6 +24931,20 @@ function _g_VCoverage(...args) {
 
 _g_VCoverage.stub = true;
 
+function _g_WebXRViewMatrix(...args) {
+  if (!wasmImports["g_WebXRViewMatrix"] || wasmImports["g_WebXRViewMatrix"].stub) abort("external symbol 'g_WebXRViewMatrix' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["g_WebXRViewMatrix"](...args);
+}
+
+_g_WebXRViewMatrix.stub = true;
+
+function _g_bWebXRMatrixActive(...args) {
+  if (!wasmImports["g_bWebXRMatrixActive"] || wasmImports["g_bWebXRMatrixActive"].stub) abort("external symbol 'g_bWebXRMatrixActive' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["g_bWebXRMatrixActive"](...args);
+}
+
+_g_bWebXRMatrixActive.stub = true;
+
 function _g_dwClockSpeed(...args) {
   if (!wasmImports["g_dwClockSpeed"] || wasmImports["g_dwClockSpeed"].stub) abort("external symbol 'g_dwClockSpeed' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["g_dwClockSpeed"](...args);
@@ -32858,6 +32872,8 @@ function assignWasmImports() {
     /** @export */ g_ClockSpeedMillisecondsMultiplier: _g_ClockSpeedMillisecondsMultiplier,
     /** @export */ g_ClockSpeedSecondsMultiplier: _g_ClockSpeedSecondsMultiplier,
     /** @export */ g_VCoverage: _g_VCoverage,
+    /** @export */ g_WebXRViewMatrix: _g_WebXRViewMatrix,
+    /** @export */ g_bWebXRMatrixActive: _g_bWebXRMatrixActive,
     /** @export */ g_dwClockSpeed: _g_dwClockSpeed,
     /** @export */ g_nThreadID: _g_nThreadID,
     /** @export */ g_pMemAlloc: _g_pMemAlloc,
