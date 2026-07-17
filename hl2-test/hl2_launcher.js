@@ -201,25 +201,10 @@ const glTelemetry = {
   gates: { g1: false, g2: false, g3: false, g4: false }
 };
 
-// G1: Verify WebGL2 context exists
-if (typeof canvasElement !== 'undefined' && canvasElement) {
-  var _gl_ctx = canvasElement.getContext('webgl2');
-  if (_gl_ctx) {
-    glTelemetry.gates.g1 = true;
-    console.info('[gl:g1] WebGL2 context exists');
-    // G2: Isolated clear test — if this produces color, canvas composition works
-    try {
-      _gl_ctx.clearColor(0.2, 0.15, 0.1, 1.0);
-      _gl_ctx.clear(_gl_ctx.COLOR_BUFFER_BIT);
-      glTelemetry.gates.g2 = true;
-      console.info('[gl:g2] clearColor + clear succeeded');
-    } catch(e) {
-      console.warn('[gl:g2] clear test failed: ' + e.message);
-    }
-  } else {
-    console.error('[gl:g1] WebGL2 context creation failed');
-  }
-}
+// G1: SKIPPED — getContext('webgl2') blocks transferControlToOffscreen for PThread
+// In PROXY_TO_PTHREAD mode, the engine creates its own context on the worker thread.
+console.info('[gl:g1] WebGL2 context check skipped (PThread/OffscreenCanvas compat mode)');
+glTelemetry.gates.g1 = true;
 
 // Wrap dlsym stub resolution to count Source GL calls (G3)
 var _orig_dlsym_count = 0;

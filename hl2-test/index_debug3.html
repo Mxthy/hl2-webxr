@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>HL2 WebXR - PThread Export Discovery v3.1</title>
+   <style>
+       body { margin: 0; overflow: hidden; background-color: #050505; color: #0f0; font-family: monospace; }
+       #game-canvas { display: block; width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
+       #debug-overlay {
+           position: absolute; top: 10px; left: 10px; z-index: 10;
+           background: rgba(0,20,0,0.92); border: 1px solid #0f0; padding: 15px; border-radius: 4px;
+           width: 640px; max-height: 95vh; overflow-y: auto; pointer-events: auto;
+       }
+       .log-entry { margin: 1px 0; padding: 0; border-bottom: 1px solid #020; }
+       .log-error { color: #ff4444; }
+       .log-warn { color: #ffaa00; }
+       .log-info { color: #44aaff; }
+       .log-debug { color: #888; }
+       .log-normal { color: #0f0; }
+       .log-success { color: #00ff88; font-weight: bold; }
+       button { background: #030; color: #0f0; border: 1px solid #0f0; padding: 6px 10px; cursor: pointer; margin-top: 8px; font-family: monospace; }
+       button:disabled { border-color: #333; color: #333; cursor: not-allowed; }
+   </style>
+</head>
+<body>
+   <canvas id="game-canvas" oncontextmenu="event.preventDefault()"></canvas>
+   <div id="debug-overlay">
+       <h2>HL2 WebXR - PThread Export Discovery v3.1</h2>
+       <div id="loading-status" class="log-warn">Lade Engine (Build #88, non-fatal, no pre-getContext)...</div>
+       <div id="export-list" style="font-size: 12px; margin-top: 8px;"></div>
+       <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
+           <button id="btn-test-bridge" disabled style="width: auto;">Teste C++ Bridge (Disable Render)</button>
+           <button id="btn-dump-exports" disabled style="width: auto;">Dump alle Exports</button>
+       </div>
+       <div id="console-log" style="margin-top: 10px; font-size: 11px;"></div>
+   </div>
+
+   <script>
+   (function() {
+       var consoleLog = document.getElementById('console-log');
+       function addLog(msg, type) {
+           var div = document.createElement('div');
+           div.className = 'log-entry log-' + (type || 'normal');
+           div.textContent = '[' + (type || 'log') + '] ' + msg;
+           consoleLog.prepend(div);
+           while (consoleLog.children.length > 120) consoleLog.removeChild(consoleLog.lastChild);
+       }
+       var orig = { log: console.log, error: console.error, warn: console.warn, info: console.info, debug: console.debug };
+       console.log = function() { addLog(Array.from(arguments).join(' '), 'normal'); orig.log.apply(console, arguments); };
+       console.error = function() { addLog(Array.from(arguments).map(function(a){ return a && a.stack || String(a); }).join(' '), 'error'); orig.error.apply(console, arguments); };
+       console.warn = function() { addLog(Array.from(arguments).join(' '), 'warn'); orig.warn.apply(console, arguments); };
+       console.info = function() { addLog(Array.from(arguments).join(' '), 'info'); orig.info.apply(console, arguments); };
+       console.debug = function() { addLog(Array.from(arguments).join(' '), 'debug'); orig.debug.apply(console, arguments); };
+       window.onerror = function(msg, url, line, col, err) { addLog(msg + ' at ' + url + ':' + line + ':' + col + ' - ' + (err && err.stack || ''), 'error'); return false; };
+       window.addEventListener('unhandledrejection', function(e) { addLog('Unhandled Rejection: ' + (e.reason && e.reason.stack || e.reason || e), 'error'); });
+       window.logCapture = addLog;
+   })();
+   </script>
+
+   <script src="xr_wrapper.js"></script>
+   <script>
+       // CRITICAL: No canvas.getContext() before engine starts!
+       // PROXY_TO_PTHREAD needs transferControlToOffscreen()
+
+       var canvas = document.getElementById('game-canvas');
+       var loadingStatus = document.getElementById('loading-status');
+       var exportList = document.getElementById('export-list');
+       var btnTestBridge = document.getElementById('btn-test-bridge');
+       var btnDumpExports = document.getElementById('btn-dump-exports');
+
+       window.canvasElement = canvas;
+       window.statusElement = loadingStatus;
+       window.spinnerElement = { style: {} };
+       window.progressElement = { hidden: true, value: 0 };
+
+       window.Module = {
+           canvas: canvas,
+           arguments: ['-game', 'portal', '-windowed', '-w', '1280', '-h', '720', '-novid'],
+           locateFile: function(path, prefix) {
+               if (path.endsWith('.wasm') || path.endsWith('.so')) {
+                   window.logCapture('Lade lokale Datei: ' + path, 'normal');
+                   return './' + path;
+               }
+               return (prefix || '') + path;
+           },
+           setStatus: function(text) { if(text) loadingStatus.textContent = text; },
+           onRuntimeInitialized: function() {
+               loadingStatus.textContent = "Engine Runtime Ready!";
+               loadingStatus.className = "log-success";
+               window.logCapture('=== onRuntimeInitialized gefeuert ===', 'success');
+               setTimeout(checkWasmExports, 800);
+           },
+           onAbort: function(err) {
+               loadingStatus.textContent = "ENGINE ABORTED";
+               loadingStatus.className = "log-error";
+               window.logCapture('ENGINE ABORT: ' + (err && err.stack || err), 'error');
+           }
+       };
+
+       // Export discovery — NO Module.asm access (it triggers abort in this Emscripten version)
+       function findExport(name) {
+           var cleanName = name.replace(/^_/, '');
+
+           // Path 1: Module._FunctionName
+           try {
+               if (typeof Module[name] === 'function')
+                   return { found: true, source: 'Module', fn: Module[name] };
+           } catch(e) {}
+
+           // Path 2: Module.wasmExports (NOT Module.asm — that triggers abort)
+           try {
+               if (Module.wasmExports) {
+                   if (typeof Module.wasmExports[name] === 'function')
+                       return { found: true, source: 'wasmExports', fn: Module.wasmExports[name] };
+                   if (typeof Module.wasmExports[cleanName] === 'function')
+                       return { found: true, source: 'wasmExports (clean)', fn: Module.wasmExports[cleanName] };
+               }
+           } catch(e) {}
+
+           // Path 3: Module.ccall / Module.cwrap (official PThread proxy)
+           try {
+               if (typeof Module.ccall === 'function') {
+                   var fn = Module.cwrap(cleanName, null, []);
+                   if (fn) return { found: true, source: 'ccall/cwrap', fn: fn };
+               }
+           } catch(e) {}
+
+           // Path 4: Global scope
+           try {
+               if (typeof window[name] === 'function')
+                   return { found: true, source: 'window', fn: window[name] };
+           } catch(e) {}
+
+           return { found: false, source: null, fn: null };
+       }
+
+       function checkWasmExports() {
+           var hooks = [
+               '_Engine_DisableAutoRender',
+               '_Engine_RenderSingleFrame',
+               '_Engine_SetCameraMatrix',
+               '_Engine_SetProjectionMatrix',
+               '_Engine_ResetCameraMatrix',
+               '_malloc',
+               '_free',
+               '_emscripten_cancel_main_loop'
+           ];
+
+           exportList.innerHTML = '';
+
+           hooks.forEach(function(h) {
+               var result = findExport(h);
+               var color = result.found ? '#0f0' : (h.indexOf('Engine') >= 0 ? '#fa0' : '#f00');
+               exportList.innerHTML += '<div style="color:' + color + '">' + h + ': ' + (result.found ? 'FOUND via ' + result.source : 'MISSING') + '</div>';
+           });
+
+           // Search Module.wasmExports for Engine/Render/Camera keys
+           try {
+               if (Module.wasmExports) {
+                   var weKeys = Object.keys(Module.wasmExports).filter(function(k) {
+                       return k.indexOf('Engine') >= 0 || k.indexOf('Render') >= 0 || k.indexOf('Camera') >= 0;
+                   });
+                   if (weKeys.length > 0) {
+                       exportList.innerHTML += '<div style="color:#08a;">wasmExports Engine/Render/Camera: ' + weKeys.join(', ') + '</div>';
+                   } else {
+                       exportList.innerHTML += '<div style="color:#f00;">wasmExports: KEINE Engine/Render/Camera Symbole gefunden!</div>';
+                   }
+
+                   // Also search for malloc
+                   var mallocKeys = Object.keys(Module.wasmExports).filter(function(k) {
+                       return k.indexOf('malloc') >= 0 || k.indexOf('free') >= 0;
+                   });
+                   if (mallocKeys.length > 0) {
+                       exportList.innerHTML += '<div style="color:#08a;">wasmExports malloc/free: ' + mallocKeys.join(', ') + '</div>';
+                   }
+               } else {
+                   exportList.innerHTML += '<div style="color:#f00;">Module.wasmExports: undefined</div>';
+               }
+           } catch(e) {
+               exportList.innerHTML += '<div style="color:#f00;">wasmExports access error: ' + e.message + '</div>';
+           }
+
+           // ccall check
+           if (typeof Module.ccall === 'function') {
+               exportList.innerHTML += '<div style="color:#0f0;">Module.ccall: verfuegbar (PThread proxy aktiv)</div>';
+           } else {
+               exportList.innerHTML += '<div style="color:#f00;">Module.ccall: NICHT verfuegbar</div>';
+           }
+
+           var engineDisable = findExport('_Engine_DisableAutoRender');
+           if (engineDisable.found) {
+               window.logCapture('C++ Bridge Hook gefunden via ' + engineDisable.source + '!', 'success');
+               btnTestBridge.disabled = false;
+           } else {
+               window.logCapture('Engine_DisableAutoRender nicht gefunden - alle Pfade geprueft', 'warn');
+               window.logCapture('Klicke "Dump alle Exports" fuer Details', 'info');
+           }
+           btnDumpExports.disabled = false;
+       }
+
+       // Bridge Test
+       btnTestBridge.addEventListener('click', function() {
+           window.logCapture('=== Teste C++ Bridge (Disable Render) ===', 'info');
+           try {
+               var result = findExport('_Engine_DisableAutoRender');
+
+               if (result.found) {
+                   window.logCapture('Aufruf via ' + result.source + '...', 'normal');
+                   result.fn();
+                   window.logCapture('_Engine_DisableAutoRender() erfolgreich!', 'success');
+                   btnTestBridge.textContent = 'Render disabled - Engine haelt';
+                   btnTestBridge.disabled = true;
+               } else if (typeof Module.ccall === 'function') {
+                   window.logCapture('Versuche ccall("Engine_DisableAutoRender")...', 'normal');
+                   Module.ccall('Engine_DisableAutoRender', 'v', [], []);
+                   window.logCapture('ccall erfolgreich!', 'success');
+                   btnTestBridge.textContent = 'Render disabled via ccall';
+                   btnTestBridge.disabled = true;
+               } else {
+                   window.logCapture('FEHLER: Konnte Hook nicht finden!', 'error');
+               }
+           } catch (e) {
+               window.logCapture('Crash beim Aufruf: ' + e.message + ' ' + (e.stack || ''), 'error');
+           }
+
+           setTimeout(function() {
+               window.logCapture('=== 2s nach Bridge-Test ===', 'info');
+           }, 2000);
+       });
+
+       // Dump Exports
+       btnDumpExports.addEventListener('click', function() {
+           window.logCapture('=== Dump aller Exports ===', 'info');
+
+           var modKeys = Object.keys(Module).filter(function(k){ return k.startsWith('_'); }).sort();
+           window.logCapture('Module._ exports (' + modKeys.length + '): ' + modKeys.slice(0, 30).join(', ') + (modKeys.length > 30 ? '...' : ''), 'normal');
+
+           try {
+               if (Module.wasmExports) {
+                   var weKeys = Object.keys(Module.wasmExports).sort();
+                   window.logCapture('wasmExports (' + weKeys.length + ' total): ' + weKeys.slice(0, 50).join(', ') + (weKeys.length > 50 ? '...' : ''), 'normal');
+                   var engineKeys = weKeys.filter(function(k){ return k.indexOf('Engine') >= 0 || k.indexOf('Render') >= 0 || k.indexOf('Camera') >= 0; });
+                   if (engineKeys.length > 0)
+                       window.logCapture('wasmExports Engine/Render/Camera: ' + engineKeys.join(', '), 'success');
+                   else
+                       window.logCapture('wasmExports: KEINE Engine/Render/Camera Symbole!', 'error');
+               } else {
+                   window.logCapture('Module.wasmExports: undefined', 'warn');
+               }
+           } catch(e) {
+               window.logCapture('wasmExports error: ' + e.message, 'error');
+           }
+
+           if (typeof Module.ccall === 'function') {
+               window.logCapture('Module.ccall: verfuegbar', 'info');
+               try {
+                   var fn = Module.cwrap('Engine_DisableAutoRender', null, []);
+                   window.logCapture('cwrap("Engine_DisableAutoRender") erfolgreich!', 'success');
+               } catch(e) {
+                   window.logCapture('cwrap fehlgeschlagen: ' + e.message, 'warn');
+               }
+           } else {
+               window.logCapture('Module.ccall: NICHT verfuegbar (braucht -sEXPORTED_RUNTIME_METHODS in CI)', 'error');
+           }
+       });
+
+       window.logCapture('Lade hl2_launcher.js (v3.1, GL telemetry disabled for PThread)...', 'info');
+       var script = document.createElement('script');
+       script.src = 'hl2_launcher.js?v=31';
+       document.body.appendChild(script);
+   </script>
+</body>
+</html>
