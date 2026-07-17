@@ -1,153 +1,161 @@
+```html
 <!DOCTYPE html>
 <html lang="de">
 <head>
-   <meta charset="UTF-8">
-   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-   <title>HL2 WebXR - Build #88 Debug</title>
-   <script src="https://cdn.tailwindcss.com"></script>
-   <style>
-       body { margin: 0; overflow: hidden; background-color: #050505; color: #0f0; font-family: monospace; }
-       #game-canvas { display: block; width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
-       
-       #debug-overlay {
-           position: absolute; top: 10px; left: 10px; z-index: 10;
-           background: rgba(0,20,0,0.8); border: 1px solid #0f0; padding: 15px; border-radius: 4px;
-           width: 400px; max-height: 90vh; overflow-y: auto; pointer-events: none;
-       }
-       
-       .hook-status { display: flex; justify-content: space-between; margin-bottom: 4px; border-bottom: 1px dashed #030; padding-bottom: 2px;}
-       .status-ok { color: #0f0; font-weight: bold; }
-       .status-fail { color: #f00; font-weight: bold; }
-       
-       button { pointer-events: auto; background: #030; color: #0f0; border: 1px solid #0f0; padding: 5px 10px; cursor: pointer; margin-top: 10px; width: 100%;}
-       button:hover { background: #050; }
-       button:disabled { border-color: #333; color: #333; cursor: not-allowed; }
-   </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>HL2 WebXR - Build #88 Debug</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #050505; color: #0f0; font-family: monospace; }
+        #game-canvas { display: block; width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
+        
+        #debug-overlay {
+            position: absolute; top: 10px; left: 10px; z-index: 10;
+            background: rgba(0,20,0,0.8); border: 1px solid #0f0; padding: 15px; border-radius: 4px;
+            width: 400px; max-height: 90vh; overflow-y: auto; pointer-events: none;
+        }
+        
+        .hook-status { display: flex; justify-content: space-between; margin-bottom: 4px; border-bottom: 1px dashed #030; padding-bottom: 2px;}
+        .status-ok { color: #0f0; font-weight: bold; }
+        .status-fail { color: #f00; font-weight: bold; }
+        
+        button { pointer-events: auto; background: #030; color: #0f0; border: 1px solid #0f0; padding: 5px 10px; cursor: pointer; margin-top: 10px; width: 100%;}
+        button:hover { background: #050; }
+        button:disabled { border-color: #333; color: #333; cursor: not-allowed; }
+    </style>
 </head>
 <body>
 
-   <canvas id="game-canvas" oncontextmenu="event.preventDefault()"></canvas>
+    <canvas id="game-canvas" oncontextmenu="event.preventDefault()"></canvas>
 
-   <div id="debug-overlay">
-       <h2 class="text-xl font-bold mb-2">λ HL2 WebXR - Debugger</h2>
-       <div id="loading-status" class="text-yellow-400 mb-4 animate-pulse">Lade Engine (Build #88)...</div>
-       
-       <div class="mb-4">
-           <strong>WASM Exports Checker:</strong>
-           <div id="export-list" class="mt-2 text-sm">
-               <!-- Wird via JS befüllt -->
-           </div>
-       </div>
+    <div id="debug-overlay">
+        <h2 class="text-xl font-bold mb-2">λ HL2 WebXR - Debugger</h2>
+        <div id="loading-status" class="text-yellow-400 mb-4 animate-pulse">Lade Engine (Build #88)...</div>
+        
+        <div class="mb-4">
+            <strong>WASM Exports Checker:</strong>
+            <div id="export-list" class="mt-2 text-sm">
+                <!-- Wird via JS befüllt -->
+            </div>
+        </div>
 
-       <button id="btn-test-bridge" disabled>Teste C++ Bridge (Disable Render)</button>
-       <button id="btn-enter-vr" disabled>WebXR Session starten</button>
-       
-       <div id="console-log" class="mt-4 text-xs font-mono" style="color: #888;"></div>
-   </div>
+        <button id="btn-test-bridge" disabled>Teste C++ Bridge (Disable Render)</button>
+        <button id="btn-enter-vr" disabled>WebXR Session starten</button>
+        
+        <div id="console-log" class="mt-4 text-xs font-mono" style="color: #888;"></div>
+    </div>
 
-   <!-- Dein aktualisierter WebXR Wrapper -->
-   <script src="xr_wrapper.js"></script>
+    <!-- WebXR Wrapper laden -->
+    <script src="xr_wrapper.js"></script>
 
-   <script>
-       const canvas = document.getElementById('game-canvas');
-       const loadingStatus = document.getElementById('loading-status');
-       const exportList = document.getElementById('export-list');
-       const btnTestBridge = document.getElementById('btn-test-bridge');
-       const btnEnterVR = document.getElementById('btn-enter-vr');
-       const consoleLog = document.getElementById('console-log');
-       
-       let webxr = null;
+    <script>
+        const canvas = document.getElementById('game-canvas');
+        const loadingStatus = document.getElementById('loading-status');
+        const exportList = document.getElementById('export-list');
+        const btnTestBridge = document.getElementById('btn-test-bridge');
+        const btnEnterVR = document.getElementById('btn-enter-vr');
+        const consoleLog = document.getElementById('console-log');
+        
+        // FIX-002: pre.js erwartet diese Globals!
+        window.canvasElement = canvas;
+        window.statusElement = loadingStatus;
+        
+        let webxr = null;
 
-       function log(msg) {
-           const div = document.createElement('div');
-           div.textContent = `> ${msg}`;
-           consoleLog.prepend(div);
-           console.log(msg);
-       }
+        function log(msg) {
+            const div = document.createElement('div');
+            div.textContent = `> ${msg}`;
+            consoleLog.prepend(div);
+            console.log(msg);
+        }
 
-       // Module Konfiguration für Emscripten
-       window.Module = {
-           canvas: canvas,
-           arguments: ['-game', 'portal', '-windowed', '-w', '1280', '-h', '720', '-novid'],
-           
-           setStatus: (text) => {
-               if(text) loadingStatus.textContent = text;
-           },
-           
-           onRuntimeInitialized: () => {
-               loadingStatus.textContent = "Engine Runtime Ready!";
-               loadingStatus.className = "text-green-400 font-bold mb-4";
-               checkWasmExports();
-           }
-       };
+        // Module Konfiguration für Emscripten
+        window.Module = {
+            canvas: canvas,
+            arguments: ['-game', 'portal', '-windowed', '-w', '1280', '-h', '720', '-novid'],
+            
+            setStatus: (text) => {
+                if(text) loadingStatus.textContent = text;
+            },
+            
+            onRuntimeInitialized: () => {
+                loadingStatus.textContent = "Engine Runtime Ready!";
+                loadingStatus.className = "text-green-400 font-bold mb-4";
+                checkWasmExports();
+            }
+        };
 
-       // Prüft, ob die C++ Hooks erfolgreich ins JS exportiert wurden
-       function checkWasmExports() {
-           const requiredHooks = [
-               '_Engine_DisableAutoRender',
-               '_Engine_RenderSingleFrame',
-               '_Engine_SetCameraMatrix',
-               '_malloc' // Wichtig für Speicherallokation
-           ];
+        // Prüft, ob die C++ Hooks erfolgreich ins JS exportiert wurden
+        function checkWasmExports() {
+            const requiredHooks = [
+                '_Engine_DisableAutoRender',
+                '_Engine_RenderSingleFrame',
+                '_Engine_SetCameraMatrix',
+                '_malloc' // Wichtig für Speicherallokation
+            ];
 
-           exportList.innerHTML = '';
-           let allPassed = true;
+            exportList.innerHTML = '';
+            let allPassed = true;
 
-           requiredHooks.forEach(hook => {
-               const isPresent = typeof Module[hook] === 'function';
-               if (!isPresent) allPassed = false;
-               
-               exportList.innerHTML += `
-                   <div class="hook-status">
-                       <span>${hook}</span>
-                       <span class="${isPresent ? 'status-ok' : 'status-fail'}">
-                           ${isPresent ? 'FOUND' : 'MISSING'}
-                       </span>
-                   </div>
-               `;
-           });
+            requiredHooks.forEach(hook => {
+                const isPresent = typeof Module[hook] === 'function';
+                if (!isPresent) allPassed = false;
+                
+                exportList.innerHTML += `
+                    <div class="hook-status">
+                        <span>${hook}</span>
+                        <span class="${isPresent ? 'status-ok' : 'status-fail'}">
+                            ${isPresent ? 'FOUND' : 'MISSING'}
+                        </span>
+                    </div>
+                `;
+            });
 
-           if (allPassed) {
-               log("Alle C++ Hooks im WASM gefunden!");
-               btnTestBridge.disabled = false;
-               initWebXR();
-           } else {
-               log("FEHLER: Nicht alle C++ Hooks wurden exportiert. Ist MAIN_MODULE=1 aktiv?");
-           }
-       }
+            if (allPassed) {
+                log("Alle C++ Hooks im WASM gefunden!");
+                btnTestBridge.disabled = false;
+                initWebXR();
+            } else {
+                log("FEHLER: Nicht alle C++ Hooks wurden exportiert. Ist MAIN_MODULE=1 aktiv?");
+            }
+        }
 
-       // Initialisiere die XR-Klasse
-       async function initWebXR() {
-           webxr = new HL2WebXR(canvas.getContext('webgl2', { xrCompatible: true }), canvas);
-           const isReady = await webxr.init();
-           if (isReady) {
-               btnEnterVR.disabled = false;
-               log("WebXR Wrapper initialisiert.");
-           }
-       }
+        // Initialisiere die XR-Klasse
+        async function initWebXR() {
+            webxr = new HL2WebXR(canvas.getContext('webgl2', { xrCompatible: true }), canvas);
+            const isReady = await webxr.init();
+            if (isReady) {
+                btnEnterVR.disabled = false;
+                log("WebXR Wrapper initialisiert.");
+            }
+        }
 
-       // UI Event Listener
-       btnTestBridge.addEventListener('click', () => {
-           log("Führe C++ Bridge Test aus...");
-           try {
-               Module._Engine_DisableAutoRender();
-               log("Erfolg: _Engine_DisableAutoRender ausgeführt. Engine sollte jetzt pausiert sein.");
-               btnTestBridge.disabled = true;
-           } catch (e) {
-               log(`Crash beim Aufruf: ${e.message}`);
-           }
-       });
+        // UI Event Listener
+        btnTestBridge.addEventListener('click', () => {
+            log("Führe C++ Bridge Test aus...");
+            try {
+                Module._Engine_DisableAutoRender();
+                log("Erfolg: _Engine_DisableAutoRender ausgeführt. Engine sollte jetzt pausiert sein.");
+                btnTestBridge.disabled = true;
+            } catch (e) {
+                log(`Crash beim Aufruf: ${e.message}`);
+            }
+        });
 
-       btnEnterVR.addEventListener('click', () => {
-           if(webxr) webxr.enterVR();
-       });
+        btnEnterVR.addEventListener('click', () => {
+            if(webxr) webxr.enterVR();
+        });
 
-       // Lade die von Build #88 kompilierte Engine
-       log("Lade hl2_launcher.js...");
-       const script = document.createElement('script');
-       script.src = 'hl2_launcher.js';
-       document.body.appendChild(script);
+        // Lade die von Build #88 kompilierte Engine
+        log("Lade hl2_launcher.js...");
+        const script = document.createElement('script');
+        script.src = 'hl2_launcher.js';
+        document.body.appendChild(script);
 
-   </script>
+    </script>
 </body>
 </html>
+
+
+```

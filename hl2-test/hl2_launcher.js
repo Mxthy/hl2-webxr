@@ -256,7 +256,8 @@ setTimeout(function() {
 
 
 // === ASSET CONFIG: Single immutable source for chunk URLs ===
-const ASSET_ORIGIN = 'https://hl2-assets-proxy.hl2-webxr.workers.dev';
+const ASSET_ORIGIN = '';
+// PATCHED: Use local server for all assets (Build #88 test)
 const CHUNK_PREFIX = ASSET_ORIGIN + '/chunks';
 
 function chunkUrl(mapName) {
@@ -301,7 +302,7 @@ async function fetchChunk(mapName) {
 var _orig_locateFile = Module.locateFile;
 Module.locateFile = function(path, prefix) {
   if (path.endsWith('.wasm') || path.endsWith('.data')) {
-    return ASSET_ORIGIN + '/hl2-runtime/' + path;
+    return path;
   }
   if (_orig_locateFile) return _orig_locateFile(path, prefix);
   return prefix + path;
