@@ -21,9 +21,15 @@ bool g_bWebXRManualLoop = false;
 // 4x4 view matrix (column-major, as provided by WebXR XRView.transform.matrix)
 float g_WebXRViewMatrix[16] = {0};
 
+// 4x4 projection matrix (column-major, from XRView.projectionMatrix)
+float g_WebXRProjectionMatrix[16] = {0};
+
 // When true, ComputeViewMatrix() in gl_rmain.cpp uses g_WebXRViewMatrix
 // instead of computing from origin+angles
 bool g_bWebXRMatrixActive = false;
+
+// When true, the projection matrix is also overridden
+bool g_bWebXRProjectionActive = false;
 
 // ============================================================================
 // Step 1: DisableAutoRender — stop the Emscripten-managed 2D main loop
@@ -60,9 +66,17 @@ extern "C" void Engine_SetCameraMatrix(float* mat) {
     g_bWebXRMatrixActive = true;
 }
 
-// Reset the override (return to engine-controlled camera)
+// Set the projection matrix override (from XRView.projectionMatrix)
+extern "C" void Engine_SetProjectionMatrix(float* mat) {
+    memcpy(g_WebXRProjectionMatrix, mat, 16 * sizeof(float));
+    g_bWebXRProjectionActive = true;
+}
+
+// Reset the overrides (return to engine-controlled camera + projection)
 extern "C" void Engine_ResetCameraMatrix() {
     g_bWebXRMatrixActive = false;
+    g_bWebXRProjectionActive = false;
+    g_bWebXRManualLoop = false;
 }
 
 #endif // __EMSCRIPTEN__

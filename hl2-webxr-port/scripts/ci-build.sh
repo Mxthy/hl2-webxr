@@ -370,6 +370,14 @@ POST_JS_EOF
     log "  patch: post.js shader+asset loading with preflight + /MOD/ IDBFS mount"
   fi
 
+
+  # WebXR Phase 2: Patch gl_rmain.cpp — ComputeViewMatrix override
+  local gl_rmain="$ENGINE_DIR/engine/gl_rmain.cpp"
+  if [ -f "$gl_rmain" ]; then
+    python3 "$REPO_ROOT/scripts/webxr_glmain_patch.py" "$gl_rmain" || true
+    log "  patch: gl_rmain.cpp WebXR matrix override"
+  fi
+
   checkpoint_mark "source_patches"
 }
 
@@ -536,6 +544,12 @@ emcc_link() {
     log "webxr_bridge.cpp present but not compiled — clearing emcc_link checkpoint"
     sed -i '/emcc_link/d' "$checkpoint_file" 2>/dev/null || true
   fi
+  # Force re-link if webxr_hooks.cpp exists but was never compiled
+  if [ -f "$REPO_ROOT/emscripten/webxr_hooks.cpp" ] && [ ! -f "$ENGINE_DIR/build/webxr_hooks.o" ]; then
+    log "webxr_hooks.cpp present but not compiled — clearing emcc_link checkpoint"
+    sed -i '/emcc_link/d' "$checkpoint_file" 2>/dev/null || true
+  fi
+
   checkpoint_done "emcc_link" && { log "emcc_link: skip"; return; }
   emsdk_env
   cd "$ENGINE_DIR"
@@ -583,6 +597,19 @@ emcc_link() {
     log "  webxr_bridge.cpp not found, skipping (Phase 2 bridge)"
   fi
 
+
+  # WebXR Phase 2: Engine hooks (Engine_DisableAutoRender, RenderSingleFrame, SetCameraMatrix)
+  local webxr_hooks_src="$REPO_ROOT/emscripten/webxr_hooks.cpp"
+  local webxr_hooks_obj="$ENGINE_DIR/build/webxr_hooks.o"
+  if [ -f "$webxr_hooks_src" ]; then
+    log "Compiling webxr_hooks.cpp..."
+    emcc -O0 -fPIC -D__EMSCRIPTEN__ -c "$webxr_hooks_src" -o "$webxr_hooks_obj"
+    log "  webxr_hooks compiled: $webxr_hooks_obj"
+  else
+    webxr_hooks_obj=""
+    log "  webxr_hooks.cpp not found, skipping (Phase 2 engine hooks)"
+  fi
+
   log "Running: emcc link → hl2_launcher.html ..."
   emcc \
     -sUSE_BZIP2=1 -sUSE_SDL=2 -sUSE_FREETYPE=1 -sUSE_LIBJPEG=1 \
@@ -607,6 +634,7 @@ emcc_link() {
     ${stubs_obj:+"$stubs_obj"} \
     ${ivp_vtable_obj:+"$ivp_vtable_obj"} \
     ${webxr_bridge_obj:+"$webxr_bridge_obj"} \
+    ${webxr_hooks_obj:+"$webxr_hooks_obj"} \
     $link_libs \
     -o build/launcher_main/hl2_launcher.html \
     2>&1 | tee "$LOG_DIR/emcc_link.log"
