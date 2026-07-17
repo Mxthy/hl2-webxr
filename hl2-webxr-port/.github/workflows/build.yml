@@ -7,6 +7,12 @@ on:
       - 'scripts/ci-build.sh'
       - '.github/workflows/build.yml'
       - 'scripts/gl_stubs_patch.py'
+      - 'scripts/webxr_glmain_patch.py'
+      - 'emscripten/webxr_bridge.cpp'
+      - 'emscripten/webxr_hooks.cpp'
+      - 'emscripten/pre.js'
+      - 'emscripten/post.js'
+      - 'emscripten/index.html'
   workflow_dispatch:
     inputs:
       buildtype:
@@ -43,6 +49,7 @@ jobs:
         with:
           sparse-checkout: |
             scripts/
+            emscripten/
             .github/
 
       - name: Cache emsdk
@@ -178,7 +185,7 @@ jobs:
           echo "| Key | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|---|---|" >> $GITHUB_STEP_SUMMARY
           echo "| Build Type | \`$BUILDTYPE\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| emsdk commit | \`$EMSDK_COMMIT\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| emsdk commit | \`$$EMSDK_COMMIT\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Run ID | \`${{ github.run_id }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Output files" >> $GITHUB_STEP_SUMMARY
