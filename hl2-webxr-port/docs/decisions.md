@@ -2,7 +2,7 @@
 ## HL2 WebGL2/WebXR Porting Manager
 
 Generated: 2026-07-10
-Zuletzt aktualisiert: 2026-07-10 19:00 (Europe/Berlin)
+Zuletzt aktualisiert: 2026-07-17 (Europe/Berlin)
 
 ---
 
@@ -107,23 +107,98 @@ nicht ein hypothetisch rekonstruierter Build-Prozess.
 
 ---
 
+### DEC-FIXED-007 — CI Sparse-Checkout muss alle benötigten Verzeichnisse enthalten
+**Status:** FESTGELEGT
+**Datum:** 2026-07-17
+
+**Entscheidung:**
+Die `sparse-checkout` in `.github/workflows/build.yml` MUSS alle Verzeichnisse enthalten,
+deren Dateien im `ci-build.sh` referenziert werden. Aktuell: `scripts/`, `emscripten/`, `.github/`.
+
+**Begründung:**
+Build #87 (commit 7e8b2b52) war "successful" aber `webxr_bridge.cpp` und `webxr_hooks.cpp`
+wurden als "not found, skipping" übersprungen — obwohl die Dateien im GitHub Repo existierten.
+Root cause: `sparse-checkout` enthielt nur `scripts/` und `.github/`, nicht `emscripten/`.
+Der CI-Runner hatte die Dateien schlicht nicht heruntergeladen. Die Builds liefen "erfolgreich"
+durch, weil alle Checks optional waren (`if [ -f ... ]` → "not found, skipping").
+
+**Symptom:**
+```
+[ci-build]   webxr_bridge.cpp not found, skipping (Phase 2 bridge)
+[ci-build]   webxr_hooks.cpp not found, skipping (Phase 2 engine hooks)
+```
+
+**Fix:**
+```yaml
+sparse-checkout: |
+  scripts/
+  emscripten/
+  .github/
+```
+
+Außerdem wurden `emscripten/webxr_bridge.cpp`, `emscripten/webxr_hooks.cpp`,
+`emscripten/pre.js`, `emscripten/post.js`, `emscripten/index.html` und
+`scripts/webxr_glmain_patch.py` zu den `paths:`-Triggern hinzugefügt.
+
+**Impact:** Jede neue Datei, die von `ci-build.sh` referenziert wird, MUSS in einem
+Verzeichnis stehen, das in der `sparse-checkout` aufgeführt ist. Bei neuen Verzeichnissen
+diese Liste zwingend erweitern.
+
+---
+
+### DEC-FIXED-008 — WebXR Phase 2: Engine Hooks via global state + ComputeViewMatrix override
+**Status:** FESTGELEGT
+**Datum:** 2026-07-17
+
+**Entscheidung:**
+WebXR Camera-Override erfolgt über globale Variablen in `webxr_hooks.cpp`
+(`g_WebXRViewMatrix[16]`, `g_bWebXRMatrixActive`) und einen Patch in
+`ComputeViewMatrix()` (gl_rmain.cpp), der bei aktivem Override die Matrix
+aus dem globalen State kopiert statt aus Origin+Angles zu berechnen.
+
+**Begründung:**
+- Minimal-invasiv: Nur eine Funktion (`ComputeViewMatrix`) wird gepatched
+- Keine Änderung an `CViewSetup` oder der View-Pipeline nötig
+- Die globale State-Variable kann von JS via `Module._Engine_SetCameraMatrix(ptr)` gesetzt werden
+- Column-major (WebXR) → Row-major (VMatrix m[row][col]) Konvertierung: `m[r][c] = src[c*4+r]`
+- Für die Projektionsmatrix existiert bereits `m_bViewToProjectionOverride` in `CViewSetup`
+- `em_loop_iteration()` (sys_dll2.cpp:1502) wird für manuelle Frame-Rendering verwendet
+
+**Architektur:**
+```
+JS (xr_wrapper.js)
+  → Module._malloc(64) → HEAPF32.set(matrix) → Module._SetCameraMatrices(viewPtr, projPtr)
+  → Module._RenderXRFrame() (pro Auge)
+
+C++ (webxr_bridge.cpp — KEEPALIVE exports)
+  → DisableAutoRenderLoop() → Engine_DisableAutoRender()
+  → SetCameraMatrices(view, proj) → Engine_SetCameraMatrix(view) + Engine_SetProjectionMatrix(proj)
+  → RenderXRFrame() → Engine_RenderSingleFrame()
+
+C++ (webxr_hooks.cpp — engine integration)
+  → Engine_DisableAutoRender() → emscripten_cancel_main_loop()
+  → Engine_RenderSingleFrame() → em_loop_iteration()
+  → Engine_SetCameraMatrix(float*) → memcpy to g_WebXRViewMatrix[16], set g_bWebXRMatrixActive=true
+
+C++ (gl_rmain.cpp — patched by webxr_glmain_patch.py)
+  → ComputeViewMatrix() checks g_bWebXRMatrixActive first
+  → If active: copy g_WebXRViewMatrix (column-major) into VMatrix (row-major)
+  → If inactive: original angle-based computation
+```
+
+**Impact:** Build #88 (commit 59a8fc14) — erstmals beide Hooks + Bridge kompiliert und gelinkt.
+
+---
+
 ## Ausstehende Entscheidungen
 
 ### DEC-001 — Asset-Quelle: Build 2153 vs steam_legacy
-**Status:** AUSSTEHEND — abhängig von T-006 (Compatibility Test)
-**Entscheider:** Projekt-Lead
-**Deadline:** Nach Abschluss T-006
+**Status:** GELÖST — Build 2153 als primäre Quelle bestätigt (CI Build #65+)
+**Datum:** 2026-07-15
 
-**Option A:** Build 2153 (ARC-01)
-- Pro: Sofort verfügbar, kein Steam-Account nötig
-- Contra: Kompatibilität mit nillerusr UNSICHER
-- Risiko erhöht: weliveinhell nutzt VPK-Format (Steam-Rip), nicht GCF
-
-**Option B:** Steam legacy-Branch
-- Pro: Kompatibilität gesichert (slqnt nutzt dies)
-- Contra: Steam-Account + HL2-Kauf erforderlich
-
-**Trigger:** T-006 Compatibility Test Ergebnis
+**Entscheidung:**
+Build 2153 (Retail) wird als primäre Asset-Quelle verwendet. Direkt extrahierbar,
+kein HLExtract/Wine nötig. CI-Pipeline lädt von Archive.org und cacht extrahierte Assets.
 
 ---
 
@@ -144,27 +219,22 @@ nicht ein hypothetisch rekonstruierter Build-Prozess.
 ---
 
 ### DEC-003 — Threading: Pthreads aktivieren?
-**Status:** AUSSTEHEND
-**Entscheider:** Entwickler
+**Status:** GELÖST — Pthreads + SHARED_MEMORY aktiviert
+**Datum:** 2026-07-11
 
-**Kontext:**
-Pthreads (SHARED_MEMORY) erfordert COOP/COEP HTTP-Header auf dem Server.
-Erhöht Komplexität des Deployments erheblich.
-
-**Optionen:**
-- A: Single-threaded (kein SHARED_MEMORY) — einfacher, möglicherweise langsamer
-- B: Multi-threaded (SHARED_MEMORY + Pthreads) — komplexer, bessere Performance
-
-**Trigger:** Performance-Profiling in Phase 1.6
+**Entscheidung:**
+Multi-threaded (SHARED_MEMORY + Pthreads) mit PROXY_TO_PTHREAD und OffscreenCanvas.
+COOP/COEP-Header sind Pflicht für alle Deployments.
 
 ---
 
 ### DEC-004 — WebXR Runtime (Phase 3)
-**Status:** AUSSTEHEND — Phase 3
-**Optionen:**
-- WebXR Device API (Browser-nativ)
-- Polyfill für ältere Browser
-- OpenVR-to-WebXR-Bridge
+**Status:** GELÖST — WebXR Device API (Browser-nativ)
+**Datum:** 2026-07-15
+
+**Entscheidung:**
+Direkte WebXR Device API ohne Framework-Overhead. SharedArrayBuffer-Bridge zwischen
+Main-Thread (XRSession) und Engine-Worker (OffscreenCanvas).
 
 ---
 
@@ -178,7 +248,9 @@ Erhöht Komplexität des Deployments erheblich.
 | DEC-FIXED-004 | Crouch auf C | FESTGELEGT | 2026-07-10 |
 | DEC-FIXED-005 | nillerusr als Engine-Basis | FESTGELEGT | 2026-07-10 |
 | DEC-FIXED-006 | weliveinhell als Build-Referenz | FESTGELEGT | 2026-07-10 |
-| DEC-001 | Asset-Quelle | AUSSTEHEND | — |
-| DEC-002 | Audio-System | AUSSTEHEND (SDL2-Hinweis) | — |
-| DEC-003 | Threading | AUSSTEHEND | — |
-| DEC-004 | WebXR Runtime | AUSSTEHEND (Phase 3) | — |
+| DEC-FIXED-007 | CI Sparse-Checkout completeness | FESTGELEGT | 2026-07-17 |
+| DEC-FIXED-008 | WebXR Phase 2 Engine Hooks Architecture | FESTGELEGT | 2026-07-17 |
+| DEC-001 | Asset-Quelle | GELÖST (Build 2153) | 2026-07-15 |
+| DEC-002 | Audio-System | AUSSTEHEND | — |
+| DEC-003 | Threading | GELÖST (Pthreads) | 2026-07-11 |
+| DEC-004 | WebXR Runtime | GELÖST (WebXR Device API) | 2026-07-15 |
