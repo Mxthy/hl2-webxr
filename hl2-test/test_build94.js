@@ -16,8 +16,8 @@ const { chromium } = require('playwright');
   page.on('console', msg => allLogs.push(`[${msg.type()}] ${msg.text()}`));
   page.on('pageerror', err => allLogs.push(`[ERROR] ${err.message}`));
 
-  console.log('=== Build #94 Test — Navigating to localhost:8086 ===');
-  await page.goto('http://localhost:8086/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
+  console.log('=== Build #94 Test — Navigating to localhost:8087 ===');
+  await page.goto('http://localhost:8087/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
   
   console.log('Waiting 50s for engine init...');
   await page.waitForTimeout(50000);
