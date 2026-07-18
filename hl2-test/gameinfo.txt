@@ -1,0 +1,23 @@
+"GameInfo"
+{
+	game	"HL2"
+	title	"Half-Life 2"
+	type	singleplayer_only
+	supports_hd "1"
+	developer	"Valve"
+	developer_url	"http://www.valvesoftware.com"
+	manual_url	"http://www.valvesoftware.com"
+	icon	"hl2"
+	
+	FileSystem
+	{
+		SteamAppId	2153
+		ToolsAppId	211
+		SearchPaths
+		{
+			Game	|gameinfo_path|.
+			Game	hl2
+			Platform	platform
+		}
+	}
+}

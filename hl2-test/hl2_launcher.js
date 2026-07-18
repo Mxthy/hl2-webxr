@@ -2007,9 +2007,12 @@ var PThread = {
   },
   receiveObjectTransfer(data) {
     if (typeof GL != "undefined") {
+      console.log('[WORKER-INIT] offscreenCanvases received: ' + JSON.stringify(Object.keys(data.offscreenCanvases || {})));
+      console.log('[WORKER-INIT] moduleCanvasId: ' + data.moduleCanvasId);
       Object.assign(GL.offscreenCanvases, data.offscreenCanvases);
       if (!Module["canvas"] && data.moduleCanvasId && GL.offscreenCanvases[data.moduleCanvasId]) {
         Module["canvas"] = GL.offscreenCanvases[data.moduleCanvasId].offscreenCanvas;
+        console.log('[WORKER-INIT] Module.canvas set to OffscreenCanvas: ' + Module["canvas"]?.id);
         Module["canvas"].id = data.moduleCanvasId;
       }
     }
@@ -6580,7 +6583,7 @@ function ___pthread_create_js(pthread_ptr, attr, startRoutine, arg) {
   // Proxied canvases string pointer -1/MAX_PTR is used as a special token to
   // fetch whatever canvases were passed to build in
   // -sOFFSCREENCANVASES_TO_PTHREAD= command line.
-  transferredCanvasNames = "game-canvas";
+  transferredCanvasNames = ""; // Don't transfer via pthread_create — let do_create_context handle it
   if (!__allowCanvasTransfer && !(typeof window !== 'undefined' && window.__allowCanvasTransfer)) { transferredCanvasNames = ""; }
   transferredCanvasNames = transferredCanvasNames ? transferredCanvasNames.split(",") : [];
   var offscreenCanvases = {};
@@ -6600,6 +6603,7 @@ function ___pthread_create_js(pthread_ptr, attr, startRoutine, arg) {
         name = Module["canvas"].id;
       }
       assert(typeof GL == "object", "OFFSCREENCANVAS_SUPPORT assumes GL is in use (you can force-include it with '-sDEFAULT_LIBRARY_FUNCS_TO_INCLUDE=$GL')");
+      console.log('[GL] Checking GL.offscreenCanvases[' + name + ']: ' + (!!GL.offscreenCanvases[name]));
       if (GL.offscreenCanvases[name]) {
         offscreenCanvasInfo = GL.offscreenCanvases[name];
         GL.offscreenCanvases[name] = null;
@@ -6613,15 +6617,24 @@ function ___pthread_create_js(pthread_ptr, attr, startRoutine, arg) {
           break;
         }
         if (canvas.controlTransferredOffscreen) {
-          console.warn(`[canvas] "${name}" already transferred — skipping (OK for PROXY_TO_PTHREAD)`);
-          // Don't error — canvas was already transferred by SDL/GL init
-          // The worker can access it via GL.offscreenCanvases
+          console.warn(`[canvas] "${name}" already transferred — reusing existing OffscreenCanvas`);
+          // Canvas was already transferred by SDL/GL init.
+          // Reuse the existing OffscreenCanvas and pass it to the worker.
           if (GL.offscreenCanvases[name]) {
-            offscreenCanvasInfo = GL.offscreenCanvases[name];
+            var existing = GL.offscreenCanvases[name];
+            // Map from SDL's {canvas: ...} format to pthread's {offscreenCanvas: ...} format
+            offscreenCanvasInfo = {
+              offscreenCanvas: existing.canvas || existing.offscreenCanvas,
+              canvasSharedPtr: existing.canvasSharedPtr,
+              id: name
+            };
+            // Don't null GL.offscreenCanvases[name] — let worker use it
+          } else {
+            // OffscreenCanvas not found — just skip
+            console.warn(`[canvas] "${name}" OffscreenCanvas not in GL.offscreenCanvases — worker won't have canvas`);
           }
-          continue;
-        }
-        if (canvas.transferControlToOffscreen) {
+          // Don't break — let the code continue to add offscreenCanvasInfo to transferList
+        } else if (canvas.transferControlToOffscreen) {
           // Create a shared information block in heap so that we can control
           // the canvas size from any thread.
           if (!canvas.canvasSharedPtr) {
@@ -6643,6 +6656,7 @@ function ___pthread_create_js(pthread_ptr, attr, startRoutine, arg) {
           // this Canvas to be controlled via an OffscreenCanvas (there is no
           // way to undo this in the spec)
           canvas.controlTransferredOffscreen = true;
+          console.log('[pthread] Canvas transferred successfully: ' + canvas.id + ' → OffscreenCanvas');
         } else {
           err(`pthread_create: cannot transfer control of canvas "${name}" to pthread, because current browser does not support OffscreenCanvas!`);
           // If building with OFFSCREEN_FRAMEBUFFER=1 mode, we don't need to
@@ -6676,6 +6690,7 @@ function ___pthread_create_js(pthread_ptr, attr, startRoutine, arg) {
     // pthread ptr to the thread that owns this canvas.
     GROWABLE_HEAP_U32()[(((canvas.canvasSharedPtr) + (8)) >>> 2) >>> 0] = pthread_ptr;
   }
+  console.log('[pthread] threadParams: moduleCanvasId=' + moduleCanvasId + ' offscreenCanvases=' + JSON.stringify(Object.keys(offscreenCanvases)) + ' transferList=' + transferList.length);
   var threadParams = {
     startRoutine,
     pthread_ptr,
@@ -12659,6 +12674,7 @@ var findCanvasEventTarget = target => {
 
 var setCanvasElementSizeCallingThread = (target, width, height) => {
   var canvas = findCanvasEventTarget(target);
+  console.log('[GL] findCanvasEventTarget result: ' + (canvas ? (canvas.id || 'OffscreenCanvas') : 'NULL/FAILED'));
   if (!canvas) return -4;
   if (canvas.canvasSharedPtr) {
     // N.B. We hold the canvasSharedPtr info structure as the authoritative source for specifying the size of a canvas
@@ -24556,6 +24572,7 @@ _emscripten_supports_offscreencanvas.sig = "i";
 var webglPowerPreferences = [ "default", "low-power", "high-performance" ];
 
 /** @suppress {duplicate } */ function _emscripten_webgl_do_create_context(target, attributes) {
+  console.log('[GL] do_create_context: target=' + target + ' isWorker=' + (typeof document === 'undefined') + ' hasCanvas=' + (!!Module['canvas']));
   target >>>= 0;
   attributes >>>= 0;
   assert(attributes);
@@ -24580,12 +24597,29 @@ var webglPowerPreferences = [ "default", "low-power", "high-performance" ];
   };
   var canvas = findCanvasEventTarget(target);
   if (!canvas) {
-    return 0;
+    // Fallback: create an OffscreenCanvas for rendering in worker
+    console.log('[GL] Canvas not found — creating fallback OffscreenCanvas (1280x800)');
+    try {
+      canvas = new OffscreenCanvas(1280, 800);
+      canvas.id = 'game-canvas';
+      // Register in GL.offscreenCanvases so findCanvasEventTarget can find it later
+      GL.offscreenCanvases['game-canvas'] = { canvas: canvas, canvasSharedPtr: _malloc(12), id: 'game-canvas' };
+      GROWABLE_HEAP_I32()[((GL.offscreenCanvases['game-canvas'].canvasSharedPtr) >>> 2) >>> 0] = 1280;
+      GROWABLE_HEAP_I32()[(((GL.offscreenCanvases['game-canvas'].canvasSharedPtr) + (4)) >>> 2) >>> 0] = 800;
+      GROWABLE_HEAP_U32()[(((GL.offscreenCanvases['game-canvas'].canvasSharedPtr) + (8)) >>> 2) >>> 0] = 0;
+      // Also set Module.canvas
+      if (!Module['canvas']) Module['canvas'] = canvas;
+    } catch(e) {
+      console.log('[GL] Fallback OffscreenCanvas failed: ' + e.message);
+      return 0;
+    }
   }
   if (canvas.offscreenCanvas) canvas = canvas.offscreenCanvas;
+  console.log('[GL] explicitSwapControl=' + contextAttributes.explicitSwapControl + ' majorVer=' + contextAttributes.majorVersion + ' minorVer=' + contextAttributes.minorVersion);
   if (contextAttributes.explicitSwapControl) {
     var supportsOffscreenCanvas = canvas.transferControlToOffscreen || (_emscripten_supports_offscreencanvas() && canvas instanceof OffscreenCanvas);
     if (!supportsOffscreenCanvas) {
+      console.log('[GL] FAIL: OffscreenCanvas not supported!');
       return 0;
     }
     if (canvas.transferControlToOffscreen) {
@@ -24602,7 +24636,9 @@ var webglPowerPreferences = [ "default", "low-power", "high-performance" ];
       canvas = GL.offscreenCanvases[canvas.id];
     }
   }
+  console.log('[GL] calling GL.createContext with canvas=' + (canvas ? (canvas.constructor?.name || 'unknown') : 'null'));
   var contextHandle = GL.createContext(canvas, contextAttributes);
+  console.log('[GL] createContext returned: ' + contextHandle + ' (0=fail)');
   return contextHandle;
 }
 
@@ -24613,6 +24649,8 @@ var _emscripten_webgl_create_context = _emscripten_webgl_do_create_context;
 _emscripten_webgl_create_context.sig = "ppp";
 
 function _emscripten_webgl_make_context_current(contextHandle) {
+    console.log('[GL] _emscripten_webgl_make_context_current called');
+
   contextHandle >>>= 0;
   var success = GL.makeContextCurrent(contextHandle);
   return success ? 0 : -5;
@@ -34455,6 +34493,22 @@ run();
     } else {
       console.log("[hl2] Shader preflight OK ✓");
     }
+    // Fix shader case sensitivity (MEMFS is case-sensitive)
+    try {
+      var fxcDir = "/hl2/shaders/fxc";
+      var shaderFiles = FS.readdir(fxcDir);
+      var caseFixed = 0;
+      for (var si = 0; si < shaderFiles.length; si++) {
+        var fname = shaderFiles[si];
+        if (fname === '.' || fname === '..') continue;
+        var lower = fname.toLowerCase();
+        if (lower !== fname && !FS.analyzePath(fxcDir + '/' + lower).exists) {
+          FS.symlink(fxcDir + '/' + fname, fxcDir + '/' + lower);
+          caseFixed++;
+        }
+      }
+      console.log("[hl2] Fixed " + caseFixed + " shader filename cases");
+    } catch(e) { console.warn("[hl2] Shader case fix error: " + e); }
     // Now load background1 + materials in parallel
     return Promise.all([ dataLoader.loadMap("background1"), dataLoader.loadMap("materials") ]);
   }).then(function() {
@@ -34492,6 +34546,10 @@ run();
     fixCase("/hl2/materials", "dev");
     fixCase("/hl2/materials", "engine");
     fixCase("/hl2/materials", "effects");
+    // Create gameinfo.txt (required by engine)
+    var gameinfoContent = '"GameInfo"\n{\n  game  "HL2"\n  title  "Half-Life 2"\n  type  singleplayer_only\n  developer  "Valve"\n  icon  "hl2"\n  FileSystem\n  {\n    SteamAppId  2153\n    ToolsAppId  211\n    SearchPaths\n    {\n      Game  |gameinfo_path|.\n      Game  hl2\n      Platform  platform\n    }\n  }\n}';
+    FS.writeFile('/hl2/gameinfo.txt', gameinfoContent);
+    console.log("[hl2] gameinfo.txt created in MEMFS");
     console.log("[hl2] All chunks loaded, starting engine...");
     removeRunDependency("load_game_data");
   }).catch(function(err) {
