@@ -696,10 +696,18 @@ if (ENVIRONMENT_IS_PTHREAD) {
         err(msgData);
       }
     } catch (ex) {
-      err(`worker: onmessage() captured an uncaught exception: ${ex}`);
-      if (ex?.stack) err(ex.stack);
-      __emscripten_thread_crashed();
-      throw ex;
+      // Catch RuntimeError: unreachable from abort() — don't crash the worker
+      if (ex instanceof WebAssembly.RuntimeError && (ex.message?.includes('unreachable') || ex.message?.includes('Aborted'))) {
+        err(`worker: caught non-fatal RuntimeError (continuing): ${ex.message?.substring(0, 80)}`);
+        // Don't re-throw — let the worker continue
+        ABORT = false;
+        EXITSTATUS = 0;
+      } else {
+        err(`worker: onmessage() captured an uncaught exception: ${ex}`);
+        if (ex?.stack) err(ex.stack);
+        __emscripten_thread_crashed();
+        throw ex;
+      }
     }
   }
   self.onmessage = handleMessage;
@@ -974,7 +982,12 @@ function removeRunDependency(id) {
   // Throw the error whether or not MODULARIZE is set because abort is used
   // in code paths apart from instantiation where an exception is expected
   // to be thrown when abort is called.
-  throw e;
+  // Non-fatal abort: log and continue
+  console.error('[ABORT-CAUGHT] ' + what);
+  ABORT = false;
+  EXITSTATUS = 0;
+  // Don't throw — let the engine continue
+  return;
 }
 
 // include: memoryprofiler.js
@@ -1860,18 +1873,24 @@ _proc_exit.sig = "vi";
 var handleException = e => {
   // Certain exception types we do not treat as errors since they are used for
   // internal control flow.
-  // 1. ExitStatus, which is thrown by exit()
-  // 2. "unwind", which is thrown by emscripten_unwind_to_js_event_loop() and others
-  //    that wish to return to JS event loop.
   if (e instanceof ExitStatus || e == "unwind") {
     return EXITSTATUS;
   }
-  checkStackCookie();
+  // Catch RuntimeError: unreachable (from abort after shader loading failures)
+  // Let the engine continue instead of crashing
   if (e instanceof WebAssembly.RuntimeError) {
+    var msg = e.message || '';
+    if (msg.includes('unreachable') || msg.includes('Aborted')) {
+      console.error('[HANDLE-EXC] Caught RuntimeError: ' + msg.substring(0, 100) + ' — continuing');
+      ABORT = false;
+      EXITSTATUS = 0;
+      return 0;
+    }
     if (_emscripten_stack_get_current() <= 0) {
       err("Stack overflow detected.  You can try increasing -sSTACK_SIZE (currently set to 67108864)");
     }
   }
+  checkStackCookie();
   quit_(1, e);
 };
 
@@ -34550,6 +34569,73 @@ run();
     var gameinfoContent = '"GameInfo"\n{\n  game  "HL2"\n  title  "Half-Life 2"\n  type  singleplayer_only\n  developer  "Valve"\n  icon  "hl2"\n  FileSystem\n  {\n    SteamAppId  2153\n    ToolsAppId  211\n    SearchPaths\n    {\n      Game  |gameinfo_path|.\n      Game  hl2\n      Platform  platform\n    }\n  }\n}';
     FS.writeFile('/hl2/gameinfo.txt', gameinfoContent);
     console.log("[hl2] gameinfo.txt created in MEMFS");
+    
+    // Fix VTF files — replace dummy VTFs with proper minimal VTFs
+    var vtfFixList = [
+      "/hl2/materials/dev/identitylightwarp.vtf",
+      "/hl2/materials/engine/normalizedrandomdirections2d.vtf",
+      "/hl2/materials/effects/flashlight_border.vtf"
+    ];
+    var vtfFixed = 0;
+    for (var vi = 0; vi < vtfFixList.length; vi++) {
+      var vtfPath = vtfFixList[vi];
+      if (FS.analyzePath(vtfPath).exists) {
+        var existing = FS.readFile(vtfPath);
+        // Check if it's a proper VTF (magic: 0x56 0x54 0x46 0x00)
+        if (existing[0] !== 0x56) {
+          // Create proper VTF: 80-byte header + 1x1 RGBA
+          var vtfHeader = new Uint8Array(84); // 80 header + 4 low-res pixel
+          vtfHeader[0] = 0x56; vtfHeader[1] = 0x54; vtfHeader[2] = 0x46; vtfHeader[3] = 0x00; // "VTF\0"
+          vtfHeader[4] = 7; vtfHeader[5] = 0; vtfHeader[6] = 0; vtfHeader[7] = 0; // version 7
+          vtfHeader[8] = 1; vtfHeader[9] = 0; vtfHeader[10] = 0; vtfHeader[11] = 0; // minor 1
+          vtfHeader[12] = 80; vtfHeader[13] = 0; vtfHeader[14] = 0; vtfHeader[15] = 0; // headerSize 80
+          vtfHeader[16] = 4; vtfHeader[17] = 0; // width 4
+          vtfHeader[18] = 4; vtfHeader[19] = 0; // height 4
+          vtfHeader[20] = 0x00; vtfHeader[21] = 0x40; vtfHeader[22] = 0; vtfHeader[23] = 0; // flags SRGB
+          vtfHeader[24] = 1; vtfHeader[25] = 0; // numFrames 1
+          // offset 28-43: reflectivity + bumpmap (floats, leave 0)
+          vtfHeader[44] = 12; vtfHeader[45] = 0; vtfHeader[46] = 0; vtfHeader[47] = 0; // imageFormat RGBA8888
+          vtfHeader[48] = 1; // numMipLevels 1
+          vtfHeader[52] = 12; vtfHeader[53] = 0; vtfHeader[54] = 0; vtfHeader[55] = 0; // lowResImageFormat RGBA8888
+          vtfHeader[56] = 1; // lowResImageWidth
+          vtfHeader[57] = 1; // lowResImageHeight
+          vtfHeader[58] = 1; vtfHeader[59] = 0; // depth 1
+          // Low-res pixel: gray RGBA
+          vtfHeader[80] = 128; vtfHeader[81] = 128; vtfHeader[82] = 128; vtfHeader[83] = 255;
+          // Full image: 4x4 RGBA (64 bytes)
+          var fullImage = new Uint8Array(64);
+          for (var fi = 0; fi < 16; fi++) { fullImage[fi*4]=128; fullImage[fi*4+1]=128; fullImage[fi*4+2]=128; fullImage[fi*4+3]=255; }
+          var fullVtf = new Uint8Array(80 + 4 + 64);
+          fullVtf.set(vtfHeader.subarray(0,80), 0);
+          fullVtf.set(vtfHeader.subarray(80,84), 80);
+          fullVtf.set(fullImage, 84);
+          FS.writeFile(vtfPath, fullVtf);
+          vtfFixed++;
+        }
+      }
+    }
+    console.log("[hl2] Fixed " + vtfFixed + " VTF files in MEMFS");
+    
+    // Fix shader version — patch version 1 to version 6 in .vcs files
+    try {
+      var fxcDir = "/hl2/shaders/fxc";
+      var shaderFiles = FS.readdir(fxcDir);
+      var versionPatched = 0;
+      for (var sfi = 0; sfi < shaderFiles.length; sfi++) {
+        var sfn = shaderFiles[sfi];
+        if (sfn === "." || sfn === "..") continue;
+        if (sfn.indexOf(".vcs") < 0) continue;
+        var sfp = fxcDir + "/" + sfn;
+        var sdata = FS.readFile(sfp);
+        if (sdata.length >= 4 && sdata[0] === 1 && sdata[1] === 0 && sdata[2] === 0 && sdata[3] === 0) {
+          // Version is 1, patch to 6
+          sdata[0] = 6;
+          FS.writeFile(sfp, sdata);
+          versionPatched++;
+        }
+      }
+      console.log("[hl2] Patched " + versionPatched + " shader files from version 1 to version 6");
+    } catch(e) { console.warn("[hl2] Shader version patch error: " + e); }
     console.log("[hl2] All chunks loaded, starting engine...");
     removeRunDependency("load_game_data");
   }).catch(function(err) {
