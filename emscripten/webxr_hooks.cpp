@@ -1,6 +1,9 @@
 // webxr_hooks.cpp — Source Engine hooks for WebXR Phase 2
-// EMSCRIPTEN_KEEPALIVE ensures functions survive dead-code elimination
-// and are exported in the WASM binary.
+// extern "C" EMSCRIPTEN_KEEPALIVE ensures functions survive dead-code
+// elimination and are exported in the WASM binary.
+// IMPORTANT: extern "C" must come BEFORE EMSCRIPTEN_KEEPALIVE — if reversed,
+// the attribute applies to the linkage specification, not the function,
+// and the linker strips the symbol.
 
 #ifdef __EMSCRIPTEN__
 
@@ -21,35 +24,30 @@ bool g_bWebXRProjectionActive = false;
 extern void em_loop_iteration();
 
 // ============================================================================
-// Hook functions — each has EMSCRIPTEN_KEEPALIVE to prevent stripping
+// Hook functions — extern "C" EMSCRIPTEN_KEEPALIVE (correct order!)
 // ============================================================================
 
-EMSCRIPTEN_KEEPALIVE
-extern "C" void Engine_DisableAutoRender() {
+extern "C" EMSCRIPTEN_KEEPALIVE void Engine_DisableAutoRender() {
     emscripten_cancel_main_loop();
     g_bWebXRManualLoop = true;
     EM_ASM_({ console.log('[WebXR] Engine_DisableAutoRender — main loop cancelled, manual mode active'); });
 }
 
-EMSCRIPTEN_KEEPALIVE
-extern "C" void Engine_RenderSingleFrame() {
+extern "C" EMSCRIPTEN_KEEPALIVE void Engine_RenderSingleFrame() {
     em_loop_iteration();
 }
 
-EMSCRIPTEN_KEEPALIVE
-extern "C" void Engine_SetCameraMatrix(float* mat) {
+extern "C" EMSCRIPTEN_KEEPALIVE void Engine_SetCameraMatrix(float* mat) {
     memcpy(g_WebXRViewMatrix, mat, 16 * sizeof(float));
     g_bWebXRMatrixActive = true;
 }
 
-EMSCRIPTEN_KEEPALIVE
-extern "C" void Engine_SetProjectionMatrix(float* mat) {
+extern "C" EMSCRIPTEN_KEEPALIVE void Engine_SetProjectionMatrix(float* mat) {
     memcpy(g_WebXRProjectionMatrix, mat, 16 * sizeof(float));
     g_bWebXRProjectionActive = true;
 }
 
-EMSCRIPTEN_KEEPALIVE
-extern "C" void Engine_ResetCameraMatrix() {
+extern "C" EMSCRIPTEN_KEEPALIVE void Engine_ResetCameraMatrix() {
     g_bWebXRMatrixActive = false;
     g_bWebXRProjectionActive = false;
     g_bWebXRManualLoop = false;

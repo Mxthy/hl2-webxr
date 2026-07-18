@@ -38,14 +38,17 @@ var CONTROLLER_R_DATA = 384;      // Float32[8] (32 Bytes)
 var CONTROLLER_ACTIVE_OFFSET = 416; // Int32 (4 Bytes)
 
 // Kompatibilitäts- und Featurecheck
+// WICHTIG: Kein canvas.getContext('webgl2') Aufruf im Main-Thread!
+// PROXY_TO_PTHREAD benötigt transferControlToOffscreen(), was fehlschlägt
+// sobald *irgendein* Code im Main-Thread einen GL-Kontext auf dem Canvas erstellt.
+// Wir prüfen nur SharedArrayBuffer und crossOriginIsolated (keine Canvas-Operation).
 (function() {
   var isSabSupported = typeof SharedArrayBuffer !== 'undefined';
-  var isWebGL2Supported = !!document.createElement('canvas').getContext('webgl2');
   var isCrossIsolated = window.crossOriginIsolated === true;
 
   console.log('[PRE-INIT] SharedArrayBuffer Support:', isSabSupported ? 'OK' : 'FEHLT');
-  console.log('[PRE-INIT] WebGL2 Support:', isWebGL2Supported ? 'OK' : 'FEHLT');
   console.log('[PRE-INIT] crossOriginIsolated:', isCrossIsolated ? 'JA' : 'NEIN');
+  // WebGL2 wird erst im Worker-Thread von der Engine geprüft — nicht hier!
 
   if (!isSabSupported || !isCrossIsolated) {
     console.warn('[PRE-INIT] WARNUNG: COOP/COEP Header oder SharedArrayBuffer fehlen! Der Engine-Worker benötigt diese Features.');

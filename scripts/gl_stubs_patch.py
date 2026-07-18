@@ -122,89 +122,15 @@ if old_canvas_fix in js:
     print('Removed old canvas fix (will be replaced by GL telemetry)')
 
 # ============================================================
-# 0b. GL Frame Heartbeat — isolated render gate telemetry
+# 0b. GL Frame Heartbeat — REMOVED for PROXY_TO_PTHREAD compatibility
 # ============================================================
-# Four gates: G1 (context exists), G2 (clear produces color),
-# G3 (Source GL call reaches stub), G4 (glDraw* called)
-gl_telemetry_block = """
-// === GL TELEMETRY: Frame heartbeat with clear/draw counters ===
-const glTelemetry = {
-  frames: 0,
-  clearCalls: 0,
-  drawCalls: 0,
-  sourceGlCalls: 0,
-  lastReport: performance.now(),
-  gates: { g1: false, g2: false, g3: false, g4: false }
-};
-
-// G1: Verify WebGL2 context exists
-if (typeof canvasElement !== 'undefined' && canvasElement) {
-  var _gl_ctx = canvasElement.getContext('webgl2');
-  if (_gl_ctx) {
-    glTelemetry.gates.g1 = true;
-    console.info('[gl:g1] WebGL2 context exists');
-    // G2: Isolated clear test — if this produces color, canvas composition works
-    try {
-      _gl_ctx.clearColor(0.2, 0.15, 0.1, 1.0);
-      _gl_ctx.clear(_gl_ctx.COLOR_BUFFER_BIT);
-      glTelemetry.gates.g2 = true;
-      console.info('[gl:g2] clearColor + clear succeeded');
-    } catch(e) {
-      console.warn('[gl:g2] clear test failed: ' + e.message);
-    }
-  } else {
-    console.error('[gl:g1] WebGL2 context creation failed');
-  }
-}
-
-// Wrap dlsym stub resolution to count Source GL calls (G3)
-var _orig_dlsym_count = 0;
-var _wrapped_dlsym = false;
-
-// Heartbeat reporter — runs every 1s, logs only if there was activity
-function reportGlTelemetry() {
-  var now = performance.now();
-  if (now - glTelemetry.lastReport >= 1000) {
-    var hasActivity = glTelemetry.frames > 0 || glTelemetry.clearCalls > 0 || glTelemetry.drawCalls > 0 || glTelemetry.sourceGlCalls > 0;
-    if (hasActivity) {
-      console.info('[gl:telemetry]', {
-        frames: glTelemetry.frames,
-        clearCalls: glTelemetry.clearCalls,
-        drawCalls: glTelemetry.drawCalls,
-        sourceGlCalls: glTelemetry.sourceGlCalls,
-        gates: glTelemetry.gates
-      });
-    }
-    glTelemetry.frames = 0;
-    glTelemetry.clearCalls = 0;
-    glTelemetry.drawCalls = 0;
-    glTelemetry.sourceGlCalls = 0;
-    glTelemetry.lastReport = now;
-  }
-  requestAnimationFrame(reportGlTelemetry);
-}
-
-// Start the heartbeat after a short delay (let engine init first)
-setTimeout(function() {
-  requestAnimationFrame(reportGlTelemetry);
-  console.info('[gl:telemetry] heartbeat started');
-}, 3000);
-"""
-
-# Insert GL telemetry right after the asset config block
-# (which was already injected above in section 0)
-if 'glTelemetry' not in js:
-    pre_js_end = '// end include:'
-    if pre_js_end in js:
-        idx = js.index(pre_js_end)
-        line_end = js.index('\n', idx)
-        js = js[:line_end+1] + gl_telemetry_block + '\n' + js[line_end+1:]
-        print('GL frame heartbeat telemetry injected')
-    else:
-        js = gl_telemetry_block + '\n' + js
-        print('GL telemetry injected at top')
-else:
-    print('GL telemetry already present')
+# The GL telemetry block previously called canvasElement.getContext('webgl2')
+# in the main thread to verify WebGL2 support and do an isolated clearColor test.
+# This binds the canvas to the main thread, causing transferControlToOffscreen()
+# to fail with "Cannot transfer control from a canvas that has a rendering context".
+# GL telemetry must run in the worker thread, not the main thread.
+# See: https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/transferControlToOffscreen
+print('GL telemetry REMOVED for PROXY_TO_PTHREAD canvas compatibility')
 
 # ============================================================
 # 1. GL stubs table (desktop GL functions not in WebGL)

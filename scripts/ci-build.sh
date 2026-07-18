@@ -550,7 +550,17 @@ emcc_link() {
     sed -i '/emcc_link/d' "$checkpoint_file" 2>/dev/null || true
   fi
 
+  # Force re-link if EXPORTED_RUNTIME_METHODS doesn't match (cache bust)
+  _erm_hash=$(grep "EXPORTED_RUNTIME_METHODS" "$REPO_ROOT/scripts/ci-build.sh" | md5sum | cut -c1-8)
+  _erm_cache="$ENGINE_DIR/build/.erm_hash"
+  if [ -f "$_erm_cache" ] && [ "$(cat "$_erm_cache")" != "$_erm_hash" ]; then
+    log "EXPORTED_RUNTIME_METHODS changed — forcing emcc_link re-run"
+    sed -i '/emcc_link/d' "$checkpoint_file" 2>/dev/null || true
+  fi
+  echo "$_erm_hash" > "$_erm_cache" 2>/dev/null || true
+
   checkpoint_done "emcc_link" && { log "emcc_link: skip"; return; }
+  log "EXPORTED_RUNTIME_METHODS: $(grep "EXPORTED_RUNTIME_METHODS" "$REPO_ROOT/scripts/ci-build.sh" | head -1 | tr -s ' ')"
   emsdk_env
   cd "$ENGINE_DIR"
 
@@ -647,6 +657,14 @@ emcc_link() {
   python3 "$REPO_ROOT/scripts/gl_stubs_patch.py" build/install/hl2_launcher.js || true
   cp -r emscripten/assets build/install/ 2>/dev/null || true
 
+  # Verify EXPORTED_RUNTIME_METHODS were applied
+  if grep -q "ccall" "$ENGINE_DIR/build/install_hl2/hl2_launcher.js" 2>/dev/null; then
+    if grep -q "unexportedSymbols.*ccall" "$ENGINE_DIR/build/install_hl2/hl2_launcher.js" 2>/dev/null; then
+      log "WARNING: ccall still in unexportedSymbols — EXPORTED_RUNTIME_METHODS may not have been applied!"
+    else
+      log "OK: ccall exported on Module"
+    fi
+  fi
   checkpoint_mark "emcc_link"
 }
 
