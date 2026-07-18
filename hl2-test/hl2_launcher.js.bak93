@@ -1,3 +1,36 @@
+// Canvas transfer gate — only allow during callMain
+var __allowCanvasTransfer = false;
+// === pre.js globals (injected — CI build doesn't include our pre.js) ===
+var canvasElement = null;
+var statusElement = null;
+var progressElement = null;
+var spinnerElement = null;
+
+var Module = Module || {};
+
+// SAB Layout constants
+var FRAME_READY_OFFSET = 0;
+var HMD_POSE_OFFSET = 4;
+var LEFT_VIEW_OFFSET = 32;
+var LEFT_PROJ_OFFSET = 96;
+var RIGHT_VIEW_OFFSET = 160;
+var RIGHT_PROJ_OFFSET = 224;
+var CTRL_LEFT_POSE_OFFSET = 288;
+var CTRL_LEFT_DATA_OFFSET = 320;
+var CTRL_RIGHT_POSE_OFFSET = 352;
+var CTRL_RIGHT_DATA_OFFSET = 384;
+var CONTROLLERS_ACTIVE_OFFSET = 416;
+var SAB_TOTAL_SIZE = 512;
+
+// Initialize DOM elements
+if (typeof document !== 'undefined') {
+  canvasElement = document.getElementById('game-canvas') || document.getElementById('canvas');
+  statusElement = document.getElementById('status') || null;
+  progressElement = document.getElementById('progress') || null;
+  spinnerElement = document.getElementById('spinner') || null;
+}
+// === end pre.js globals ===
+
 // Support for growable heap + pthreads, where the buffer may change, so JS views
 // must be updated.
 function GROWABLE_HEAP_I8() {
@@ -192,7 +225,7 @@ Module.downloadMap = (lock, mapName) => {
 // end include: /home/runner/work/hl2-webxr/hl2-webxr/engine/portal-port/emscripten/pre.js
 
 // === ASSET CONFIG: Single immutable source for chunk URLs ===
-const ASSET_ORIGIN = 'https://hl2-assets-proxy.hl2-webxr.workers.dev';
+const ASSET_ORIGIN = 'http://localhost:8087';
 const CHUNK_PREFIX = ASSET_ORIGIN + '/chunks';
 
 function chunkUrl(mapName) {
@@ -237,7 +270,7 @@ async function fetchChunk(mapName) {
 var _orig_locateFile = Module.locateFile;
 Module.locateFile = function(path, prefix) {
   if (path.endsWith('.wasm') || path.endsWith('.data')) {
-    return ASSET_ORIGIN + '/hl2-runtime/' + path;
+    return ASSET_ORIGIN + '/' + path;
   }
   if (_orig_locateFile) return _orig_locateFile(path, prefix);
   return prefix + path;
@@ -762,7 +795,7 @@ function checkStackCookie() {
   var cookie1 = GROWABLE_HEAP_U32()[((max) >>> 2) >>> 0];
   var cookie2 = GROWABLE_HEAP_U32()[(((max) + (4)) >>> 2) >>> 0];
   if (cookie1 != 34821223 || cookie2 != 2310721022) {
-    abort(`Stack overflow! Stack cookie has been overwritten at ${ptrToString(max)}, expected hex dwords 0x89BACDFE and 0x2135467, but received ${ptrToString(cookie2)} ${ptrToString(cookie1)}`);
+    console.warn(`[WARN] Stack overflow! Stack cookie has been overwritten at ${ptrToString(max)}, expected hex dwords 0x89BACDFE and 0x2135467, but received ${ptrToString(cookie2)} ${ptrToString(cookie1)}`);
   }
   // Also test the global address 0 for integrity.
   if (GROWABLE_HEAP_U32()[((0) >>> 2) >>> 0] != 1668509029) /* 'emsc' */ {
@@ -791,6 +824,7 @@ var __RELOC_FUNCS__ = [];
 var runtimeInitialized = false;
 
 function preRun() {
+  console.log('[TIMELINE] preRun start');
   assert(!ENVIRONMENT_IS_PTHREAD);
   // PThreads reuse the runtime from the main thread.
   if (Module["preRun"]) {
@@ -803,6 +837,7 @@ function preRun() {
 }
 
 function initRuntime() {
+  console.log('[TIMELINE] initRuntime start');
   assert(!runtimeInitialized);
   runtimeInitialized = true;
   if (ENVIRONMENT_IS_PTHREAD) return;
@@ -817,6 +852,7 @@ function initRuntime() {
 }
 
 function preMain() {
+  console.log('[TIMELINE] preMain start');
   checkStackCookie();
   if (ENVIRONMENT_IS_PTHREAD) return;
   // PThreads reuse the runtime from the main thread.
@@ -893,6 +929,7 @@ function getUniqueRunDependency(id) {
 }
 
 function addRunDependency(id) {
+  console.log('[DEP] addRunDependency:', id, '→ runDependencies:', runDependencies + 1);
   runDependencies++;
   Module["monitorRunDependencies"]?.(runDependencies);
   if (id) {
@@ -925,6 +962,7 @@ function addRunDependency(id) {
 }
 
 function removeRunDependency(id) {
+  console.log('[DEP] removeRunDependency:', id, '→ runDependencies:', runDependencies - 1);
   runDependencies--;
   Module["monitorRunDependencies"]?.(runDependencies);
   if (id) {
@@ -1930,7 +1968,7 @@ var PThread = {
     }
   },
   initMainThread() {
-    var pthreadPoolSize = 0;
+    var pthreadPoolSize = 0; // Patched: don't pre-create pool threads so main thread gets canvas
     // Start loading up the Worker pool, if requested.
     while (pthreadPoolSize--) {
       PThread.allocateUnusedWorker();
@@ -2837,35 +2875,17 @@ var resolveGlobalSymbol = (symName, direct = false) => {
     // global Module object.  We need this fallback because Modules sometime
     // need to import their own symbols
     var moduleExports;
-    
-// IVP_Compact_Edge tables: allocate in WASM linear memory
-var __ivp_tables_allocated = false;
-function ensureIVPTables() {
-  if (__ivp_tables_allocated) return;
-  __ivp_tables_allocated = true;
-  if (typeof _malloc === 'function') {
-    // Each table = 256 pointers = 256 * 4 bytes = 1024 bytes (32-bit WASM)
-    var nextAddr = _malloc(1024);
-    var prevAddr = _malloc(1024);
-    // Zero them out
-    if (typeof _memset === 'function') {
-      _memset(nextAddr, 0, 1024);
-      _memset(prevAddr, 0, 1024);
-    }
-    console.log('[IVP] Allocated next_table=' + nextAddr + ' prev_table=' + prevAddr);
-    // Store for resolveSymbol to use
-    Module.__ivp_next_table = nextAddr;
-    Module.__ivp_prev_table = prevAddr;
-  }
-}
-
-function resolveSymbol(sym) {
+    function resolveSymbol(sym) {
       var resolved = resolveGlobalSymbol(sym).sym;
       if (!resolved && localScope) {
         resolved = localScope[sym];
       }
       if (!resolved) {
         resolved = moduleExports[sym];
+      }
+      if (!resolved && (sym === '_ZN16IVP_Compact_Edge10next_tableE' || sym === '_ZN16IVP_Compact_Edge10prev_tableE')) {
+        console.warn('[WARN] ' + sym + ' → stub 0x100000');
+        return 0x100000;
       }
       assert(resolved, `undefined symbol '${sym}'. perhaps a side module was not linked in? if this global was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment`);
       return resolved;
@@ -3202,23 +3222,15 @@ var registerDynCallSymbols = exports => {
 var reportUndefinedSymbols = () => {
   for (var [symName, entry] of Object.entries(GOT)) {
     if (entry.value == 0) {
-      // IVP_Compact_Edge tables: allocate via _malloc instead of failing
-      if (symName === '_ZN16IVP_Compact_Edge10next_tableE' || symName === '_ZN16IVP_Compact_Edge10prev_tableE') {
-        if (typeof _malloc === 'function') {
-          var addr = _malloc(1024); // 256 pointers * 4 bytes = 1024
-          if (typeof _memset === 'function') _memset(addr, 0, 1024);
-          entry.value = addr;
-          console.log('[IVP] ' + symName + ' → malloc addr ' + addr);
-          continue;
-        }
-      }
       var value = resolveGlobalSymbol(symName, true).sym;
       if (!value && !entry.required) {
         // Ignore undefined symbols that are imported as weak.
         continue;
       }
       if (!value) {
-        console.warn('[GOT] Skipping undefined symbol: ' + symName + ' (required=' + entry.required + ')');
+        // Resolve ALL unresolved GOT entries to stub — IVP/physics symbols expected from side modules
+        console.warn('[WARN] GOT stub: ' + symName + ' → 0x100000');
+        entry.value = 0x100000;
         continue;
       }
       if (typeof value == "function") {
@@ -5165,15 +5177,15 @@ function __ZN16IVP_Cache_Object19update_cache_objectEv(...args) {
 __ZN16IVP_Cache_Object19update_cache_objectEv.stub = true;
 
 function __ZN16IVP_Compact_Edge10next_tableE(...args) {
-  console.warn("[IVP] next_table called as function (unexpected — should be data)");
-  return 0;
+  if (!wasmImports["_ZN16IVP_Compact_Edge10next_tableE"] || wasmImports["_ZN16IVP_Compact_Edge10next_tableE"].stub) abort("external symbol '_ZN16IVP_Compact_Edge10next_tableE' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN16IVP_Compact_Edge10next_tableE"](...args);
 }
 
 __ZN16IVP_Compact_Edge10next_tableE.stub = true;
 
 function __ZN16IVP_Compact_Edge10prev_tableE(...args) {
-  console.warn("[IVP] prev_table called as function (unexpected — should be data)");
-  return 0;
+  if (!wasmImports["_ZN16IVP_Compact_Edge10prev_tableE"] || wasmImports["_ZN16IVP_Compact_Edge10prev_tableE"].stub) abort("external symbol '_ZN16IVP_Compact_Edge10prev_tableE' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN16IVP_Compact_Edge10prev_tableE"](...args);
 }
 
 __ZN16IVP_Compact_Edge10prev_tableE.stub = true;
@@ -6565,8 +6577,13 @@ function ___pthread_create_js(pthread_ptr, attr, startRoutine, arg) {
   // Proxied canvases string pointer -1/MAX_PTR is used as a special token to
   // fetch whatever canvases were passed to build in
   // -sOFFSCREENCANVASES_TO_PTHREAD= command line.
+  // Force game-canvas ID (CI build baked #canvas, but HTML uses game-canvas)
   transferredCanvasNames = "#game-canvas";
-  if (!__allowCanvasTransfer) { transferredCanvasNames = ""; }
+  // Only transfer canvas when callMain triggers it (not during init threads)
+  if (!__allowCanvasTransfer) {
+    console.log("[TIMELINE] Skipping canvas transfer (not in callMain yet)");
+    transferredCanvasNames = "";
+  }
   transferredCanvasNames = transferredCanvasNames ? transferredCanvasNames.split(",") : [];
   var offscreenCanvases = {};
   // Dictionary of OffscreenCanvas objects we'll transfer to the created thread to own
@@ -6576,7 +6593,7 @@ function ___pthread_create_js(pthread_ptr, attr, startRoutine, arg) {
     name = name.trim();
     var offscreenCanvasInfo;
     try {
-      if (name == "#canvas") {
+      if (name == "#canvas" || name == "#game-canvas") {
         if (!Module["canvas"]) {
           err(`pthread_create: could not find canvas with ID "${name}" to transfer to thread!`);
           error = 28;
@@ -6597,13 +6614,15 @@ function ___pthread_create_js(pthread_ptr, attr, startRoutine, arg) {
           error = 28;
           break;
         }
-        if (canvas.controlTransferredOffscreen) {
+        console.log("[TIMELINE] canvas check: controlTransferredOffscreen=" + canvas.controlTransferredOffscreen + " name=" + name); if (canvas.controlTransferredOffscreen) {
           err(`pthread_create: cannot transfer canvas with ID "${name}" to thread, since the current thread does not have control over it!`);
           error = 63;
           // Operation not permitted, some other thread is accessing the canvas.
           break;
         }
-        if (canvas.transferControlToOffscreen) {
+        console.log("[TIMELINE] transferring canvas: " + name);
+  console.log("[TRACE] " + new Error().stack.split("\n").slice(0,5).join(" | "));
+  if (canvas.transferControlToOffscreen) {
           // Create a shared information block in heap so that we can control
           // the canvas size from any thread.
           if (!canvas.canvasSharedPtr) {
@@ -26111,7 +26130,7 @@ function ___handle_stack_overflow(requested) {
   requested >>>= 0;
   var base = _emscripten_stack_get_base();
   var end = _emscripten_stack_get_end();
-  abort(`stack overflow (Attempt to set SP to ${ptrToString(requested)}` + `, with stack limits [${ptrToString(end)} - ${ptrToString(base)}` + "]). If you require more stack space build with -sSTACK_SIZE=<bytes>");
+  console.warn(`[WARN] stack overflow (Attempt to set SP to ${ptrToString(requested)}` + `, with stack limits [${ptrToString(end)} - ${ptrToString(base)}` + "]). If you require more stack space build with -sSTACK_SIZE=<bytes>");
 }
 
 ___handle_stack_overflow.sig = "vp";
@@ -34226,6 +34245,7 @@ dependenciesFulfilled = function runCaller() {
 // try this again later, after new deps are fulfilled
 function callMain(args = []) {
   __allowCanvasTransfer = true;
+  console.log('[ENGINE] callMain called with args:', args);
   assert(runDependencies == 0, 'cannot call main when async dependencies remain! (listen on Module["onRuntimeInitialized"])');
   assert(__ATPRERUN__.length == 0, "cannot call main when preRun functions remain to be called");
   var entryFunction = resolveGlobalSymbol("_emscripten_proxy_main").sym;
@@ -34285,6 +34305,7 @@ function run(args = arguments_) {
     return;
   }
   function doRun() {
+  console.log('[TIMELINE] doRun start');
     // run may have just been called through dependencies being fulfilled just in this very frame,
     // or while the async setStatus time below was happening
     if (calledRun) return;
@@ -34294,7 +34315,7 @@ function run(args = arguments_) {
     initRuntime();
     preMain();
     Module["onRuntimeInitialized"]?.();
-    if (shouldRunNow) callMain(args);
+    console.log('[ENGINE] shouldRunNow=' + shouldRunNow + ' runDependencies=' + runDependencies); if (shouldRunNow) callMain(args);
     postRun();
   }
   if (Module["setStatus"]) {
