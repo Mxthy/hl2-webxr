@@ -1,11 +1,7 @@
 
-// Safe globals — defined early to prevent ReferenceErrors
-var spinnerElement = (typeof document !== 'undefined') ? document.getElementById('spinner') : null;
-var progressElement = (typeof document !== 'undefined') ? document.getElementById('progress') : null;
-var statusElement = (typeof document !== 'undefined') ? document.getElementById('status') : null;
-var loadingStatus = (typeof document !== 'undefined') ? document.getElementById('loading-status') : null;
-var __allowCanvasTransfer = false;
-if (typeof window !== 'undefined') window.__allowCanvasTransfer = false;
+// Safe globals — only __allowCanvasTransfer (others defined later in file)
+var __allowCanvasTransfer = true;
+if (typeof window !== 'undefined') window.__allowCanvasTransfer = true;
 
 // Support for growable heap + pthreads, where the buffer may change, so JS views
 // must be updated.
@@ -141,14 +137,14 @@ class DataLoader {
   }
   async setProgress(mapName, progress) {
     if (progress < 1) {
-      spinnerElement.style.display = "";
-      statusElement.innerText = `Downloading map ${mapName}`;
-      progressElement.hidden = false;
-      progressElement.value = progress;
+      if (typeof spinnerElement !== "undefined" && spinnerElement) spinnerElement.style.display = "";
+      if (typeof statusElement !== 'undefined' && statusElement) statusElement.innerText = `Downloading map ${mapName}`;
+      if (typeof progressElement !== "undefined" && progressElement) progressElement.hidden = false;
+      if (typeof progressElement !== "undefined" && progressElement) progressElement.value = progress;
     } else {
-      spinnerElement.style.display = "none";
-      statusElement.innerText = "";
-      progressElement.hidden = true;
+      if (typeof spinnerElement && spinnerElement) spinnerElement.style.display = "none";
+      if (typeof statusElement !== "undefined" && statusElement) statusElement.innerText = "";
+      if (typeof progressElement !== "undefined" && progressElement) progressElement.hidden = true;
     }
   }
   async loadMap(mapName) {
@@ -6584,7 +6580,7 @@ function ___pthread_create_js(pthread_ptr, attr, startRoutine, arg) {
   // Proxied canvases string pointer -1/MAX_PTR is used as a special token to
   // fetch whatever canvases were passed to build in
   // -sOFFSCREENCANVASES_TO_PTHREAD= command line.
-  transferredCanvasNames = "#game-canvas";
+  transferredCanvasNames = "game-canvas";
   if (!__allowCanvasTransfer && !(typeof window !== 'undefined' && window.__allowCanvasTransfer)) { transferredCanvasNames = ""; }
   transferredCanvasNames = transferredCanvasNames ? transferredCanvasNames.split(",") : [];
   var offscreenCanvases = {};
@@ -6617,10 +6613,13 @@ function ___pthread_create_js(pthread_ptr, attr, startRoutine, arg) {
           break;
         }
         if (canvas.controlTransferredOffscreen) {
-          err(`pthread_create: cannot transfer canvas with ID "${name}" to thread, since the current thread does not have control over it!`);
-          error = 63;
-          // Operation not permitted, some other thread is accessing the canvas.
-          break;
+          console.warn(`[canvas] "${name}" already transferred — skipping (OK for PROXY_TO_PTHREAD)`);
+          // Don't error — canvas was already transferred by SDL/GL init
+          // The worker can access it via GL.offscreenCanvases
+          if (GL.offscreenCanvases[name]) {
+            offscreenCanvasInfo = GL.offscreenCanvases[name];
+          }
+          continue;
         }
         if (canvas.transferControlToOffscreen) {
           // Create a shared information block in heap so that we can control
