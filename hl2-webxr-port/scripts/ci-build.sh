@@ -259,6 +259,40 @@ EOF
   log "  patch: emscripten_stubs.cpp (with IVP_Mindist weak stubs)"
   
 
+  # Patch 5e (pre): pre.js — Globale Variablen + SAB Konstanten
+  PRE_JS="$ENGINE_DIR/emscripten/pre.js"
+  cat > "$PRE_JS" << 'PRE_JS_EOF'
+// pre.js - Globale Variablen vor dem Emscripten-Bundle initialisieren
+var canvasElement = null;
+var statusElement = null;
+var progressElement = null;
+var spinnerElement = null;
+
+var Module = Module || {};
+
+// SharedArrayBuffer Layout-Konstanten für die WebXR-Engine-Brücke
+var FRAME_READY_OFFSET = 0;
+var HMD_POSE_OFFSET = 4;
+var LEFT_VIEW_OFFSET = 32;
+var LEFT_PROJ_OFFSET = 96;
+var RIGHT_VIEW_OFFSET = 160;
+var RIGHT_PROJ_OFFSET = 224;
+var CTRL_LEFT_POSE_OFFSET = 288;
+var CTRL_LEFT_DATA_OFFSET = 320;
+var CTRL_RIGHT_POSE_OFFSET = 352;
+var CTRL_RIGHT_DATA_OFFSET = 384;
+var CONTROLLERS_ACTIVE_OFFSET = 416;
+var SAB_TOTAL_SIZE = 512;
+
+if (typeof document !== 'undefined') {
+  canvasElement = document.getElementById('game-canvas') || document.getElementById('canvas');
+  statusElement = document.getElementById('status');
+  progressElement = document.getElementById('progress');
+  spinnerElement = document.getElementById('spinner');
+}
+PRE_JS_EOF
+  log "  patch: pre.js (globals + SAB constants)"
+
   # Patch 6 (post): post.js — Shader + Asset Chunk Loading vor callMain()
   POST_JS="$ENGINE_DIR/emscripten/post.js"
   if [ -f "$POST_JS" ]; then
@@ -659,7 +693,7 @@ emcc_link() {
     -sFULL_ES3 -sSTACK_SIZE=64mb \
     --shell-file=emscripten/shell.html \
     -sPROXY_TO_PTHREAD \
-    -sOFFSCREENCANVASES_TO_PTHREAD="#canvas" \
+    -sOFFSCREENCANVASES_TO_PTHREAD="#game-canvas" \
     -sOFFSCREENCANVAS_SUPPORT=1 \
     "-sEXPORTED_RUNTIME_METHODS=['wasmMemory','addRunDependency','removeRunDependency','FS','callMain','abort','HEAPU8','ccall','cwrap','wasmExports','getValue','setValue','HEAPF32','HEAPU32','lengthBytesUTF8','stringToUTF8','UTF8ToString']" \
     --pre-js emscripten/pre.js \

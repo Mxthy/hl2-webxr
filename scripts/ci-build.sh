@@ -633,7 +633,7 @@ emcc_link() {
     -sFULL_ES3 -sSTACK_SIZE=64mb \
     --shell-file=emscripten/shell.html \
     -sPROXY_TO_PTHREAD \
-    -sOFFSCREENCANVASES_TO_PTHREAD="#canvas" \
+    -sOFFSCREENCANVASES_TO_PTHREAD="#game-canvas" \
     -sOFFSCREENCANVAS_SUPPORT=1 \
     "-sEXPORTED_RUNTIME_METHODS=['wasmMemory','addRunDependency','removeRunDependency','FS','callMain','abort','HEAPU8','ccall','cwrap','wasmExports','getValue','setValue','HEAPF32','HEAPU32','lengthBytesUTF8','stringToUTF8','UTF8ToString']" \
     --pre-js emscripten/pre.js \

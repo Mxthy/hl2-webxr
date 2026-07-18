@@ -1,3 +1,34 @@
+// === pre.js globals (injected — CI build doesn't include our pre.js) ===
+var canvasElement = null;
+var statusElement = null;
+var progressElement = null;
+var spinnerElement = null;
+
+var Module = Module || {};
+
+// SAB Layout constants
+var FRAME_READY_OFFSET = 0;
+var HMD_POSE_OFFSET = 4;
+var LEFT_VIEW_OFFSET = 32;
+var LEFT_PROJ_OFFSET = 96;
+var RIGHT_VIEW_OFFSET = 160;
+var RIGHT_PROJ_OFFSET = 224;
+var CTRL_LEFT_POSE_OFFSET = 288;
+var CTRL_LEFT_DATA_OFFSET = 320;
+var CTRL_RIGHT_POSE_OFFSET = 352;
+var CTRL_RIGHT_DATA_OFFSET = 384;
+var CONTROLLERS_ACTIVE_OFFSET = 416;
+var SAB_TOTAL_SIZE = 512;
+
+// Initialize DOM elements
+if (typeof document !== 'undefined') {
+  canvasElement = document.getElementById('game-canvas') || document.getElementById('canvas');
+  statusElement = document.getElementById('status') || null;
+  progressElement = document.getElementById('progress') || null;
+  spinnerElement = document.getElementById('spinner') || null;
+}
+// === end pre.js globals ===
+
 // Support for growable heap + pthreads, where the buffer may change, so JS views
 // must be updated.
 function GROWABLE_HEAP_I8() {
@@ -104,7 +135,7 @@ if (ENVIRONMENT_IS_NODE) {
 // include: /home/runner/work/hl2-webxr/hl2-webxr/engine/portal-port/emscripten/pre.js
 Module["arguments"] = Module["arguments"] || [];
 
-Module["arguments"].push("-game", "portal", "-noip", "-language", "english", "-windowed", "+mat_hdr_level", "0", "+mat_colorcorrection", "1");
+Module["arguments"].push("-game", "hl2", "-noip", "-language", "english", "-windowed", "+mat_hdr_level", "0", "+mat_colorcorrection", "1");
 
 class DataLoader {
   mapsOrdered=[ "background1", "testchmb_a_00", "testchmb_a_01", "testchmb_a_02", "testchmb_a_03", "testchmb_a_04", "testchmb_a_05", "testchmb_a_06", "testchmb_a_07", "testchmb_a_08", "testchmb_a_09", "testchmb_a_10", "testchmb_a_11", "testchmb_a_13", "testchmb_a_14", "testchmb_a_15" ];
@@ -893,6 +924,7 @@ function getUniqueRunDependency(id) {
 }
 
 function addRunDependency(id) {
+  console.log('[DEP] addRunDependency:', id, '→ runDependencies:', runDependencies + 1);
   runDependencies++;
   Module["monitorRunDependencies"]?.(runDependencies);
   if (id) {
@@ -925,6 +957,7 @@ function addRunDependency(id) {
 }
 
 function removeRunDependency(id) {
+  console.log('[DEP] removeRunDependency:', id, '→ runDependencies:', runDependencies - 1);
   runDependencies--;
   Module["monitorRunDependencies"]?.(runDependencies);
   if (id) {
@@ -6539,11 +6572,8 @@ function ___pthread_create_js(pthread_ptr, attr, startRoutine, arg) {
   // Proxied canvases string pointer -1/MAX_PTR is used as a special token to
   // fetch whatever canvases were passed to build in
   // -sOFFSCREENCANVASES_TO_PTHREAD= command line.
-  if (transferredCanvasNames == 4294967295) {
-    transferredCanvasNames = "#canvas";
-  } else {
-    transferredCanvasNames = UTF8ToString(transferredCanvasNames).trim();
-  }
+  // Force game-canvas ID (CI build baked #canvas, but HTML uses game-canvas)
+  transferredCanvasNames = "#game-canvas";
   transferredCanvasNames = transferredCanvasNames ? transferredCanvasNames.split(",") : [];
   var offscreenCanvases = {};
   // Dictionary of OffscreenCanvas objects we'll transfer to the created thread to own
@@ -6553,7 +6583,7 @@ function ___pthread_create_js(pthread_ptr, attr, startRoutine, arg) {
     name = name.trim();
     var offscreenCanvasInfo;
     try {
-      if (name == "#canvas") {
+      if (name == "#canvas" || name == "#game-canvas") {
         if (!Module["canvas"]) {
           err(`pthread_create: could not find canvas with ID "${name}" to transfer to thread!`);
           error = 28;
@@ -34202,6 +34232,7 @@ dependenciesFulfilled = function runCaller() {
 
 // try this again later, after new deps are fulfilled
 function callMain(args = []) {
+  console.log('[ENGINE] callMain called with args:', args);
   assert(runDependencies == 0, 'cannot call main when async dependencies remain! (listen on Module["onRuntimeInitialized"])');
   assert(__ATPRERUN__.length == 0, "cannot call main when preRun functions remain to be called");
   var entryFunction = resolveGlobalSymbol("_emscripten_proxy_main").sym;
@@ -34270,7 +34301,7 @@ function run(args = arguments_) {
     initRuntime();
     preMain();
     Module["onRuntimeInitialized"]?.();
-    if (shouldRunNow) callMain(args);
+    console.log('[ENGINE] shouldRunNow=' + shouldRunNow + ' runDependencies=' + runDependencies); if (shouldRunNow) callMain(args);
     postRun();
   }
   if (Module["setStatus"]) {
