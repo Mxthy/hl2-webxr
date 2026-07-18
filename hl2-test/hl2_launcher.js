@@ -34568,6 +34568,68 @@ run();
     // Create gameinfo.txt (required by engine)
     var gameinfoContent = '"GameInfo"\n{\n  game  "HL2"\n  title  "Half-Life 2"\n  type  singleplayer_only\n  developer  "Valve"\n  icon  "hl2"\n  FileSystem\n  {\n    SteamAppId  2153\n    ToolsAppId  211\n    SearchPaths\n    {\n      Game  |gameinfo_path|.\n      Game  hl2\n      Platform  platform\n    }\n  }\n}';
     FS.writeFile('/hl2/gameinfo.txt', gameinfoContent);
+    // Write surfaceproperties manifest (required by physics engine)
+    FS.mkdir('/hl2/scripts');
+    var manifestContent = '"surfaceproperties_manifest"\n{\n\t"file"\t\t"scripts/surfaceproperties.txt"\n}';
+    FS.writeFile('/hl2/scripts/surfaceproperties_manifest.txt', manifestContent);
+    var propsContent = '"surfaceproperties"\n{\n\t"solid" { "density" "1.0" }\n\t"metal" { "density" "1.0" }\n\t"glass" { "density" "1.0" }\n\t"concrete" { "density" "1.0" }\n\t"dirt" { "density" "1.0" }\n\t"water" { "density" "1.0" }\n\t"wood" { "density" "1.0" }\n\t"player" { "density" "1.0" }\n\t"metal_barrel" { "density" "1.0" }\n\t"plastic" { "density" "1.0" }\n\t"rubber" { "density" "1.0" }\n\t"grass" { "density" "1.0" }\n\t"rock" { "density" "1.0" }\n\t"gravel" { "density" "1.0" }\n\t"cardboard" { "density" "1.0" }\n\t"paper" { "density" "1.0" }\n\t"flesh" { "density" "1.0" }\n\t"snow" { "density" "1.0" }\n\t"ice" { "density" "1.0" }\n\t"asphalt" { "density" "1.0" }\n\t"brass" { "density" "1.0" }\n\t"bronze" { "density" "1.0" }\n\t"copper" { "density" "1.0" }\n\t"iron" { "density" "1.0" }\n\t"steel" { "density" "1.0" }\n\t"slime" { "density" "1.0" }\n\t"mud" { "density" "1.0" }\n\t"chainlink" { "density" "1.0" }\n\t"tile" { "density" "1.0" }\n\t"plaster" { "density" "1.0" }\n}';
+    FS.writeFile('/hl2/scripts/surfaceproperties.txt', propsContent);
+    // Write ALL required script manifests (engine aborts if any are missing)
+    var writeManifest = function(path, manifestKey, files) {
+      var content = '"' + manifestKey + '"\n{\n';
+      for (var mi = 0; mi < files.length; mi++) {
+        content += '\t"file"\t\t"' + files[mi] + '"\n';
+      }
+      content += '}';
+      FS.writeFile(path, content);
+      // Also write the referenced files as empty valid KeyValues
+      for (var fi = 0; fi < files.length; fi++) {
+        var refPath = '/hl2/' + files[fi];
+        if (!FS.analyzePath(refPath).exists) {
+          var dir = refPath.substring(0, refPath.lastIndexOf('/'));
+          try { FS.mkdirTree(dir); } catch(e) {}
+          FS.writeFile(refPath, '"' + files[fi].split('/').pop().replace('.txt','') + '"\n{\n}');
+        }
+      }
+    };
+    writeManifest('/hl2/scripts/surfaceproperties_manifest.txt', 'surfaceproperties_manifest', ['scripts/surfaceproperties.txt']);
+    writeManifest('/hl2/scripts/game_sounds_manifest.txt', 'game_sounds_manifest', ['scripts/game_sounds.txt', 'scripts/game_sounds_hl2.txt', 'scripts/game_sounds_physics.txt']);
+    writeManifest('/hl2/scripts/soundscapes_manifest.txt', 'soundscapes_manifest', ['scripts/soundscapes.txt']);
+    writeManifest('/hl2/scripts/episodic_soundscape_manifest.txt', 'episodic_soundscape_manifest', ['scripts/soundscapes.txt']);
+    // Also create any other common script files the engine might need
+    FS.writeFile('/hl2/scripts/surfaceproperties.txt', '"surfaceproperties"\n{\n\t"solid" { "density" "1.0" }\n\t"metal" { "density" "1.0" }\n\t"glass" { "density" "1.0" }\n\t"concrete" { "density" "1.0" }\n\t"dirt" { "density" "1.0" }\n\t"water" { "density" "1.0" }\n\t"wood" { "density" "1.0" }\n\t"player" { "density" "1.0" }\n\t"metal_barrel" { "density" "1.0" }\n\t"plastic" { "density" "1.0" }\n\t"rubber" { "density" "1.0" }\n\t"grass" { "density" "1.0" }\n\t"rock" { "density" "1.0" }\n\t"gravel" { "density" "1.0" }\n\t"cardboard" { "density" "1.0" }\n\t"paper" { "density" "1.0" }\n\t"flesh" { "density" "1.0" }\n\t"snow" { "density" "1.0" }\n\t"ice" { "density" "1.0" }\n\t"asphalt" { "density" "1.0" }\n\t"brass" { "density" "1.0" }\n\t"bronze" { "density" "1.0" }\n\t"copper" { "density" "1.0" }\n\t"iron" { "density" "1.0" }\n\t"steel" { "density" "1.0" }\n\t"slime" { "density" "1.0" }\n\t"mud" { "density" "1.0" }\n\t"chainlink" { "density" "1.0" }\n\t"tile" { "density" "1.0" }\n\t"plaster" { "density" "1.0" }\n}');
+    console.log('[hl2] All script manifests written to MEMFS ✓');
+    // Write SourceScheme.res (VGUI resource scheme — required by engine)
+    FS.mkdirTree('/hl2/resource');
+    var schemeRes = '"Scheme"\n{\n\tFonts\n\t{\n\t\t"Default"\n\t\t{\n\t\t\t"1"\n\t\t\t{\n\t\t\t\t"name"\t\t"Tahoma"\n\t\t\t\t"tall"\t\t"16"\n\t\t\t}\n\t\t}\n\t}\n\tColors\n\t{\n\t\t"BaseText"\t\t"255 255 255 255"\n\t}\n}';
+    FS.writeFile('/hl2/resource/SourceScheme.res', schemeRes);
+    console.log('[hl2] SourceScheme.res written to MEMFS');
+    // Fix VTF textures — use v7.4 format (104-byte header) matching NVIDIA SHIELD OBB
+    var createDummyVTF = function(path) {
+      // VTF v7.4 template from NVIDIA SHIELD HL2 OBB (8x8 DXT1)
+      var vtf = new Uint8Array([
+        // Header (104 bytes)
+        0x56,0x54,0x46,0x00, 0x07,0x00,0x00,0x00, 0x04,0x00,0x00,0x00, 0x68,0x00,0x00,0x00,
+        0x08,0x00,0x08,0x00, 0x40,0x02,0x00,0x00, 0x01,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,
+        0x47,0x8d,0x50,0x3f, 0xe8,0xef,0x57,0x3f, 0x47,0x8d,0x50,0x3f, 0x00,0x00,0x00,0x00,
+        0x00,0x00,0x80,0x3f, 0x0d,0x00,0x00,0x00, 0x04,0x0d,0x00,0x00, 0x00,0x08,0x08,0x01,
+        0x00,0x00,0x00,0x00, 0x03,0x00,0x00,0x00, 0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,
+        0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,
+        0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,
+        // Pixel data (88 bytes — 8x8 DXT1)
+        0xff,0xff,0xff,0xff, 0xff,0xff,0xff,0xff, 0xff,0xff,0xff,0xff, 0xff,0xff,0xff,0xff,
+        0xff,0xff,0xff,0xff, 0xff,0xff,0xff,0xff, 0xff,0xff,0xff,0xff, 0xff,0xff,0xff,0xff,
+        0xff,0xff,0xff,0xff, 0xff,0xff,0xff,0xff, 0xff,0xff,0xff,0xff, 0xff,0xff,0xff,0xff,
+        0xff,0xff,0xff,0xff, 0xff,0xff,0xff,0xff, 0xff,0xff,0xff,0xff, 0xff,0xff,0xff,0xff,
+        0xff,0xff,0xff,0xff, 0xff,0xff,0xff,0xff, 0xff,0xff,0xff,0xff, 0xff,0xff,0xff,0xff,
+        0xff,0xff,0xff,0xff, 0xff,0xff,0xff,0xff
+      ]);
+      try { FS.writeFile(path, vtf); } catch(e) { console.warn('[hl2] VTF create failed: ' + path); }
+    };
+    createDummyVTF('/hl2/materials/dev/identitylightwarp.vtf');
+    createDummyVTF('/hl2/materials/engine/normalizedrandomdirections2d.vtf');
+    createDummyVTF('/hl2/materials/effects/flashlight_border.vtf');
+    console.log('[hl2] Dummy VTF textures created in MEMFS');
     console.log("[hl2] gameinfo.txt created in MEMFS");
     
     // Fix VTF files — replace dummy VTFs with proper minimal VTFs
@@ -34617,27 +34679,76 @@ run();
     console.log("[hl2] Fixed " + vtfFixed + " VTF files in MEMFS");
     
     // Fix shader version — patch version 1 to version 6 in .vcs files
-    try {
-      var fxcDir = "/hl2/shaders/fxc";
-      var shaderFiles = FS.readdir(fxcDir);
-      var versionPatched = 0;
-      for (var sfi = 0; sfi < shaderFiles.length; sfi++) {
-        var sfn = shaderFiles[sfi];
-        if (sfn === "." || sfn === "..") continue;
-        if (sfn.indexOf(".vcs") < 0) continue;
-        var sfp = fxcDir + "/" + sfn;
-        var sdata = FS.readFile(sfp);
-        if (sdata.length >= 4 && sdata[0] === 1 && sdata[1] === 0 && sdata[2] === 0 && sdata[3] === 0) {
-          // Version is 1, patch to 6
-          sdata[0] = 6;
-          FS.writeFile(sfp, sdata);
-          versionPatched++;
-        }
+    // === v6 SHADER OVERWRITE ===
+    // The retail 2153 shaders are version 1 (2004 format).
+    // The nillerusr engine (Source 2013) requires version 6 shaders.
+    // Fetch shaders_v6.data from R2 and overwrite v1 files in MEMFS.
+    var v6Url = (typeof ASSET_ORIGIN !== "undefined" ? ASSET_ORIGIN : "https://hl2-webxr-assets.bdeeeb229289da950d71472c4c4bab76.r2.cloudflarestorage.com") + "/chunks/shaders_v6.data";
+    console.log("[hl2] Fetching v6 shaders from " + v6Url);
+    fetch(v6Url).then(function(v6Response) {
+      if (!v6Response.ok) throw new Error("HTTP " + v6Response.status);
+      return v6Response.arrayBuffer();
+    }).then(function(v6Buffer) {
+      var dv = new DataView(v6Buffer);
+      var off = 0;
+      var replaced = 0;
+      while (off + 8 <= v6Buffer.byteLength) {
+        var pathLen = dv.getInt32(off, true);
+        var dataLen = dv.getInt32(off + 4, true);
+        off += 8;
+        if (pathLen <= 0 || pathLen > 256 || dataLen <= 0 || dataLen > 50000000) break;
+        var pathBytes = new Uint8Array(v6Buffer, off, pathLen);
+        var path = new TextDecoder().decode(pathBytes);
+        off += pathLen;
+        var shaderData = new Uint8Array(v6Buffer, off, dataLen);
+        off += dataLen;
+        try { FS.writeFile(path, shaderData); replaced++; } catch(e) { console.warn("[hl2] v6 overwrite failed: " + path); }
       }
-      console.log("[hl2] Patched " + versionPatched + " shader files from version 1 to version 6");
-    } catch(e) { console.warn("[hl2] Shader version patch error: " + e); }
-    console.log("[hl2] All chunks loaded, starting engine...");
-    removeRunDependency("load_game_data");
+      console.log("[hl2] v6 shaders: " + replaced + " files overwritten in MEMFS ✓");
+      // Now patch any remaining v1 shaders
+      try {
+        var fxcDir = "/hl2/shaders/fxc";
+        var shaderFiles = FS.readdir(fxcDir);
+        var versionPatched = 0;
+        for (var sfi = 0; sfi < shaderFiles.length; sfi++) {
+          var sfn = shaderFiles[sfi];
+          if (sfn === "." || sfn === "..") continue;
+          if (sfn.indexOf(".vcs") < 0) continue;
+          var sfp = fxcDir + "/" + sfn;
+          var sdata = FS.readFile(sfp);
+          if (sdata.length >= 4 && sdata[0] === 1 && sdata[1] === 0 && sdata[2] === 0 && sdata[3] === 0) {
+            sdata[0] = 6;
+            FS.writeFile(sfp, sdata);
+            versionPatched++;
+          }
+        }
+        if (versionPatched > 0) console.log("[hl2] Patched " + versionPatched + " remaining v1 shaders to v6 (fallback)");
+      } catch(e) { console.warn("[hl2] Shader version patch error: " + e); }
+      console.log("[hl2] All chunks loaded, starting engine...");
+      removeRunDependency("load_game_data");
+    }).catch(function(e) {
+      console.warn("[hl2] v6 shader download failed: " + e + " — using v1 patch fallback");
+      try {
+        var fxcDir = "/hl2/shaders/fxc";
+        var shaderFiles = FS.readdir(fxcDir);
+        var versionPatched = 0;
+        for (var sfi = 0; sfi < shaderFiles.length; sfi++) {
+          var sfn = shaderFiles[sfi];
+          if (sfn === "." || sfn === "..") continue;
+          if (sfn.indexOf(".vcs") < 0) continue;
+          var sfp = fxcDir + "/" + sfn;
+          var sdata = FS.readFile(sfp);
+          if (sdata.length >= 4 && sdata[0] === 1 && sdata[1] === 0 && sdata[2] === 0 && sdata[3] === 0) {
+            sdata[0] = 6;
+            FS.writeFile(sfp, sdata);
+            versionPatched++;
+          }
+        }
+        console.log("[hl2] Patched " + versionPatched + " v1 shaders to v6 (fallback)");
+      } catch(e2) { console.warn("[hl2] Shader version patch error: " + e2); }
+      console.log("[hl2] All chunks loaded, starting engine...");
+      removeRunDependency("load_game_data");
+    });
   }).catch(function(err) {
     console.error("[hl2] Chunk load error: " + err + " — starting with partial data");
     removeRunDependency("load_game_data");
