@@ -293,6 +293,37 @@ EOF
   loadShaders.then(function() {
     console.log('[hl2] shaders.data loaded — ' +
       FS.readdir('/hl2/shaders').length + ' shader dirs in MEMFS')
+
+    // === v6 SHADER OVERWRITE ===
+    // The retail 2153 shaders are version 1 (2004 format).
+    // The nillerusr engine (Source 2013) requires version 6 shaders.
+    // Download v6 shaders from R2 and overwrite the v1 files in MEMFS.
+    fetchChunk('shaders_v6').then(function(v6Buffer) {
+      var dv = new DataView(v6Buffer)
+      var off = 0
+      var replaced = 0
+      while (off + 8 <= v6Buffer.byteLength) {
+        var pathLen = dv.getInt32(off, true)
+        var dataLen = dv.getInt32(off + 4, true)
+        off += 8
+        if (pathLen <= 0 || pathLen > 256 || dataLen <= 0 || dataLen > 50000000) break
+        var pathBytes = new Uint8Array(v6Buffer, off, pathLen)
+        var path = new TextDecoder().decode(pathBytes)
+        off += pathLen
+        var shaderData = new Uint8Array(v6Buffer, off, dataLen)
+        off += dataLen
+        // Overwrite the v1 shader file in MEMFS
+        try {
+          FS.writeFile(path, shaderData)
+          replaced++
+        } catch(e) {
+          console.warn('[hl2] v6 shader overwrite failed for ' + path + ': ' + e)
+        }
+      }
+      console.log('[hl2] v6 shaders: ' + replaced + ' files overwritten in MEMFS')
+    }).catch(function(e) {
+      console.warn('[hl2] v6 shader download failed (using v1 fallback): ' + e)
+    })
     // Preflight: verify critical shader families exist
     var criticalShaders = [
       'vertexlit_and_unlit_generic_vs20',
