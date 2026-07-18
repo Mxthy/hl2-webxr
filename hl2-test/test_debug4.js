@@ -20,31 +20,55 @@ const { chromium } = require('playwright');
   console.log('Navigating...');
   await page.goto('http://localhost:8080/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
   
-  // Wait 40s — allows 30s chunk timeout + 10s for engine init
-  console.log('Waiting 40s for engine init + chunk timeout...');
-  await page.waitForTimeout(40000);
+  // Wait 45s
+  console.log('Waiting 45s...');
+  await page.waitForTimeout(45000);
 
-  // Get status
+  // Check if we can call main
   const info = await page.evaluate(() => {
     var info = {};
     info.crossOriginIsolated = window.crossOriginIsolated;
-    info.statusText = document.getElementById('status')?.textContent || 'null';
-    info.logHTML = document.getElementById('log')?.innerHTML?.substring(0, 3000) || 'null';
-    info.moduleKeys = typeof Module !== 'undefined' ? Object.keys(Module).filter(k => 
-      k.indexOf('Engine') >= 0 || k.indexOf('Disable') >= 0 || k.indexOf('Render') >= 0 || 
-      k.indexOf('Camera') >= 0 || k.indexOf('ccall') >= 0 || k.indexOf('cwrap') >= 0 || 
-      k.indexOf('wasm') >= 0 || k.indexOf('callMain') >= 0 || k.indexOf('calledMain') >= 0
-    ) : [];
+    info.runtimeReady = typeof Module !== 'undefined' && Module.calledMain !== undefined;
     info.calledMain = typeof Module !== 'undefined' ? Module.calledMain : false;
+    info.statusText = document.getElementById('status')?.textContent || 'null';
+    info.logHTML = document.getElementById('log')?.innerHTML?.substring(0, 5000) || 'null';
+    
+    // Try to call main if not called yet
+    if (typeof Module !== 'undefined' && !Module.calledMain && typeof Module.callMain === 'function') {
+      try {
+        info.callMainResult = 'attempted';
+        Module.callMain(['-game', 'hl2', '-windowed', '-w', '1280', '-h', '800', '-novid', '-noip']);
+        info.callMainResult = 'success';
+      } catch (e) {
+        info.callMainResult = 'error: ' + e.message;
+      }
+    }
+    
     return info;
   });
 
-  // Print filtered logs (no null.style spam)
-  console.log('\n=== Console Logs (' + allLogs.length + ' total) ===');
-  allLogs.filter(l => !l.includes('Cannot read properties')).forEach(l => console.log(l));
+  // Wait another 10s after callMain attempt
+  await page.waitForTimeout(10000);
+
+  // Print filtered logs
+  console.log('\n=== Console Logs (' + allLogs.length + ' total, filtered) ===');
+  allLogs.filter(l => 
+    !l.includes('Cannot read properties') && 
+    !l.includes('still waiting') && 
+    !l.includes('(end of list)') &&
+    !l.includes('dependency:')
+  ).forEach(l => console.log(l));
 
   console.log('\n=== Info ===');
   console.log(JSON.stringify(info, null, 2));
+
+  // Get final logs after callMain
+  const finalLogs = await page.evaluate(() => ({
+    logHTML: document.getElementById('log')?.innerHTML?.substring(0, 5000) || 'null',
+    calledMain: typeof Module !== 'undefined' ? Module.calledMain : false,
+  }));
+  console.log('\n=== Final ===');
+  console.log(JSON.stringify(finalLogs, null, 2));
 
   await browser.close();
 })();
