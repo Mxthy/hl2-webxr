@@ -1,5 +1,6 @@
-// sw.js — Service Worker: COOP/COEP-Header-Injection + Caching
-const CACHE = 'hl2-xr-v6';
+// sw.js — Service Worker für HL2 WebXR
+// Injiziert COOP/COEP Headers auf alle Responses (ermöglicht SharedArrayBuffer)
+const CACHE = 'hl2-xr-v1';
 
 const PRECACHE = [
   './',
@@ -8,13 +9,13 @@ const PRECACHE = [
   'hl2_launcher.wasm',
   'xr_wrapper.js',
   'pre.js',
-  'sw.js',
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     (async () => {
       const cache = await caches.open(CACHE);
+      // Einzeln cachen — ein 404 soll nicht alles blockieren
       await Promise.allSettled(PRECACHE.map((url) => cache.add(url)));
       await self.skipWaiting();
     })(),
@@ -48,14 +49,17 @@ function withCoiHeaders(resp) {
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   const url = new URL(req.url);
+
   if (req.method !== 'GET' || url.origin !== self.location.origin) return;
 
   const path = url.pathname;
 
-  // Chunks: fetch + COEP, kein Cache (zu groß)
+  // Chunks: fetch + COEP headers, kein Cache (zu groß)
   if (path.includes('/chunks/') && path.endsWith('.data')) {
     event.respondWith(
-      fetch(req).then(withCoiHeaders).catch(() => new Response('offline', { status: 503 })),
+      fetch(req)
+        .then(withCoiHeaders)
+        .catch(() => new Response('offline', { status: 503 })),
     );
     return;
   }
@@ -71,14 +75,16 @@ self.addEventListener('fetch', (event) => {
           return withCoiHeaders(resp);
         } catch (e) {
           const cached = await caches.match(req);
-          return withCoiHeaders(cached || new Response('{}', { headers: { 'content-type': 'application/json' } }));
+          return withCoiHeaders(
+            cached || new Response('{}', { headers: { 'content-type': 'application/json' } }),
+          );
         }
       })(),
     );
     return;
   }
 
-  // Alle anderen: Cache-First + COEP
+  // Alle anderen: Cache-First mit Network-Fallback
   event.respondWith(
     (async () => {
       const cached = await caches.match(req);

@@ -1,73 +1,44 @@
-// post.js — Engine-Konfiguration (nach dem generierten Emscripten-Code)
-// slqnt-Ansatz: dynamicLibraries=[] → Emscripten liest neededDynlibs aus WASM-Metadata
+// post.js - Wird nach dem generierten Emscripten-Code ausgeführt
+// Konfigurationen und Anpassungen für die HL2-Engine
 
-// 1. dynamicLibraries LEER — Emscripten-Dylink-System übernimmt aus WASM-Metadata
-//    (Verhindert vtable-Reihenfolge-Probleme wie _ZTV11IVP_Mindist als GOT.mem-Import)
+// 1. dynamicLibraries explizit leer setzen, damit Emscripten die neededDynlibs
+// selbstständig aus den WASM-Metadaten parst (slqnt.dev-Ansatz)
 Module.dynamicLibraries = [];
 
-// 2. Canvas — korrekte Referenz
-Module.canvas = window.canvasElement || document.getElementById('canvas');
-if (Module.canvas) {
-  Module.canvas.width = window.screen.availWidth || 1920;
-  Module.canvas.height = window.screen.availHeight || 1080;
+// 2. Korrekte Zuweisung des Canvas-Elements
+if (window.canvasElement) {
+  Module.canvas = window.canvasElement;
+} else {
+  Module.canvas = document.getElementById('canvas');
 }
 
-// 3. Engine-Startargumente (Quest 3 optimiert)
+// 3. Engine-Startargumente festlegen (Quest 3 optimiert)
+// -game hl2: Lädt HL2 Mod/Assets
+// -windowed -w 1920 -h 1080: Standardauflösung
+// -novid: Intro-Videos überspringen (wichtig bei WebXR, da keine VR-Wiedergabe des Intro-Videos möglich)
+// -noip: Kein TCP/IP-Binding-Fehler
+// +mat_hdr_level 0 +mat_colorcorrection 1 +mat_picmip 1: Performance-Optimierungen für Quest 3 Standalone
+// -nosteam: Deaktiviert Steam-Verbindung
 Module.arguments = [
   '-game', 'hl2',
   '-windowed',
-  '-w', String(Module.canvas ? Module.canvas.width : 1920),
-  '-h', String(Module.canvas ? Module.canvas.height : 1080),
+  '-w', '1920',
+  '-h', '1080',
   '-novid',
   '-noip',
-  '-nosteam',
   '+mat_hdr_level', '0',
   '+mat_colorcorrection', '1',
   '+mat_picmip', '1',
+  '-nosteam'
 ];
 
-// 4. Status-Callbacks
-Module.setStatus = function(text) {
-  if (Module.setStatus.last !== text) {
-    Module.setStatus.last = text;
-    if (window.statusElement) window.statusElement.textContent = text || '';
-    var m = text && text.match(/([^(]+)\((\d+)\/(\d+)\)/);
-    if (m && window.progressElement) {
-      window.progressElement.hidden = false;
-      window.progressElement.value = parseInt(m[2]);
-      window.progressElement.max   = parseInt(m[3]);
-    } else if (window.progressElement && !text) {
-      window.progressElement.hidden = true;
-      if (window.spinnerElement) window.spinnerElement.style.display = 'none';
-    }
-  }
-};
+console.log('[POST-INIT] Engine-Argumente gesetzt:', Module.arguments.join(' '));
 
-Module.totalDependencies = 0;
-Module.monitorRunDependencies = function(left) {
-  this.totalDependencies = Math.max(this.totalDependencies, left);
-  Module.setStatus(left ? 'Vorbereitung... (' + (this.totalDependencies - left) + '/' + this.totalDependencies + ')' : '');
-};
-
-// 5. Nach Runtime-Init: XR-Wrapper benachrichtigen
+// 4. Integration mit xr_wrapper.js SharedArrayBuffer Bridge
+// Sobald das WASM-Memory zur Verfügung steht, initialisieren wir den SAB-Zeiger in WASM, falls benötigt
 Module.onRuntimeInitialized = function() {
-  console.log('[POST] WASM Runtime initialisiert!');
+  console.log('[POST-INIT] WASM Runtime initialisiert! Engine startet...');
   if (window.xrWrapper && typeof window.xrWrapper.onEngineInitialized === 'function') {
     window.xrWrapper.onEngineInitialized();
   }
 };
-
-// 6. Fehler-Handler
-window.onerror = function(e) {
-  Module.setStatus('Fehler — siehe Browser-Konsole');
-  if (window.spinnerElement) window.spinnerElement.style.display = 'none';
-  Module.setStatus = function(t) { if (t) console.error('[post-exception] ' + t); };
-};
-
-// 7. __gameChoice Promise (Engine wartet auf Spielauswahl)
-Module.__gameChoice = Module.__gameChoice || new Promise(function(resolve) {
-  Module.__resolveGame = resolve;
-  window.__resolveGame = resolve; // auch global verfügbar für index.html
-});
-
-console.log('[POST] Engine-Konfiguration geladen. dynamicLibraries=[], Canvas gesetzt.');

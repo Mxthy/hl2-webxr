@@ -106,12 +106,6 @@ Module["arguments"] = Module["arguments"] || [];
 
 Module["arguments"].push("-game", "portal", "-noip", "-language", "english", "-windowed", "+mat_hdr_level", "0", "+mat_colorcorrection", "1");
 
-// Safe globals for progress UI (prevent null.style errors)
-// In worker context, document is not available — use dummy objects
-var spinnerElement = (typeof document !== 'undefined' && document.getElementById('spinner')) || { style: { display: '' }, };
-var progressElement = (typeof document !== 'undefined' && document.getElementById('progress')) || { hidden: true, value: 0 };
-var statusElement = (typeof document !== 'undefined' && document.getElementById('status')) || { innerText: '' };
-
 class DataLoader {
   mapsOrdered=[ "background1", "testchmb_a_00", "testchmb_a_01", "testchmb_a_02", "testchmb_a_03", "testchmb_a_04", "testchmb_a_05", "testchmb_a_06", "testchmb_a_07", "testchmb_a_08", "testchmb_a_09", "testchmb_a_10", "testchmb_a_11", "testchmb_a_13", "testchmb_a_14", "testchmb_a_15" ];
   loadedMaps={};
@@ -198,8 +192,8 @@ Module.downloadMap = (lock, mapName) => {
 // end include: /home/runner/work/hl2-webxr/hl2-webxr/engine/portal-port/emscripten/pre.js
 
 // === ASSET CONFIG: Single immutable source for chunk URLs ===
-const ASSET_ORIGIN = '';  // Use local files
-const CHUNK_PREFIX = 'https://hl2-assets-proxy.hl2-webxr.workers.dev/chunks';
+const ASSET_ORIGIN = 'http://localhost:8086';  // Load from local server for testing
+const CHUNK_PREFIX = ASSET_ORIGIN + '/chunks';
 
 function chunkUrl(mapName) {
   if (!/^[a-z0-9_]+$/i.test(mapName)) {
@@ -242,9 +236,8 @@ async function fetchChunk(mapName) {
 // === LOCATEFILE: Redirect Emscripten runtime files to CDN ===
 var _orig_locateFile = Module.locateFile;
 Module.locateFile = function(path, prefix) {
-  if (path.endsWith('.wasm')) return './' + path;
-  if (path.endsWith('.data')) {
-    return 'https://hl2-assets-proxy.hl2-webxr.workers.dev/chunks/' + path;
+  if (path.endsWith('.wasm') || path.endsWith('.data')) {
+    return ASSET_ORIGIN + '/' + path;
   }
   if (_orig_locateFile) return _orig_locateFile(path, prefix);
   return prefix + path;
@@ -700,11 +693,6 @@ if (ENVIRONMENT_IS_PTHREAD) {
     } catch (ex) {
       err(`worker: onmessage() captured an uncaught exception: ${ex}`);
       if (ex?.stack) err(ex.stack);
-      // Catch 'null function' RuntimeErrors from missing IVP stubs — non-fatal for testing
-      if (ex instanceof WebAssembly.RuntimeError && String(ex.message || ex).indexOf('null function') >= 0) {
-        console.warn('[WARN] null function RuntimeError caught (non-fatal): ' + ex.message);
-        return;
-      }
       __emscripten_thread_crashed();
       throw ex;
     }
@@ -766,21 +754,19 @@ function writeStackCookie() {
 
 function checkStackCookie() {
   if (ABORT) return;
-  // Stack cookie check disabled for debugging
   var max = _emscripten_stack_get_end();
+  // See writeStackCookie().
   if (max == 0) {
     max += 4;
   }
   var cookie1 = GROWABLE_HEAP_U32()[((max) >>> 2) >>> 0];
   var cookie2 = GROWABLE_HEAP_U32()[(((max) + (4)) >>> 2) >>> 0];
   if (cookie1 != 34821223 || cookie2 != 2310721022) {
-    console.warn('[WARN] Stack cookie corrupted at ' + ptrToString(max) + ' (non-fatal, check disabled)');
-    // Re-write the cookies to prevent repeated warnings
-    GROWABLE_HEAP_U32()[((max) >>> 2) >>> 0] = 34821223;
-    GROWABLE_HEAP_U32()[(((max) + (4)) >>> 2) >>> 0] = 2310721022;
+    abort(`Stack overflow! Stack cookie has been overwritten at ${ptrToString(max)}, expected hex dwords 0x89BACDFE and 0x2135467, but received ${ptrToString(cookie2)} ${ptrToString(cookie1)}`);
   }
-  if (GROWABLE_HEAP_U32()[((0) >>> 2) >>> 0] != 1668509029) {
-    GROWABLE_HEAP_U32()[((0) >>> 2) >>> 0] = 1668509029; // Restore 'emsc' marker
+  // Also test the global address 0 for integrity.
+  if (GROWABLE_HEAP_U32()[((0) >>> 2) >>> 0] != 1668509029) /* 'emsc' */ {
+    abort("Runtime error: The application has corrupted its heap memory area (address zero)!");
   }
 }
 
@@ -2859,18 +2845,7 @@ var resolveGlobalSymbol = (symName, direct = false) => {
       if (!resolved) {
         resolved = moduleExports[sym];
       }
-      if (!resolved) {
-        // For GOT.mem data symbols (static class members), return a fixed non-zero
-        // address in WASM linear memory to prevent NULL deref / stack overflow
-        if (sym.indexOf('IVP_Compact_Edge') >= 0 || sym.indexOf('next_table') >= 0 || sym.indexOf('prev_table') >= 0) {
-          // Use a fixed address in the heap area (past stack guard pages)
-          var dummyAddr = 0x100000; // 1MB — safe in 2GB initial memory
-          console.warn('[WARN] undefined symbol (stubbed): ' + sym + ' at addr 0x' + dummyAddr.toString(16) + ' (non-fatal)');
-          return dummyAddr;
-        }
-        console.warn('[WARN] undefined symbol: ' + sym + ' (non-fatal)');
-        return 0;
-      }
+      assert(resolved, `undefined symbol '${sym}'. perhaps a side module was not linked in? if this global was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment`);
       return resolved;
     }
     // TODO kill ↓↓↓ (except "symbols local to this module", it will likely be
@@ -3210,17 +3185,7 @@ var reportUndefinedSymbols = () => {
         // Ignore undefined symbols that are imported as weak.
         continue;
       }
-      if (!value) {
-        // For GOT.mem data symbols (static class members), return fixed non-zero address
-        if (symName.indexOf('IVP_Compact_Edge') >= 0 || symName.indexOf('next_table') >= 0 || symName.indexOf('prev_table') >= 0) {
-          var dummyAddr = 0x100000; // 1MB — safe in 2GB initial memory
-          entry.value = dummyAddr;
-          console.warn('[WARN] undefined symbol (report, stubbed): ' + symName + ' at addr 0x' + dummyAddr.toString(16) + ' (non-fatal)');
-          return;
-        }
-        console.warn('[WARN] undefined symbol (report): ' + symName + ' (non-fatal)');
-        return;
-      }
+      assert(value, `undefined symbol '${symName}'. perhaps a side module was not linked in? if this global was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment`);
       if (typeof value == "function") {
         /** @suppress {checkTypes} */ entry.value = addFunction(value, value.sig);
       } else if (typeof value == "number") {
@@ -5165,14 +5130,14 @@ function __ZN16IVP_Cache_Object19update_cache_objectEv(...args) {
 __ZN16IVP_Cache_Object19update_cache_objectEv.stub = true;
 
 function __ZN16IVP_Compact_Edge10next_tableE(...args) {
-  if (!wasmImports["_ZN16IVP_Compact_Edge10next_tableE"] || wasmImports["_ZN16IVP_Compact_Edge10next_tableE"].stub) abort("external symbol '_ZN16IVP_Compact_Edge10next_tableE' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  if (!wasmImports["_ZN16IVP_Compact_Edge10next_tableE"] || wasmImports["_ZN16IVP_Compact_Edge10next_tableE"].stub) return 0; // IVP_Compact_Edge stub — symbols now defined in WASM is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IVP_Compact_Edge10next_tableE"](...args);
 }
 
 __ZN16IVP_Compact_Edge10next_tableE.stub = true;
 
 function __ZN16IVP_Compact_Edge10prev_tableE(...args) {
-  if (!wasmImports["_ZN16IVP_Compact_Edge10prev_tableE"] || wasmImports["_ZN16IVP_Compact_Edge10prev_tableE"].stub) abort("external symbol '_ZN16IVP_Compact_Edge10prev_tableE' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  if (!wasmImports["_ZN16IVP_Compact_Edge10prev_tableE"] || wasmImports["_ZN16IVP_Compact_Edge10prev_tableE"].stub) return 0; // IVP_Compact_Edge stub — symbols now defined in WASM is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IVP_Compact_Edge10prev_tableE"](...args);
 }
 
@@ -34438,12 +34403,8 @@ run();
     } else {
       console.log("[hl2] Shader preflight OK ✓");
     }
-    // Now load background1 + materials in parallel (with 30s timeout for testing)
-    var chunkTimeout = new Promise(function(resolve) { setTimeout(resolve, 30000); });
-    return Promise.race([
-      Promise.all([ dataLoader.loadMap("background1"), dataLoader.loadMap("materials") ]),
-      chunkTimeout.then(function() { console.warn("[hl2] Chunk loading timed out after 30s — starting with partial data"); })
-    ]);
+    // Now load background1 + materials in parallel
+    return Promise.all([ dataLoader.loadMap("background1"), dataLoader.loadMap("materials") ]);
   }).then(function() {
     // Fix case-sensitive directory names (MEMFS is case-sensitive)
     var fixCase = function(dir, correctName) {
