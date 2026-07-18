@@ -106,6 +106,12 @@ Module["arguments"] = Module["arguments"] || [];
 
 Module["arguments"].push("-game", "portal", "-noip", "-language", "english", "-windowed", "+mat_hdr_level", "0", "+mat_colorcorrection", "1");
 
+// Safe globals for progress UI (prevent null.style errors)
+// In worker context, document is not available — use dummy objects
+var spinnerElement = (typeof document !== 'undefined' && document.getElementById('spinner')) || { style: { display: '' }, };
+var progressElement = (typeof document !== 'undefined' && document.getElementById('progress')) || { hidden: true, value: 0 };
+var statusElement = (typeof document !== 'undefined' && document.getElementById('status')) || { innerText: '' };
+
 class DataLoader {
   mapsOrdered=[ "background1", "testchmb_a_00", "testchmb_a_01", "testchmb_a_02", "testchmb_a_03", "testchmb_a_04", "testchmb_a_05", "testchmb_a_06", "testchmb_a_07", "testchmb_a_08", "testchmb_a_09", "testchmb_a_10", "testchmb_a_11", "testchmb_a_13", "testchmb_a_14", "testchmb_a_15" ];
   loadedMaps={};
@@ -34404,8 +34410,12 @@ run();
     } else {
       console.log("[hl2] Shader preflight OK ✓");
     }
-    // Now load background1 + materials in parallel
-    return Promise.all([ dataLoader.loadMap("background1"), dataLoader.loadMap("materials") ]);
+    // Now load background1 + materials in parallel (with 30s timeout for testing)
+    var chunkTimeout = new Promise(function(resolve) { setTimeout(resolve, 30000); });
+    return Promise.race([
+      Promise.all([ dataLoader.loadMap("background1"), dataLoader.loadMap("materials") ]),
+      chunkTimeout.then(function() { console.warn("[hl2] Chunk loading timed out after 30s — starting with partial data"); })
+    ]);
   }).then(function() {
     // Fix case-sensitive directory names (MEMFS is case-sensitive)
     var fixCase = function(dir, correctName) {
