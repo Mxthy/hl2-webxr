@@ -1,3 +1,12 @@
+
+// Safe globals — defined early to prevent ReferenceErrors
+var spinnerElement = (typeof document !== 'undefined') ? document.getElementById('spinner') : null;
+var progressElement = (typeof document !== 'undefined') ? document.getElementById('progress') : null;
+var statusElement = (typeof document !== 'undefined') ? document.getElementById('status') : null;
+var loadingStatus = (typeof document !== 'undefined') ? document.getElementById('loading-status') : null;
+var __allowCanvasTransfer = false;
+if (typeof window !== 'undefined') window.__allowCanvasTransfer = false;
+
 // Support for growable heap + pthreads, where the buffer may change, so JS views
 // must be updated.
 function GROWABLE_HEAP_I8() {
@@ -192,7 +201,7 @@ Module.downloadMap = (lock, mapName) => {
 // end include: /home/runner/work/hl2-webxr/hl2-webxr/engine/portal-port/emscripten/pre.js
 
 // === ASSET CONFIG: Single immutable source for chunk URLs ===
-const ASSET_ORIGIN = 'https://hl2-assets-proxy.hl2-webxr.workers.dev';
+const ASSET_ORIGIN = 'http://localhost:8087';
 const CHUNK_PREFIX = ASSET_ORIGIN + '/chunks';
 
 function chunkUrl(mapName) {
@@ -237,7 +246,7 @@ async function fetchChunk(mapName) {
 var _orig_locateFile = Module.locateFile;
 Module.locateFile = function(path, prefix) {
   if (path.endsWith('.wasm') || path.endsWith('.data')) {
-    return ASSET_ORIGIN + '/hl2-runtime/' + path;
+    return path; // Serve from same origin (localhost)
   }
   if (_orig_locateFile) return _orig_locateFile(path, prefix);
   return prefix + path;
@@ -1116,7 +1125,15 @@ function createWasm() {
   // (for example, if the order of elements is wrong, and the one defining Module is
   // later), so we save Module and check it later.
   var trueModule = Module;
-  function receiveInstantiationResult(result) {
+  function __zeroIVPRegion() {
+  // Zero out 2048 bytes at 0x800000 for IVP_Compact_Edge tables
+  if (typeof wasmMemory !== 'undefined' && wasmMemory && wasmMemory.buffer) {
+    var heap = new Uint8Array(wasmMemory.buffer);
+    for (var i = 0x800000; i < 0x800000 + 2048; i++) heap[i] = 0;
+    console.log('[IVP] Zeroed 2048 bytes at 0x800000');
+  }
+}
+function receiveInstantiationResult(result) {
     // 'result' is a ResultObject object which has both the module and instance.
     // receiveInstance() will swap in the exports (to Module.asm) so they can be called
     assert(Module === trueModule, "the Module object should not be replaced during async compilation - perhaps the order of HTML elements is wrong?");
@@ -3202,15 +3219,17 @@ var registerDynCallSymbols = exports => {
 var reportUndefinedSymbols = () => {
   for (var [symName, entry] of Object.entries(GOT)) {
     if (entry.value == 0) {
-      // IVP_Compact_Edge tables: allocate via _malloc instead of failing
-      if (symName === '_ZN16IVP_Compact_Edge10next_tableE' || symName === '_ZN16IVP_Compact_Edge10prev_tableE') {
-        if (typeof _malloc === 'function') {
-          var addr = _malloc(1024); // 256 pointers * 4 bytes = 1024
-          if (typeof _memset === 'function') _memset(addr, 0, 1024);
-          entry.value = addr;
-          console.log('[IVP] ' + symName + ' → malloc addr ' + addr);
-          continue;
-        }
+      // IVP_Compact_Edge tables: use static WASM memory address
+      // 0x800000 (8MB) is in the heap region but past static data — safe to use
+      if (symName === '_ZN16IVP_Compact_Edge10next_tableE') {
+        entry.value = 0x800000; // 8MB offset
+        console.log('[IVP] next_table → static addr 0x800000');
+        continue;
+      }
+      if (symName === '_ZN16IVP_Compact_Edge10prev_tableE') {
+        entry.value = 0x800400; // 8MB + 1024 bytes
+        console.log('[IVP] prev_table → static addr 0x800400');
+        continue;
       }
       var value = resolveGlobalSymbol(symName, true).sym;
       if (!value && !entry.required) {
@@ -6566,7 +6585,7 @@ function ___pthread_create_js(pthread_ptr, attr, startRoutine, arg) {
   // fetch whatever canvases were passed to build in
   // -sOFFSCREENCANVASES_TO_PTHREAD= command line.
   transferredCanvasNames = "#game-canvas";
-  if (!__allowCanvasTransfer) { transferredCanvasNames = ""; }
+  if (!__allowCanvasTransfer && !(typeof window !== 'undefined' && window.__allowCanvasTransfer)) { transferredCanvasNames = ""; }
   transferredCanvasNames = transferredCanvasNames ? transferredCanvasNames.split(",") : [];
   var offscreenCanvases = {};
   // Dictionary of OffscreenCanvas objects we'll transfer to the created thread to own
@@ -34226,6 +34245,7 @@ dependenciesFulfilled = function runCaller() {
 // try this again later, after new deps are fulfilled
 function callMain(args = []) {
   __allowCanvasTransfer = true;
+  if (typeof window !== 'undefined') window.__allowCanvasTransfer = true;
   assert(runDependencies == 0, 'cannot call main when async dependencies remain! (listen on Module["onRuntimeInitialized"])');
   assert(__ATPRERUN__.length == 0, "cannot call main when preRun functions remain to be called");
   var entryFunction = resolveGlobalSymbol("_emscripten_proxy_main").sym;
