@@ -1,3 +1,5 @@
+// Canvas transfer gate — only allow during callMain
+var __allowCanvasTransfer = false;
 // === pre.js globals (injected — CI build doesn't include our pre.js) ===
 var canvasElement = null;
 var statusElement = null;
@@ -822,6 +824,7 @@ var __RELOC_FUNCS__ = [];
 var runtimeInitialized = false;
 
 function preRun() {
+  console.log('[TIMELINE] preRun start');
   assert(!ENVIRONMENT_IS_PTHREAD);
   // PThreads reuse the runtime from the main thread.
   if (Module["preRun"]) {
@@ -834,6 +837,7 @@ function preRun() {
 }
 
 function initRuntime() {
+  console.log('[TIMELINE] initRuntime start');
   assert(!runtimeInitialized);
   runtimeInitialized = true;
   if (ENVIRONMENT_IS_PTHREAD) return;
@@ -848,6 +852,7 @@ function initRuntime() {
 }
 
 function preMain() {
+  console.log('[TIMELINE] preMain start');
   checkStackCookie();
   if (ENVIRONMENT_IS_PTHREAD) return;
   // PThreads reuse the runtime from the main thread.
@@ -1963,7 +1968,7 @@ var PThread = {
     }
   },
   initMainThread() {
-    var pthreadPoolSize = 8;
+    var pthreadPoolSize = 0; // Patched: don't pre-create pool threads so main thread gets canvas
     // Start loading up the Worker pool, if requested.
     while (pthreadPoolSize--) {
       PThread.allocateUnusedWorker();
@@ -6574,6 +6579,11 @@ function ___pthread_create_js(pthread_ptr, attr, startRoutine, arg) {
   // -sOFFSCREENCANVASES_TO_PTHREAD= command line.
   // Force game-canvas ID (CI build baked #canvas, but HTML uses game-canvas)
   transferredCanvasNames = "#game-canvas";
+  // Only transfer canvas when callMain triggers it (not during init threads)
+  if (!__allowCanvasTransfer) {
+    console.log("[TIMELINE] Skipping canvas transfer (not in callMain yet)");
+    transferredCanvasNames = "";
+  }
   transferredCanvasNames = transferredCanvasNames ? transferredCanvasNames.split(",") : [];
   var offscreenCanvases = {};
   // Dictionary of OffscreenCanvas objects we'll transfer to the created thread to own
@@ -6604,13 +6614,15 @@ function ___pthread_create_js(pthread_ptr, attr, startRoutine, arg) {
           error = 28;
           break;
         }
-        if (canvas.controlTransferredOffscreen) {
+        console.log("[TIMELINE] canvas check: controlTransferredOffscreen=" + canvas.controlTransferredOffscreen + " name=" + name); if (canvas.controlTransferredOffscreen) {
           err(`pthread_create: cannot transfer canvas with ID "${name}" to thread, since the current thread does not have control over it!`);
           error = 63;
           // Operation not permitted, some other thread is accessing the canvas.
           break;
         }
-        if (canvas.transferControlToOffscreen) {
+        console.log("[TIMELINE] transferring canvas: " + name);
+  console.log("[TRACE] " + new Error().stack.split("\n").slice(0,5).join(" | "));
+  if (canvas.transferControlToOffscreen) {
           // Create a shared information block in heap so that we can control
           // the canvas size from any thread.
           if (!canvas.canvasSharedPtr) {
@@ -34232,6 +34244,7 @@ dependenciesFulfilled = function runCaller() {
 
 // try this again later, after new deps are fulfilled
 function callMain(args = []) {
+  __allowCanvasTransfer = true;
   console.log('[ENGINE] callMain called with args:', args);
   assert(runDependencies == 0, 'cannot call main when async dependencies remain! (listen on Module["onRuntimeInitialized"])');
   assert(__ATPRERUN__.length == 0, "cannot call main when preRun functions remain to be called");
@@ -34292,6 +34305,7 @@ function run(args = arguments_) {
     return;
   }
   function doRun() {
+  console.log('[TIMELINE] doRun start');
     // run may have just been called through dependencies being fulfilled just in this very frame,
     // or while the async setStatus time below was happening
     if (calledRun) return;
