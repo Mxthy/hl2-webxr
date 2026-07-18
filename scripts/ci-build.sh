@@ -359,6 +359,81 @@ EOF
     fixCase('/hl2/materials', 'dev')
     fixCase('/hl2/materials', 'engine')
     fixCase('/hl2/materials', 'effects')
+    // PATCH 3: gameinfo.txt (required by engine setup)
+    var gameinfoContent = '"GameInfo"\n{\n  game  "HL2"\n  title  "Half-Life 2"\n  type  singleplayer_only\n  developer  "Valve"\n  icon  "hl2"\n  FileSystem\n  {\n    SteamAppId  2153\n    ToolsAppId  211\n    SearchPaths\n    {\n      Game  |gameinfo_path|.\n      Game  hl2\n      Platform  platform\n    }\n  }\n}'
+    FS.writeFile('/hl2/gameinfo.txt', gameinfoContent)
+    console.log('[hl2] gameinfo.txt created in MEMFS')
+
+    // PATCH 4: VTF files — replace dummy VTFs with proper VTF format
+    var vtfFixList = [
+      '/hl2/materials/dev/identitylightwarp.vtf',
+      '/hl2/materials/engine/normalizedrandomdirections2d.vtf',
+      '/hl2/materials/effects/flashlight_border.vtf'
+    ]
+    var vtfFixed = 0
+    for (var vi = 0; vi < vtfFixList.length; vi++) {
+      var vtfPath = vtfFixList[vi]
+      if (FS.analyzePath(vtfPath).exists) {
+        var existing = FS.readFile(vtfPath)
+        if (existing[0] !== 0x56) {
+          var vtfHeader = new Uint8Array(84)
+          vtfHeader[0] = 0x56; vtfHeader[1] = 0x54; vtfHeader[2] = 0x46; vtfHeader[3] = 0x00
+          vtfHeader[4] = 7; vtfHeader[8] = 1; vtfHeader[12] = 80
+          vtfHeader[16] = 4; vtfHeader[18] = 4
+          vtfHeader[20] = 0x00; vtfHeader[21] = 0x40
+          vtfHeader[24] = 1; vtfHeader[44] = 12; vtfHeader[48] = 1
+          vtfHeader[52] = 12; vtfHeader[56] = 1; vtfHeader[57] = 1; vtfHeader[58] = 1
+          vtfHeader[80] = 128; vtfHeader[81] = 128; vtfHeader[82] = 128; vtfHeader[83] = 255
+          var fullImage = new Uint8Array(64)
+          for (var fi = 0; fi < 16; fi++) { fullImage[fi*4]=128; fullImage[fi*4+1]=128; fullImage[fi*4+2]=128; fullImage[fi*4+3]=255 }
+          var fullVtf = new Uint8Array(80 + 4 + 64)
+          fullVtf.set(vtfHeader.subarray(0,80), 0)
+          fullVtf.set(vtfHeader.subarray(80,84), 80)
+          fullVtf.set(fullImage, 84)
+          FS.writeFile(vtfPath, fullVtf)
+          vtfFixed++
+        }
+      }
+    }
+    console.log('[hl2] Fixed ' + vtfFixed + ' VTF files in MEMFS')
+
+    // PATCH 5: Shader version — patch .vcs files from version 1 to version 6
+    try {
+      var fxcDir = '/hl2/shaders/fxc'
+      var shaderFiles = FS.readdir(fxcDir)
+      var versionPatched = 0
+      for (var sfi = 0; sfi < shaderFiles.length; sfi++) {
+        var sfn = shaderFiles[sfi]
+        if (sfn === '.' || sfn === '..') continue
+        if (sfn.indexOf('.vcs') < 0) continue
+        var sfp = fxcDir + '/' + sfn
+        var sdata = FS.readFile(sfp)
+        if (sdata.length >= 4 && sdata[0] === 1 && sdata[1] === 0 && sdata[2] === 0 && sdata[3] === 0) {
+          sdata[0] = 6
+          FS.writeFile(sfp, sdata)
+          versionPatched++
+        }
+      }
+      console.log('[hl2] Patched ' + versionPatched + ' shader files from version 1 to version 6')
+    } catch(e) { console.warn('[hl2] Shader version patch error: ' + e) }
+
+    // PATCH 6: Shader case-insensitive symlinks (MEMFS is case-sensitive)
+    try {
+      var fxcDir2 = '/hl2/shaders/fxc'
+      var shaderFiles2 = FS.readdir(fxcDir2)
+      var caseFixed = 0
+      for (var si = 0; si < shaderFiles2.length; si++) {
+        var fname = shaderFiles2[si]
+        if (fname === '.' || fname === '..') continue
+        var lower = fname.toLowerCase()
+        if (lower !== fname && !FS.analyzePath(fxcDir2 + '/' + lower).exists) {
+          FS.symlink(fxcDir2 + '/' + fname, fxcDir2 + '/' + lower)
+          caseFixed++
+        }
+      }
+      console.log('[hl2] Fixed ' + caseFixed + ' shader filename cases')
+    } catch(e) { console.warn('[hl2] Shader case fix error: ' + e) }
+
     console.log('[hl2] All chunks loaded, starting engine...')
     removeRunDependency('load_game_data')
   }).catch(function(err) {
@@ -654,6 +729,9 @@ emcc_link() {
   # GL stubs + dlsym/dlopen intercept + GL version spoof
   python3 "$REPO_ROOT/scripts/gl_stubs_patch.py" build/launcher_main/hl2_launcher.js || true
   python3 "$REPO_ROOT/scripts/gl_stubs_patch.py" build/install/hl2_launcher.js || true
+  # Runtime safety patches: non-fatal abort, exception handling, GL fallback
+  python3 "$REPO_ROOT/scripts/runtime_patches.py" build/launcher_main/hl2_launcher.js || true
+  python3 "$REPO_ROOT/scripts/runtime_patches.py" build/install/hl2_launcher.js || true
   cp -r emscripten/assets build/install/ 2>/dev/null || true
 
   # Verify EXPORTED_RUNTIME_METHODS were applied
