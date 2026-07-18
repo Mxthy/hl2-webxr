@@ -3,7 +3,7 @@
 <head>
    <meta charset="UTF-8">
    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-   <title>HL2 WebXR - Build #88 Debug</title>
+   <title>HL2 WebXR - Build #94 — IVP Fix + Canvas Transfer</title>
    <script src="https://cdn.tailwindcss.com"></script>
    <style>
        body { margin: 0; overflow: hidden; background-color: #050505; color: #0f0; font-family: monospace; }
@@ -116,14 +116,14 @@
            }
        }
 
-       // Initialisiere die XR-Klasse
+       // Initialisiere die XR-Klasse — VERZÖGERT!
+       // Der Canvas wird von der Engine via PROXY_TO_PTHREAD + OFFSCREENCANVAS
+       // übernommen. Ein getContext('webgl2') im Main-Thread VOR dem Transfer
+       // würde den Canvas dauerhaft blockieren ("cannot transfer canvas" Fehler).
+       // Daher: Erst WebXR initialisieren, wenn der Nutzer explizit VR anfordert.
        async function initWebXR() {
-           webxr = new HL2WebXR(canvas.getContext('webgl2', { xrCompatible: true }), canvas);
-           const isReady = await webxr.init();
-           if (isReady) {
-               btnEnterVR.disabled = false;
-               log("WebXR Wrapper initialisiert.");
-           }
+           log("WebXR deferred until user requests VR session.");
+           btnEnterVR.disabled = false;
        }
 
        // UI Event Listener
@@ -138,8 +138,21 @@
            }
        });
 
-       btnEnterVR.addEventListener('click', () => {
-           if(webxr) webxr.enterVR();
+       btnEnterVR.addEventListener('click', async () => {
+           try {
+               // WebGL-Kontext erst hier holen — nach Engine-Canvas-Transfer
+               if (!webxr || !webxr.gl) {
+                   log("Hole WebGL2-Kontext für WebXR...");
+                   const gl = canvas.getContext('webgl2', { xrCompatible: true });
+                   if (!gl) { log("FEHLER: Kein WebGL2-Kontext verfügbar!"); return; }
+                   webxr = new HL2WebXR(gl, canvas);
+                   const ready = await webxr.init();
+                   if (!ready) { log("WebXR Init fehlgeschlagen."); return; }
+               }
+               webxr.enterVR();
+           } catch (e) {
+               log(`VR Fehler: ${e.message}`);
+           }
        });
 
        // Lade die von Build #88 kompilierte Engine

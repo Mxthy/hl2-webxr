@@ -236,6 +236,22 @@ int _ZN11IVP_Mindist22recalc_invalid_mindistEv(void* self) {
     return 0;
 }
 
+// -----------------------------------------------------------------------
+// IVP_Compact_Edge static data members
+// -----------------------------------------------------------------------
+// These are GOT.mem imports in the main WASM — the engine expects them
+// from a side module (libvphysics.so) but they're not exported there.
+// Define them here as zeroed arrays so the physics engine has valid
+// memory to read/write instead of NULL (which causes stack overflow
+// and null-function RuntimeErrors).
+// 256 pointer-sized entries = 2048 bytes on 64-bit, 1024 on 32-bit.
+// -----------------------------------------------------------------------
+__attribute__((used, visibility("default")))
+void* _ZN16IVP_Compact_Edge10next_tableE[256] = {0};
+
+__attribute__((used, visibility("default")))
+void* _ZN16IVP_Compact_Edge10prev_tableE[256] = {0};
+
 } // extern "C"
 
 #endif // __EMSCRIPTEN__
@@ -558,6 +574,16 @@ emcc_link() {
     sed -i '/emcc_link/d' "$checkpoint_file" 2>/dev/null || true
   fi
   echo "$_erm_hash" > "$_erm_cache" 2>/dev/null || true
+
+  # Force re-link if emscripten_stubs.cpp content changed (IVP_Compact_Edge fix etc.)
+  _stubs_hash=$(grep -A999 'emscripten_stubs.cpp' "$REPO_ROOT/scripts/ci-build.sh" | grep -m1 -B999 'EOF' | md5sum | cut -c1-8)
+  _stubs_cache="$ENGINE_DIR/build/.stubs_hash"
+  if [ -f "$_stubs_cache" ] && [ "$(cat "$_stubs_cache")" != "$_stubs_hash" ]; then
+    log "emscripten_stubs.cpp changed — forcing emcc_link + stubs re-compile"
+    sed -i '/emcc_link/d' "$checkpoint_file" 2>/dev/null || true
+    rm -f "$ENGINE_DIR/build/emscripten_stubs.o" 2>/dev/null || true
+  fi
+  echo "$_stubs_hash" > "$_stubs_cache" 2>/dev/null || true
 
   checkpoint_done "emcc_link" && { log "emcc_link: skip"; return; }
   log "EXPORTED_RUNTIME_METHODS: $(grep "EXPORTED_RUNTIME_METHODS" "$REPO_ROOT/scripts/ci-build.sh" | head -1 | tr -s ' ')"
