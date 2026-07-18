@@ -1,133 +1,88 @@
 const { chromium } = require('playwright');
 
 (async () => {
-    const browser = await chromium.launch({
-        headless: true,
-        args: [
-            '--use-gl=angle',
-            '--use-angle=swiftshader',
-            '--enable-unsafe-swiftshader',
-            '--enable-features=SharedArrayBuffer,CrossOriginIsolation',
-            '--disable-features=IsolateOrigins,site-per-process',
-            '--no-sandbox'
-        ]
-    });
+  const browser = await chromium.launch({
+    args: [
+      '--enable-features=SharedArrayBuffer,CrossOriginIsolation',
+      '--cross-origin-isolated',
+      '--enable-experimental-web-platform-features',
+      '--no-sandbox',
+      '--disable-gpu',
+      '--disable-dev-shm-usage',
+    ]
+  });
 
-    const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
-    const page = await context.newPage();
+  const context = await browser.newContext({
+    viewport: { width: 1280, height: 1024 }
+  });
 
-    const logs = [];
-    page.on('console', msg => logs.push(`[${msg.type()}] ${msg.text()}`));
-    page.on('pageerror', err => logs.push(`[PAGE_ERROR] ${err.message}`));
-    
-    // Track network requests for .wasm and .so files
-    const failedRequests = [];
-    page.on('requestfailed', req => {
-        failedRequests.push(`${req.url()} - ${req.failure()?.errorText || 'unknown'}`);
-    });
-    
-    const responses = [];
-    page.on('response', resp => {
-        const url = resp.url();
-        if (url.endsWith('.wasm') || url.endsWith('.so') || url.endsWith('.data')) {
-            responses.push(`${url.split('/').pop()}: ${resp.status()} (${resp.headers()['content-length'] || '?'} bytes)`);
-        }
-    });
+  const page = await context.newPage();
 
-    console.log('Navigating to localhost...');
-    await page.goto('http://localhost:8086/index_debug3.html?fresh=build90', { 
-        waitUntil: 'domcontentloaded',
-        timeout: 120000 
-    });
+  // Collect console messages
+  const logs = [];
+  page.on('console', msg => {
+    logs.push(`[${msg.type()}] ${msg.text()}`);
+  });
+  page.on('pageerror', err => {
+    logs.push(`[ERROR] ${err.message}`);
+  });
 
-    const isolated = await page.evaluate(() => self.crossOriginIsolated);
-    console.log('crossOriginIsolated:', isolated);
+  console.log('Navigating to localhost:8080...');
+  await page.goto('http://localhost:8080/index.html', {
+    waitUntil: 'domcontentloaded',
+    timeout: 30000
+  });
 
-    console.log('Waiting for engine init (5 min max)...');
-    try {
-        await page.waitForFunction(
-            () => {
-                const el = document.querySelector('#loading-status');
-                if (!el) return false;
-                const text = el.textContent;
-                return text.includes('Ready') || text.includes('ABORTED') || text.includes('Error') || text.includes('ABORT');
-            },
-            { timeout: 300000, polling: 3000 }
-        );
-    } catch(e) {
-        console.log('Timeout waiting for init...');
-    }
+  // Wait for engine init
+  console.log('Waiting 15s for engine init...');
+  await page.waitForTimeout(15000);
 
-    await page.waitForTimeout(5000);
+  // Check if engine ready
+  const status = await page.evaluate(() => {
+    return {
+      crossOriginIsolated: window.crossOriginIsolated,
+      statusText: document.getElementById('status')?.textContent,
+      buttons: {
+        testBridge: !document.getElementById('btnTestBridge')?.disabled,
+        checkExports: !document.getElementById('btnCheckExports')?.disabled,
+      },
+      moduleExists: typeof Module !== 'undefined',
+      moduleKeys: typeof Module !== 'undefined' ? Object.keys(Module).filter(k => 
+        k.indexOf('Engine') >= 0 || k.indexOf('Disable') >= 0 || k.indexOf('Render') >= 0 || k.indexOf('Camera') >= 0 || k.indexOf('ccall') >= 0 || k.indexOf('cwrap') >= 0 || k.indexOf('wasm') >= 0
+      ) : [],
+    };
+  });
 
-    // Network summary
-    console.log('\n=== Network Responses (.wasm/.so/.data) ===');
-    responses.forEach(r => console.log(r));
-    
-    console.log('\n=== Failed Requests ===');
-    if (failedRequests.length === 0) console.log('None');
-    failedRequests.forEach(r => console.log(r));
+  console.log('=== Page Status ===');
+  console.log(JSON.stringify(status, null, 2));
 
-    const status = await page.evaluate(() => {
-        const el = document.querySelector('#loading-status');
-        return el ? el.textContent : 'NOT FOUND';
-    });
-    console.log('\n=== Loading Status ===');
-    console.log(status);
+  // If test bridge button is enabled, click it
+  if (status.buttons.testBridge) {
+    console.log('\nClicking Test Bridge button...');
+    await page.click('#btnTestBridge');
+    await page.waitForTimeout(2000);
+  }
 
-    const exports = await page.evaluate(() => {
-        const el = document.querySelector('#export-list');
-        return el ? el.textContent : 'NOT FOUND';
-    });
-    console.log('\n=== Export List ===');
-    console.log(exports);
+  // If check exports button is enabled, click it
+  if (status.buttons.checkExports) {
+    console.log('Clicking Check Exports button...');
+    await page.click('#btnCheckExports');
+    await page.waitForTimeout(2000);
+  }
 
-    const consoleLog = await page.evaluate(() => {
-        const el = document.querySelector('#console-log');
-        if (!el) return 'NOT FOUND';
-        return Array.from(el.children).map(c => c.textContent).join('\n');
-    });
-    console.log('\n=== Console Log (last 40) ===');
-    consoleLog.split('\n').slice(0, 40).forEach(l => console.log(l));
+  // Get log output
+  const logText = await page.evaluate(() => {
+    return document.getElementById('log')?.innerHTML || '';
+  });
 
-    const buttons = await page.evaluate(() => {
-        return Array.from(document.querySelectorAll('button')).map(b => ({ 
-            text: b.textContent.trim().replace(/\s+/g, ' '), 
-            disabled: b.disabled 
-        }));
-    });
-    console.log('\n=== Buttons ===');
-    buttons.forEach(b => console.log(`${b.text}: ${b.disabled ? 'DISABLED' : 'ENABLED'}`));
+  // Parse log HTML to text
+  const logLines = logText.split('<div>').map(l => l.replace(/<\/div>/g, '').trim()).filter(Boolean);
 
-    // Click Dump if enabled
-    const dumpEnabled = buttons.some(b => b.text.includes('Dump') && !b.disabled);
-    if (dumpEnabled) {
-        console.log('\n=== Clicking Dump Exports ===');
-        await page.click('#btn-dump-exports');
-        await page.waitForTimeout(2000);
-        const dumpLog = await page.evaluate(() => {
-            const el = document.querySelector('#console-log');
-            return el ? Array.from(el.children).map(c => c.textContent).join('\n') : '';
-        });
-        dumpLog.split('\n').slice(0, 25).forEach(l => console.log(l));
-    }
+  console.log('\n=== Console Log ===');
+  logs.slice(-30).forEach(l => console.log(l));
 
-    // Click Bridge if enabled
-    const bridgeEnabled = buttons.some(b => b.text.includes('Bridge') && !b.disabled);
-    if (bridgeEnabled) {
-        console.log('\n=== Clicking Test C++ Bridge ===');
-        await page.click('#btn-test-bridge');
-        await page.waitForTimeout(3000);
-        const bridgeLog = await page.evaluate(() => {
-            const el = document.querySelector('#console-log');
-            return el ? Array.from(el.children).map(c => c.textContent).join('\n') : '';
-        });
-        bridgeLog.split('\n').slice(0, 15).forEach(l => console.log(l));
-    }
+  console.log('\n=== Debug Log ===');
+  logLines.slice(-30).forEach(l => console.log(l));
 
-    console.log('\n=== Native Console (last 15) ===');
-    logs.slice(-15).forEach(l => console.log(l));
-
-    await browser.close();
-    console.log('\n=== Done ===');
+  await browser.close();
 })();

@@ -1,160 +1,141 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-   <meta charset="UTF-8">
-   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-   <title>HL2 WebXR - Build #88 Debug</title>
-   <script src="https://cdn.tailwindcss.com"></script>
-   <style>
-       body { margin: 0; overflow: hidden; background-color: #050505; color: #0f0; font-family: monospace; }
-       #game-canvas { display: block; width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
-       
-       #debug-overlay {
-           position: absolute; top: 10px; left: 10px; z-index: 10;
-           background: rgba(0,20,0,0.8); border: 1px solid #0f0; padding: 15px; border-radius: 4px;
-           width: 400px; max-height: 90vh; overflow-y: auto; pointer-events: none;
-       }
-       
-       .hook-status { display: flex; justify-content: space-between; margin-bottom: 4px; border-bottom: 1px dashed #030; padding-bottom: 2px;}
-       .status-ok { color: #0f0; font-weight: bold; }
-       .status-fail { color: #f00; font-weight: bold; }
-       
-       button { pointer-events: auto; background: #030; color: #0f0; border: 1px solid #0f0; padding: 5px 10px; cursor: pointer; margin-top: 10px; width: 100%;}
-       button:hover { background: #050; }
-       button:disabled { border-color: #333; color: #333; cursor: not-allowed; }
-   </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HL2 WebXR — Build #93 Debug</title>
+  <style>
+    body { background: #1a1a2e; color: #e0e0e0; font-family: monospace; margin: 0; padding: 20px; }
+    #canvas { width: 1280px; height: 720px; border: 2px solid #444; display: block; margin: 10px 0; }
+    #log { position: fixed; right: 20px; top: 20px; width: 500px; height: 80vh; overflow-y: auto;
+           background: #0d0d1a; padding: 10px; border: 1px solid #333; font-size: 12px; }
+    .btn { background: #16213e; color: #e0e0e0; border: 1px solid #444; padding: 8px 16px;
+           cursor: pointer; margin: 4px; border-radius: 4px; }
+    .btn:hover { background: #0f3460; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    #status { display: inline-block; padding: 4px 12px; border-radius: 4px; background: #333; }
+  </style>
 </head>
 <body>
+  <h2>HL2 WebXR — Build #93 Debug</h2>
+  <div>
+    <span id="status">Idle</span>
+    <button class="btn" id="btnStart">Start Engine</button>
+    <button class="btn" id="btnTestBridge" disabled>Test Bridge</button>
+    <button class="btn" id="btnCheckExports" disabled>Check Exports</button>
+  </div>
+  <canvas id="canvas"></canvas>
+  <div id="log"></div>
 
-   <canvas id="game-canvas" oncontextmenu="event.preventDefault()"></canvas>
+  <script>
+    // Global canvasElement for pre.js
+    var canvasElement = document.getElementById('canvas');
+    var statusElement = document.getElementById('status');
+    var progressElement = null;
+    var spinnerElement = null;
+    window.canvasElement = canvasElement;
+    window.statusElement = statusElement;
 
-   <div id="debug-overlay">
-       <h2 class="text-xl font-bold mb-2">λ HL2 WebXR - Debugger</h2>
-       <div id="loading-status" class="text-yellow-400 mb-4 animate-pulse">Lade Engine (Build #88)...</div>
-       
-       <div class="mb-4">
-           <strong>WASM Exports Checker:</strong>
-           <div id="export-list" class="mt-2 text-sm">
-               <!-- Wird via JS befüllt -->
-           </div>
-       </div>
+    var logEl = document.getElementById('log');
+    function log(msg) {
+      var ts = new Date().toISOString().substr(11, 8);
+      logEl.innerHTML += '<div>[' + ts + '] ' + msg + '</div>';
+      logEl.scrollTop = logEl.scrollHeight;
+      console.log('[Debug] ' + msg);
+    }
 
-       <button id="btn-test-bridge" disabled>Teste C++ Bridge (Disable Render)</button>
-       <button id="btn-enter-vr" disabled>WebXR Session starten</button>
-       
-       <div id="console-log" class="mt-4 text-xs font-mono" style="color: #888;"></div>
-   </div>
+    // Check exports before engine starts
+    function checkWasmExports() {
+      log("=== WASM Export Check ===");
+      var found = [], missing = [];
+      var names = ['_malloc', '_free', '_Engine_DisableAutoRender', '_Engine_RenderSingleFrame',
+                    '_Engine_SetCameraMatrix', '_Engine_SetProjectionMatrix', '_Engine_ResetCameraMatrix',
+                    '_DisableAutoRenderLoop', '_SetCameraMatrices', '_RenderXRFrame',
+                    '_EnableAutoRenderLoop'];
+      names.forEach(function(n) {
+        if (typeof Module[n] === 'function') { found.push(n); }
+        else { missing.push(n); }
+      });
+      log("Found: " + found.join(', '));
+      if (missing.length) log("Missing: " + missing.join(', '));
 
-   <script src="xr_wrapper.js"></script>
+      // Also check via ccall / cwrap / wasmExports paths
+      try {
+        if (typeof Module.ccall === 'function') log("ccall: available ✅");
+        if (typeof Module.cwrap === 'function') log("cwrap: available ✅");
+        if (typeof Module.wasmExports === 'function') {
+          var we = Module.wasmExports();
+          if (we && we.Engine_DisableAutoRender) log("wasmExports.Engine_DisableAutoRender: FOUND ✅");
+          else log("wasmExports available but Engine_DisableAutoRender not in it");
+        }
+      } catch(e) { log("Export path check error: " + e.message); }
+    }
 
-   <script>
-       const canvas = document.getElementById('game-canvas');
-       const loadingStatus = document.getElementById('loading-status');
-       const exportList = document.getElementById('export-list');
-       const btnTestBridge = document.getElementById('btn-test-bridge');
-       const btnEnterVR = document.getElementById('btn-enter-vr');
-       const consoleLog = document.getElementById('console-log');
-       
-       window.canvasElement = canvas;
-       window.statusElement = loadingStatus;
-       
-       let webxr = null;
+    // Module config
+    var Module = Module || {};
+    Module.canvas = canvasElement;
+    Module.arguments = ['-game', 'hl2', '-windowed', '-w', '1280', '-h', '720', '-novid', '-noip',
+                        '+mat_hdr_level', '0', '+mat_colorcorrection', '1', '+mat_picmip', '1', '-nosteam'];
 
-       function log(msg) {
-           const div = document.createElement('div');
-           div.textContent = `> ${msg}`;
-           consoleLog.prepend(div);
-           console.log(msg);
-       }
+    Module.onRuntimeInitialized = function() {
+      log("ENGINE RUNTIME READY!");
+      document.getElementById('btnTestBridge').disabled = false;
+      document.getElementById('btnCheckExports').disabled = false;
+      checkWasmExports();
+    };
 
-       window.Module = {
-           canvas: canvas,
-           arguments: ['-game', 'portal', '-windowed', '-w', '1280', '-h', '720', '-novid'],
-           
-           // FIX: Zwinge Emscripten, WASM und .so Dateien LOKAL zu laden, 
-           // anstatt den R2-Proxy aus der pre.js zu nutzen.
-           locateFile: function(path, prefix) {
-               if (path.endsWith('.wasm') || path.endsWith('.so')) {
-                   log(`Lade lokale Datei: ${path}`);
-                   return './' + path; 
-               }
-               return prefix + path;
-           },
-           
-           setStatus: (text) => {
-               if(text) loadingStatus.textContent = text;
-           },
-           
-           onRuntimeInitialized: () => {
-               loadingStatus.textContent = "Engine Runtime Ready!";
-               loadingStatus.className = "text-green-400 font-bold mb-4";
-               checkWasmExports();
-           }
-       };
+    Module.onAbort = function(e) { log("ABORT: " + e); };
 
-       function checkWasmExports() {
-           const requiredHooks = [
-               '_Engine_DisableAutoRender',
-               '_Engine_RenderSingleFrame',
-               '_Engine_SetCameraMatrix',
-               '_malloc'
-           ];
+    Module.locateFile = function(path) {
+      if (path.endsWith('.wasm')) return './hl2_launcher.wasm';
+      if (path.endsWith('.js')) return './hl2_launcher.js';
+      if (path.endsWith('.data')) {
+        return 'https://hl2-webxr-assets.r2.cloudflarestorage.com/chunks/' + path;
+      }
+      return path;
+    };
 
-           exportList.innerHTML = '';
-           let allPassed = true;
+    Module.dynamicLibraries = [];
 
-           requiredHooks.forEach(hook => {
-               const isPresent = typeof Module[hook] === 'function';
-               if (!isPresent) allPassed = false;
-               
-               exportList.innerHTML += `
-                   <div class="hook-status">
-                       <span>${hook}</span>
-                       <span class="${isPresent ? 'status-ok' : 'status-fail'}">
-                           ${isPresent ? 'FOUND' : 'MISSING'}
-                       </span>
-                   </div>
-               `;
-           });
+    // Load engine script
+    var script = document.createElement('script');
+    script.src = './hl2_launcher.js';
+    script.onload = function() { log("hl2_launcher.js loaded"); };
+    script.onerror = function() { log("Failed to load hl2_launcher.js"); };
+    document.head.appendChild(script);
 
-           if (allPassed) {
-               log("Alle C++ Hooks im WASM gefunden!");
-               btnTestBridge.disabled = false;
-               initWebXR();
-           } else {
-               log("FEHLER: Nicht alle C++ Hooks wurden exportiert.");
-           }
-       }
+    // Button handlers
+    document.getElementById('btnStart').addEventListener('click', function() {
+      log("Starting engine...");
+      statusElement.textContent = 'Running';
+      if (typeof Module.callMain === 'function') {
+        try { Module.callMain(Module.arguments); } catch(e) { log("callMain error: " + e.message); }
+      }
+    });
 
-       async function initWebXR() {
-           webxr = new HL2WebXR(canvas.getContext('webgl2', { xrCompatible: true }), canvas);
-           const isReady = await webxr.init();
-           if (isReady) {
-               btnEnterVR.disabled = false;
-               log("WebXR Wrapper initialisiert.");
-           }
-       }
+    document.getElementById('btnTestBridge').addEventListener('click', function() {
+      log("=== C++ Bridge Test ===");
+      try {
+        if (typeof Module._Engine_DisableAutoRender === 'function') {
+          Module._Engine_DisableAutoRender();
+          log("✅ Module._Engine_DisableAutoRender() called");
+        } else if (Module.asm && typeof Module.asm._Engine_DisableAutoRender === 'function') {
+          Module.asm._Engine_DisableAutoRender();
+          log("✅ Module.asm._Engine_DisableAutoRender() called");
+        } else if (typeof Module.ccall === 'function') {
+          Module.ccall('Engine_DisableAutoRender', 'v', [], []);
+          log("✅ Module.ccall('Engine_DisableAutoRender') called");
+        } else if (Module.wasmExports && Module.wasmExports().Engine_DisableAutoRender) {
+          Module.wasmExports().Engine_DisableAutoRender();
+          log("✅ Module.wasmExports().Engine_DisableAutoRender() called");
+        } else {
+          log("❌ Could not find Engine_DisableAutoRender via any path");
+          log("Module keys: " + Object.keys(Module).filter(function(k){ return k.indexOf('Engine') >= 0 || k.indexOf('Disable') >= 0 || k.indexOf('Render') >= 0; }).join(', '));
+        }
+      } catch(e) { log("Crash: " + e.message); }
+    });
 
-       btnTestBridge.addEventListener('click', () => {
-           log("Führe C++ Bridge Test aus...");
-           try {
-               Module._Engine_DisableAutoRender();
-               log("Erfolg: _Engine_DisableAutoRender ausgeführt. Engine sollte jetzt pausiert sein.");
-               btnTestBridge.disabled = true;
-           } catch (e) {
-               log(`Crash beim Aufruf: ${e.message}`);
-           }
-       });
-
-       btnEnterVR.addEventListener('click', () => {
-           if(webxr) webxr.enterVR();
-       });
-
-       log("Lade hl2_launcher.js...");
-       const script = document.createElement('script');
-       script.src = 'hl2_launcher.js';
-       document.body.appendChild(script);
-
-   </script>
+    document.getElementById('btnCheckExports').addEventListener('click', checkWasmExports);
+  </script>
 </body>
 </html>
