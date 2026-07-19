@@ -797,6 +797,17 @@ var __RELOC_FUNCS__ = [];
 var runtimeInitialized = false;
 
 function preRun() {
+  // Store Module.canvas (OffscreenCanvas from manual transfer) in GL.offscreenCanvases
+  // so workers can find it via findCanvasEventTarget
+  if (!ENVIRONMENT_IS_PTHREAD && Module.canvas) {
+    if (typeof GL !== 'undefined') {
+      GL.offscreenCanvases = GL.offscreenCanvases || {};
+      var canvasId = Module.canvas.id || 'canvas';
+      GL.offscreenCanvases[canvasId] = Module.canvas;
+      console.log('[CANVAS] Stored OffscreenCanvas in GL.offscreenCanvases["' + canvasId + '"]');
+    }
+  }
+  
   // Intercept FS.open to log/fix SourceScheme access
   console.log('[FS-TRACE] FS.open override installed in preRun, ENVIRONMENT_IS_PTHREAD=' + ENVIRONMENT_IS_PTHREAD);
   var _orig_FS_open = FS.open;
@@ -2027,9 +2038,20 @@ var PThread = {
   receiveObjectTransfer(data) {
     if (typeof GL != "undefined") {
       Object.assign(GL.offscreenCanvases, data.offscreenCanvases);
+      console.log('[WORKER-CANVAS] Received offscreenCanvases keys: ' + Object.keys(data.offscreenCanvases || {}));
+      console.log('[WORKER-CANVAS] moduleCanvasId: ' + data.moduleCanvasId);
+      console.log('[WORKER-CANVAS] GL.offscreenCanvases keys after merge: ' + Object.keys(GL.offscreenCanvases || {}));
+      if (GL.offscreenCanvases['canvas']) {
+        console.log('[WORKER-CANVAS] canvas entry type: ' + typeof GL.offscreenCanvases['canvas']);
+        console.log('[WORKER-CANVAS] has offscreenCanvas: ' + !!GL.offscreenCanvases['canvas'].offscreenCanvas);
+      }
       if (!Module["canvas"] && data.moduleCanvasId && GL.offscreenCanvases[data.moduleCanvasId]) {
         Module["canvas"] = GL.offscreenCanvases[data.moduleCanvasId].offscreenCanvas;
         Module["canvas"].id = data.moduleCanvasId;
+        Module.__transferredOffscreenCanvas = Module["canvas"];
+        console.log('[WORKER-CANVAS] Module.canvas set to OffscreenCanvas: ' + (Module["canvas"] instanceof OffscreenCanvas) + ' size: ' + Module["canvas"].width + 'x' + Module["canvas"].height);
+      } else {
+        console.log('[WORKER-CANVAS] Module.canvas NOT set. Module.canvas=' + (Module.canvas ? 'exists' : 'null') + ', moduleCanvasId="' + data.moduleCanvasId + '"');
       }
     }
   },
@@ -6577,13 +6599,30 @@ function ___pthread_create_js(pthread_ptr, attr, startRoutine, arg) {
     transferredCanvasNames = UTF8ToString(transferredCanvasNames).trim();
   }
   transferredCanvasNames = transferredCanvasNames ? transferredCanvasNames.split(",") : [];
-  // Force-include 'canvas' for offscreen canvas transfer to worker
-  if (transferredCanvasNames.indexOf('canvas') < 0) {
-    transferredCanvasNames.push('canvas');
-  }
+  // Manual canvas transfer — don't let pthread_create try to transfer again
+  transferredCanvasNames = transferredCanvasNames.filter(function(n) { return n !== 'canvas'; });
   var offscreenCanvases = {};
   // Dictionary of OffscreenCanvas objects we'll transfer to the created thread to own
   var moduleCanvasId = Module["canvas"]?.id || "";
+  
+  // MANUAL CANVAS TRANSFER: If Module.canvas is an OffscreenCanvas (from transferControlToOffscreen),
+  // pass it to the worker so it can render to the visible canvas
+  if (!ENVIRONMENT_IS_PTHREAD && Module["canvas"] instanceof OffscreenCanvas && !moduleCanvasId) {
+    moduleCanvasId = 'canvas';
+    Module["canvas"].id = 'canvas';
+    offscreenCanvases['canvas'] = {
+      offscreenCanvas: Module["canvas"],
+      canvasSharedPtr: _malloc(12),
+      id: 'canvas'
+    };
+    GROWABLE_HEAP_I32()[(offscreenCanvases['canvas'].canvasSharedPtr >>> 2)] = Module["canvas"].width;
+    GROWABLE_HEAP_I32()[((offscreenCanvases['canvas'].canvasSharedPtr + 4) >>> 2)] = Module["canvas"].height;
+    GROWABLE_HEAP_U32()[((offscreenCanvases['canvas'].canvasSharedPtr + 8) >>> 2)] = 0;
+    transferList.push(Module["canvas"]);
+    // Also store in a global for findCanvasEventTarget
+    Module.__transferredOffscreenCanvas = Module["canvas"];
+    console.log('[CANVAS] Passing OffscreenCanvas to worker via pthread_create (transferList size: ' + transferList.length + ')');
+  }
   // Note that transferredCanvasNames might be null (so we cannot do a for-of loop).
   for (var name of transferredCanvasNames) {
     name = name.trim();
@@ -12637,18 +12676,43 @@ var GL = {
 var maybeCStringToJsString = cString => cString > 2 ? UTF8ToString(cString) : cString;
 
 var findCanvasEventTarget = target => {
+  // Check Module.__transferredOffscreenCanvas FIRST — this is our manually transferred canvas
+  if (Module.__transferredOffscreenCanvas) {
+    console.log('[FIND-CANVAS] Using Module.__transferredOffscreenCanvas (' + Module.__transferredOffscreenCanvas.width + 'x' + Module.__transferredOffscreenCanvas.height + ')');
+    return Module.__transferredOffscreenCanvas;
+  }
+  // Debug: log what target is being looked up
+  var targetStr = (typeof target === 'string') ? target : String(target);
+  if (typeof GL !== 'undefined' && GL.offscreenCanvases) {
+    var keys = Object.keys(GL.offscreenCanvases);
+    if (keys.length > 0) console.log('[FIND-CANVAS] target=' + targetStr + ' GL.offscreenCanvases keys=' + JSON.stringify(keys) + ' ENVIRONMENT_IS_PTHREAD=' + ENVIRONMENT_IS_PTHREAD);
+  }
   // Check for transferred offscreen canvas first
   if (typeof GL !== 'undefined' && GL.offscreenCanvases) {
     for (var key in GL.offscreenCanvases) {
       if (key == 'canvas' && (target == 'canvas' || target == 0 || !target)) {
-        return GL.offscreenCanvases[key];
+        var entry = GL.offscreenCanvases[key];
+        // GL.offscreenCanvases stores info objects {offscreenCanvas, canvasSharedPtr, id}
+        // Return the actual OffscreenCanvas, not the wrapper
+        if (entry && entry.offscreenCanvas) return entry.offscreenCanvas;
+        if (entry) return entry; // Already an OffscreenCanvas
       }
     }
   }
   target = maybeCStringToJsString(target);
-  var found = (GL.offscreenCanvases && GL.offscreenCanvases[target.substr(1)]) ||
-  (target == "canvas" && GL.offscreenCanvases && Object.keys(GL.offscreenCanvases)[0]) ||
-  (typeof document != "undefined" && document.querySelector(target));
+  var found = null;
+  if (GL.offscreenCanvases) {
+    var key1 = target.substr(1);
+    if (GL.offscreenCanvases[key1]) {
+      found = GL.offscreenCanvases[key1].offscreenCanvas || GL.offscreenCanvases[key1];
+    } else if (target == "canvas" && Object.keys(GL.offscreenCanvases).length > 0) {
+      var firstKey = Object.keys(GL.offscreenCanvases)[0];
+      found = GL.offscreenCanvases[firstKey].offscreenCanvas || GL.offscreenCanvases[firstKey];
+    }
+  }
+  if (!found && typeof document != "undefined") {
+    found = document.querySelector(target);
+  }
   if (found) return found;
   if (typeof OffscreenCanvas != "undefined") {
     var fb = new OffscreenCanvas(1280, 800);
