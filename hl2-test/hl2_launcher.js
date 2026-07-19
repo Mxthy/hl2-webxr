@@ -104,7 +104,7 @@ if (ENVIRONMENT_IS_NODE) {
 // include: /home/runner/work/hl2-webxr/hl2-webxr/engine/portal-port/emscripten/pre.js
 Module["arguments"] = Module["arguments"] || [];
 
-Module["arguments"].push("-game", "portal", "-noip", "-language", "english", "-windowed", "+mat_hdr_level", "0", "+mat_colorcorrection", "1");
+Module["arguments"].push("-game", "hl2", "-windowed", "-w", "1280", "-h", "800", "-novid", "-noip", "-language", "english", "+mat_hdr_level", "0", "+mat_colorcorrection", "1");
 
 class DataLoader {
   mapsOrdered=[ "background1", "testchmb_a_00", "testchmb_a_01", "testchmb_a_02", "testchmb_a_03", "testchmb_a_04", "testchmb_a_05", "testchmb_a_06", "testchmb_a_07", "testchmb_a_08", "testchmb_a_09", "testchmb_a_10", "testchmb_a_11", "testchmb_a_13", "testchmb_a_14", "testchmb_a_15" ];
@@ -34499,6 +34499,7 @@ run();
     var schemeRes = [
       '"Scheme"',
       '{',
+      '\t// Fonts',
       '\tFonts',
       '\t{',
       '\t\t"Default"',
@@ -34507,15 +34508,56 @@ run();
       '\t\t\t{',
       '\t\t\t\t"name"\t\t"Tahoma"',
       '\t\t\t\t"tall"\t\t"16"',
+      '\t\t\t\t"weight"\t\t"0"',
+      '\t\t\t\t"ypos"\t\t"0"',
+      '\t\t\t}',
+      '\t\t}',
+      '\t\t"Marlett"',
+      '\t\t{',
+      '\t\t\t"1"',
+      '\t\t\t{',
+      '\t\t\t\t"name"\t\t"Marlett"',
+      '\t\t\t\t"tall"\t\t"13"',
+      '\t\t\t\t"weight"\t\t"0"',
+      '\t\t\t\t"ypos"\t\t"0"',
+      '\t\t\t}',
+      '\t\t}',
+      '\t\t"Courier New"',
+      '\t\t{',
+      '\t\t\t"1"',
+      '\t\t\t{',
+      '\t\t\t\t"name"\t\t"Courier New"',
+      '\t\t\t\t"tall"\t\t"13"',
+      '\t\t\t\t"weight"\t\t"0"',
       '\t\t\t}',
       '\t\t}',
       '\t}',
+      '\t// Colors',
       '\tColors',
       '\t{',
       '\t\t"BaseText"\t\t"255 255 255 255"',
-      '\t\t"white"\t\t"255 255 255 255"',
-      '\t\t"black"\t\t"0 0 0 255"',
+      '\t\t"BrightBaseText"\t"255 255 255 255"',
+      '\t\t"DimBaseText"\t\t"180 180 180 255"',
+      '\t\t"DimText"\t\t"120 120 120 255"',
+      '\t\t"SelectionBG"\t\t"50 50 50 255"',
+      '\t\t"SelectionBG2"\t"70 70 70 255"',
+      '\t\t"ListBG"\t\t\t"0 0 0 255"',
+      '\t\t"TitleText"\t\t"255 255 255 255"',
+      '\t\t"TitleDimText"\t\t"180 180 180 255"',
+      '\t\t"TitleBG"\t\t"100 100 100 255"',
+      '\t\t"TitleDimBG"\t\t"0 0 0 255"',
+      '\t\t"Cursor"\t\t"255 255 255 255"',
+      '\t\t"CheckBg"\t\t"90 90 90 255"',
+      '\t\t"CheckFg"\t\t"255 255 255 255"',
+      '\t\t"CheckCheck"\t\t"50 50 50 255"',
+      '\t\t"CheckBg"\t\t"90 90 90 255"',
+      '\t\t"ListSelFg"\t\t"255 255 255 255"',
+      '\t\t"ListSelBg"\t\t"70 70 70 255"',
+      '\t\t"white"\t\t\t"255 255 255 255"',
+      '\t\t"black"\t\t\t"0 0 0 255"',
+      '\t\t"Blank"\t\t\t"0 0 0 0"',
       '\t}',
+      '\t// Borders',
       '\tBorders',
       '\t{',
       '\t\t"DefaultBorder"',
@@ -34532,13 +34574,188 @@ run();
       '\t\t\t\t"color"\t\t"0 0 0 0"',
       '\t\t\t}',
       '\t\t}',
+      '\t\t"ButtonBorder"',
+      '\t\t{',
+      '\t\t\t"1"',
+      '\t\t\t{',
+      '\t\t\t\t"color"\t\t"80 80 80 255"',
+      '\t\t\t}',
+      '\t\t}',
+      '\t\t"FrameBorder"',
+      '\t\t{',
+      '\t\t\t"1"',
+      '\t\t\t{',
+      '\t\t\t\t"color"\t\t"100 100 100 255"',
+      '\t\t\t}',
+      '\t\t}',
+      '\t\t"TabBorder"',
+      '\t\t{',
+      '\t\t\t"1"',
+      '\t\t\t{',
+      '\t\t\t\t"color"\t\t"80 80 80 255"',
+      '\t\t\t}',
+      '\t\t}',
+      '\t\t"ScrollBorder"',
+      '\t\t{',
+      '\t\t\t"1"',
+      '\t\t\t{',
+      '\t\t\t\t"color"\t\t"80 80 80 255"',
+      '\t\t\t}',
+      '\t\t}',
+      '\t\t"ButtonDepressedBorder"',
+      '\t\t{',
+      '\t\t\t"1"',
+      '\t\t\t{',
+      '\t\t\t\t"color"\t\t"60 60 60 255"',
+      '\t\t\t}',
+      '\t\t}',
+      '\t\t"ButtonKeyFocusBorder"',
+      '\t\t{',
+      '\t\t\t"1"',
+      '\t\t\t{',
+      '\t\t\t\t"color"\t\t"80 80 80 255"',
+      '\t\t\t}',
+      '\t\t}',
+      '\t\t"ButtonSelectedBorder"',
+      '\t\t{',
+      '\t\t\t"1"',
+      '\t\t\t{',
+      '\t\t\t\t"color"\t\t"80 80 80 255"',
+      '\t\t\t}',
+      '\t\t}',
       '\t}',
       '}'
     ].join('\n');
     FS.writeFile('/hl2/resource/SourceScheme.res', schemeRes);
     FS.writeFile('/hl2/Resource/SourceScheme.res', schemeRes);
     FS.writeFile('/hl2/platform/Resource/SourceScheme.res', schemeRes);
+    FS.mkdirTree('/platform/Resource');
+    FS.writeFile('/platform/Resource/SourceScheme.res', schemeRes);
+    // Also write without hl2 prefix (engine may look relative to working dir)
+    FS.mkdirTree('/Resource');
+    FS.writeFile('/Resource/SourceScheme.res', schemeRes);
+    // bin directory (some Source builds look there)
+    FS.mkdirTree('/bin/Resource');
+    FS.writeFile('/bin/Resource/SourceScheme.res', schemeRes);
+    // Also write to platform subdirectories
+    FS.mkdirTree('/hl2/platform');
     console.log('[hl2] SourceScheme.res written to MEMFS');
+    // Also write to CWD-relative paths (engine may resolve relative to CWD)
+    FS.mkdirTree('/hl2/hl2/Resource');
+    FS.mkdirTree('/hl2/hl2/resource');
+    FS.writeFile('/hl2/hl2/Resource/SourceScheme.res', schemeRes);
+    FS.writeFile('/hl2/hl2/resource/SourceScheme.res', schemeRes);
+    // Write to bin (some Source builds use bin/ as search root)
+    FS.mkdirTree('/bin/hl2/Resource');
+    FS.writeFile('/bin/hl2/Resource/SourceScheme.res', schemeRes);
+    console.log('[hl2] SourceScheme.res also written to CWD-relative paths');
+    // Also write relative to CWD
+    try {
+      var cwd = FS.cwd();
+      console.log('[hl2] MEMFS CWD: ' + cwd);
+      FS.mkdirTree(cwd + '/Resource');
+      FS.writeFile(cwd + '/Resource/SourceScheme.res', schemeRes);
+      console.log('[hl2] SourceScheme.res written to CWD: ' + cwd + '/Resource/');
+    } catch(e) {
+      console.warn('[hl2] CWD SourceScheme write: ' + e);
+    }
+    // Write surfaceproperties_manifest.txt + surfaceproperties.txt (physics material system — required by engine)
+    FS.mkdirTree('/hl2/scripts');
+    var surfaceManifest = [
+      '"surfaceproperties_manifest"',
+      '{',
+      '\t"file"\t\t"scripts/surfaceproperties.txt"',
+      '}'
+    ].join('\n');
+    var surfaceProps = [
+      '"surfaceproperties"',
+      '{',
+      '\t"default"\t\t{ "density" "1000" "elasticity" "0.1" "friction" "0.8" }',
+      '\t"metal"\t\t{ "density" "1000" "elasticity" "0.2" "friction" "0.8" }',
+      '\t"glass"\t\t{ "density" "1000" "elasticity" "0.5" "friction" "0.5" }',
+      '\t"concrete"\t{ "density" "1000" "elasticity" "0.1" "friction" "0.9" }',
+      '\t"wood"\t\t{ "density" "1000" "elasticity" "0.3" "friction" "0.7" }',
+      '\t"plastic"\t{ "density" "1000" "elasticity" "0.4" "friction" "0.6" }',
+      '\t"water"\t\t{ "density" "1000" "elasticity" "0.1" "friction" "0.1" }',
+      '}'
+    ].join('\n');
+    FS.writeFile('/hl2/scripts/surfaceproperties_manifest.txt', surfaceManifest);
+    FS.writeFile('/hl2/scripts/surfaceproperties.txt', surfaceProps);
+    console.log('[hl2] surfaceproperties_manifest.txt + surfaceproperties.txt written to MEMFS');
+    // Write game_sounds_manifest.txt + other script manifests (required by engine)
+    var gameSoundsManifest = [
+      '"game_sounds_manifest"',
+      '{',
+      '\t"file"\t\t"scripts/game_sounds.txt"',
+      '\t"file"\t\t"scripts/game_sounds_vehicles.txt"',
+      '\t"file"\t\t"scripts/game_sounds_physics.txt"',
+      '\t"file"\t\t"scripts/game_sounds_weapons.txt"',
+      '}'
+    ].join('\n');
+    FS.writeFile('/hl2/scripts/game_sounds_manifest.txt', gameSoundsManifest);
+    // Minimal game_sounds.txt (empty but valid)
+    FS.writeFile('/hl2/scripts/game_sounds.txt', '"game_sounds"\n{\n}\n');
+    FS.writeFile('/hl2/scripts/game_sounds_vehicles.txt', '"game_sounds"\n{\n}\n');
+    FS.writeFile('/hl2/scripts/game_sounds_physics.txt', '"game_sounds"\n{\n}\n');
+    FS.writeFile('/hl2/scripts/game_sounds_weapons.txt', '"game_sounds"\n{\n}\n');
+    // Closecaption manifest
+    var closecaptionManifest = [
+      '"closecaption_manifest"',
+      '{',
+      '\t"file"\t\t"scripts/closecaption_english.txt"',
+      '}'
+    ].join('\n');
+    FS.writeFile('/hl2/scripts/closecaption_manifest.txt', closecaptionManifest);
+    FS.writeFile('/hl2/scripts/closecaption_english.txt', '"lang"\n{\n"Language" "english"\n"Tokens"\n{\n}\n}\n');
+    // ModActors (if needed)
+    FS.mkdirTree('/hl2/scripts/actor');
+    // hud layout
+    FS.mkdirTree('/hl2/scripts');
+    console.log('[hl2] game_sounds_manifest + script manifests written to MEMFS');
+    // Write ALL remaining script manifests (Source Engine requires these during init)
+    var soundscapesManifest = [
+      '"soundscapes_manifest"',
+      '{',
+      '\t"file"\t\t"scripts/soundscapes.txt"',
+      '}'
+    ].join('\n');
+    FS.writeFile('/hl2/scripts/soundscapes_manifest.txt', soundscapesManifest);
+    FS.writeFile('/hl2/scripts/soundscapes.txt', '"soundscapes"\n{\n}\n');
+    // _modmanifest.txt (mod resource manifest)
+    var modManifest = [
+      '"_modmanifest"',
+      '{',
+      '\t"file"\t\t"scripts/game_sounds_manifest.txt"',
+      '\t"file"\t\t"scripts/surfaceproperties_manifest.txt"',
+      '\t"file"\t\t"scripts/soundscapes_manifest.txt"',
+      '}'
+    ].join('\n');
+    FS.writeFile('/hl2/scripts/_modmanifest.txt', modManifest);
+    // vgui resource files
+    FS.mkdirTree('/hl2/resource');
+    var hudLayout = [
+      '"HudLayout.res"',
+      '{',
+      '\t"HudHealth"',
+      '\t{',
+      '\t\t"fieldname"\t\t"HudHealth"',
+      '\t\t"xpos"\t\t"16"',
+      '\t\t"ypos"\t\t"16"',
+      '\t\t"wide"\t\t"102"',
+      '\t\t"tall"\t\t"36"',
+      '\t}',
+      '}',
+    ].join('\n');
+    FS.writeFile('/hl2/scripts/HudLayout.res', hudLayout);
+    // kb_act.lst (keybindings)
+    FS.writeFile('/hl2/scripts/kb_act.lst', '');
+    // kb_def.lst (default keybindings)
+    FS.writeFile('/hl2/scripts/kb_def.lst', '');
+    // hudanimations.txt
+    FS.writeFile('/hl2/scripts/hudanimations.txt', '"hudanimations"\n{\n}\n');
+    // modtext (mod text file)
+    FS.writeFile('/hl2/scripts/modtext.txt', '"modtext"\n{\n}\n');
+    console.log('[hl2] ALL script manifests written to MEMFS (soundscapes, _modmanifest, hud, kb)');
     // PATCH 5: Shader version — patch .vcs files from version 1 to version 6
     try {
       var fxcDir = "/hl2/shaders/fxc";
@@ -34580,6 +34797,23 @@ run();
     }
     console.log("[hl2] All chunks loaded, starting engine...");
     removeRunDependency("load_game_data");
+
+    // Debug: verify MEMFS state after chunk loading
+    try {
+      console.log('[POST-LOAD] MEMFS root: ' + JSON.stringify(FS.readdir('/').slice(0,20)));
+      console.log('[POST-LOAD] /hl2 exists: ' + FS.analyzePath('/hl2').exists);
+      if (FS.analyzePath('/hl2').exists) {
+        var hl2contents = FS.readdir('/hl2');
+        console.log('[POST-LOAD] /hl2 contents: ' + JSON.stringify(hl2contents.slice(0,30)));
+      }
+      console.log('[POST-LOAD] /hl2/gameinfo.txt: ' + FS.analyzePath('/hl2/gameinfo.txt').exists);
+      console.log('[POST-LOAD] /hl2/Resource exists: ' + FS.analyzePath('/hl2/Resource').exists);
+      if (FS.analyzePath('/hl2/Resource').exists) {
+        console.log('[POST-LOAD] /hl2/Resource contents: ' + JSON.stringify(FS.readdir('/hl2/Resource')));
+      }
+      console.log('[POST-LOAD] /Resource exists: ' + FS.analyzePath('/Resource').exists);
+      console.log('[POST-LOAD] /hl2/scripts exists: ' + FS.analyzePath('/hl2/scripts').exists);
+    } catch(e) { console.warn('[POST-LOAD] error: ' + e); }
   }).catch(function(err) {
     console.error("[hl2] Chunk load error: " + err + " — starting with partial data");
     removeRunDependency("load_game_data");
