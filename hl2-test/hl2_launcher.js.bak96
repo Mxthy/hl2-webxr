@@ -192,7 +192,7 @@ Module.downloadMap = (lock, mapName) => {
 // end include: /home/runner/work/hl2-webxr/hl2-webxr/engine/portal-port/emscripten/pre.js
 
 // === ASSET CONFIG: Single immutable source for chunk URLs ===
-const ASSET_ORIGIN = 'http://localhost:8087';
+const ASSET_ORIGIN = 'https://hl2-assets-proxy.hl2-webxr.workers.dev';
 const CHUNK_PREFIX = ASSET_ORIGIN + '/chunks';
 
 function chunkUrl(mapName) {
@@ -34484,72 +34484,54 @@ run();
     var gameinfoContent = '"GameInfo"\n{\n  game  "HL2"\n  title  "Half-Life 2"\n  type  singleplayer_only\n  developer  "Valve"\n  icon  "hl2"\n  FileSystem\n  {\n    SteamAppId  2153\n    ToolsAppId  211\n    SearchPaths\n    {\n      Game  |gameinfo_path|.\n      Game  hl2\n      Platform  platform\n    }\n  }\n}';
     FS.writeFile("/hl2/gameinfo.txt", gameinfoContent);
     console.log("[hl2] gameinfo.txt created in MEMFS");
-    // VTF v7.1 fix — correct field offsets from nillerusr source (vtf.h)
-    // imageFormat at offset 52, numMipLevels at offset 56, header size = 64
-    var createDummyVTF = function(path) {
-      var vtf = new Uint8Array([
-        0x56, 0x54, 0x46, 0x00, 0x07, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00,
-        0x04, 0x00, 0x04, 0x00, 0x00, 0x40, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x3f, 0x00, 0x00, 0x00, 0x3f, 0x00, 0x00, 0x00, 0x3f, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00,
-        0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff,
-        0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff,
-        0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff,
-        0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff,
-      ]);
-      try { FS.writeFile(path, vtf); } catch(e) { console.warn('[hl2] VTF create failed: ' + path); }
-    };
-    createDummyVTF('/hl2/materials/dev/identitylightwarp.vtf');
-    createDummyVTF('/hl2/materials/engine/normalizedrandomdirections2d.vtf');
-    createDummyVTF('/hl2/materials/effects/flashlight_border.vtf');
-    console.log('[hl2] VTF v7.1 textures created in MEMFS');
-    // Write SourceScheme.res (VGUI resource scheme — required by engine)
-    FS.mkdirTree('/hl2/resource');
-    FS.mkdirTree('/hl2/Resource');
-    FS.mkdirTree('/hl2/platform/Resource');
-    var schemeRes = [
-      '"Scheme"',
-      '{',
-      '\tFonts',
-      '\t{',
-      '\t\t"Default"',
-      '\t\t{',
-      '\t\t\t"1"',
-      '\t\t\t{',
-      '\t\t\t\t"name"\t\t"Tahoma"',
-      '\t\t\t\t"tall"\t\t"16"',
-      '\t\t\t}',
-      '\t\t}',
-      '\t}',
-      '\tColors',
-      '\t{',
-      '\t\t"BaseText"\t\t"255 255 255 255"',
-      '\t\t"white"\t\t"255 255 255 255"',
-      '\t\t"black"\t\t"0 0 0 255"',
-      '\t}',
-      '\tBorders',
-      '\t{',
-      '\t\t"DefaultBorder"',
-      '\t\t{',
-      '\t\t\t"1"',
-      '\t\t\t{',
-      '\t\t\t\t"color"\t\t"0 0 0 255"',
-      '\t\t\t}',
-      '\t\t}',
-      '\t\t"NoBorder"',
-      '\t\t{',
-      '\t\t\t"1"',
-      '\t\t\t{',
-      '\t\t\t\t"color"\t\t"0 0 0 0"',
-      '\t\t\t}',
-      '\t\t}',
-      '\t}',
-      '}'
-    ].join('\n');
-    FS.writeFile('/hl2/resource/SourceScheme.res', schemeRes);
-    FS.writeFile('/hl2/Resource/SourceScheme.res', schemeRes);
-    FS.writeFile('/hl2/platform/Resource/SourceScheme.res', schemeRes);
-    console.log('[hl2] SourceScheme.res written to MEMFS');
+    // PATCH 4: VTF files — replace dummy VTFs with proper VTF format
+    var vtfFixList = [ "/hl2/materials/dev/identitylightwarp.vtf", "/hl2/materials/engine/normalizedrandomdirections2d.vtf", "/hl2/materials/effects/flashlight_border.vtf" ];
+    var vtfFixed = 0;
+    for (var vi = 0; vi < vtfFixList.length; vi++) {
+      var vtfPath = vtfFixList[vi];
+      if (FS.analyzePath(vtfPath).exists) {
+        var existing = FS.readFile(vtfPath);
+        if (existing[0] !== 86) {
+          var vtfHeader = new Uint8Array(84);
+          vtfHeader[0] = 86;
+          vtfHeader[1] = 84;
+          vtfHeader[2] = 70;
+          vtfHeader[3] = 0;
+          vtfHeader[4] = 7;
+          vtfHeader[8] = 1;
+          vtfHeader[12] = 80;
+          vtfHeader[16] = 4;
+          vtfHeader[18] = 4;
+          vtfHeader[20] = 0;
+          vtfHeader[21] = 64;
+          vtfHeader[24] = 1;
+          vtfHeader[44] = 12;
+          vtfHeader[48] = 1;
+          vtfHeader[52] = 12;
+          vtfHeader[56] = 1;
+          vtfHeader[57] = 1;
+          vtfHeader[58] = 1;
+          vtfHeader[80] = 128;
+          vtfHeader[81] = 128;
+          vtfHeader[82] = 128;
+          vtfHeader[83] = 255;
+          var fullImage = new Uint8Array(64);
+          for (var fi = 0; fi < 16; fi++) {
+            fullImage[fi * 4] = 128;
+            fullImage[fi * 4 + 1] = 128;
+            fullImage[fi * 4 + 2] = 128;
+            fullImage[fi * 4 + 3] = 255;
+          }
+          var fullVtf = new Uint8Array(80 + 4 + 64);
+          fullVtf.set(vtfHeader.subarray(0, 80), 0);
+          fullVtf.set(vtfHeader.subarray(80, 84), 80);
+          fullVtf.set(fullImage, 84);
+          FS.writeFile(vtfPath, fullVtf);
+          vtfFixed++;
+        }
+      }
+    }
+    console.log("[hl2] Fixed " + vtfFixed + " VTF files in MEMFS");
     // PATCH 5: Shader version — patch .vcs files from version 1 to version 6
     try {
       var fxcDir = "/hl2/shaders/fxc";
