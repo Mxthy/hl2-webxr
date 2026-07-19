@@ -22,23 +22,21 @@
         const htmlCanvas = document.getElementById('canvas');
         const statusElement = document.getElementById('loading-status');
         
-        // 1. MANUELLER TRANSFER (Vor Emscripten Boot!)
+        // 1. Manuelle OffscreenCanvas-Erstellung
         const offscreen = htmlCanvas.transferControlToOffscreen();
         offscreen.width = 1280;
         offscreen.height = 800;
 
-        // Globals für pre.js
-        window.canvasElement = htmlCanvas; 
-        window.statusElement = statusElement;
+        // 2. Global für den JS-Patch speichern
+        window.manualOffscreenCanvas = offscreen;
+        window.canvasHasBeenTransferred = false; // Flag für den Multiple-Worker-Fix
 
         window.Module = {
-            // 2. Wir übergeben das OffscreenCanvas-Objekt direkt!
-            canvas: offscreen,
+            canvas: null, 
             arguments: ['-game', 'hl2', '-windowed', '-w', '1280', '-h', '800', '-novid', '-noip'],
             
             preRun: [
                 function() {
-                    // 3. Zwinge Emscripten, den eigenen Transfer-Versuch zu überspringen
                     if (typeof transferredCanvasNames !== 'undefined') {
                         transferredCanvasNames = []; 
                     }
@@ -51,14 +49,12 @@
                 statusElement.textContent = "ENGINE RUNTIME READY!";
                 statusElement.style.color = "#0f0";
                 
-                // Mappe wasmExports auf Module für unsere WebXR Hooks
                 if (Module.wasmExports) {
                     Module._Engine_DisableAutoRender = Module.wasmExports.Engine_DisableAutoRender;
                 }
             }
         };
 
-        // Lade die Engine
         const script = document.createElement('script');
         script.src = 'hl2_launcher.js';
         document.body.appendChild(script);

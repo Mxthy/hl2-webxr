@@ -797,17 +797,6 @@ var __RELOC_FUNCS__ = [];
 var runtimeInitialized = false;
 
 function preRun() {
-  // Store Module.canvas (OffscreenCanvas from manual transfer) in GL.offscreenCanvases
-  // so workers can find it via findCanvasEventTarget
-  if (!ENVIRONMENT_IS_PTHREAD && Module.canvas) {
-    if (typeof GL !== 'undefined') {
-      GL.offscreenCanvases = GL.offscreenCanvases || {};
-      var canvasId = Module.canvas.id || 'canvas';
-      GL.offscreenCanvases[canvasId] = Module.canvas;
-      console.log('[CANVAS] Stored OffscreenCanvas in GL.offscreenCanvases["' + canvasId + '"]');
-    }
-  }
-  
   // Intercept FS.open to log/fix SourceScheme access
   console.log('[FS-TRACE] FS.open override installed in preRun, ENVIRONMENT_IS_PTHREAD=' + ENVIRONMENT_IS_PTHREAD);
   var _orig_FS_open = FS.open;
@@ -2039,19 +2028,29 @@ var PThread = {
     if (typeof GL != "undefined") {
       Object.assign(GL.offscreenCanvases, data.offscreenCanvases);
       console.log('[WORKER-CANVAS] Received offscreenCanvases keys: ' + Object.keys(data.offscreenCanvases || {}));
-      console.log('[WORKER-CANVAS] moduleCanvasId: ' + data.moduleCanvasId);
-      console.log('[WORKER-CANVAS] GL.offscreenCanvases keys after merge: ' + Object.keys(GL.offscreenCanvases || {}));
-      if (GL.offscreenCanvases['canvas']) {
-        console.log('[WORKER-CANVAS] canvas entry type: ' + typeof GL.offscreenCanvases['canvas']);
-        console.log('[WORKER-CANVAS] has offscreenCanvas: ' + !!GL.offscreenCanvases['canvas'].offscreenCanvas);
-      }
-      if (!Module["canvas"] && data.moduleCanvasId && GL.offscreenCanvases[data.moduleCanvasId]) {
-        Module["canvas"] = GL.offscreenCanvases[data.moduleCanvasId].offscreenCanvas;
-        Module["canvas"].id = data.moduleCanvasId;
-        Module.__transferredOffscreenCanvas = Module["canvas"];
-        console.log('[WORKER-CANVAS] Module.canvas set to OffscreenCanvas: ' + (Module["canvas"] instanceof OffscreenCanvas) + ' size: ' + Module["canvas"].width + 'x' + Module["canvas"].height);
+      if (GL.offscreenCanvases['canvas'] && GL.offscreenCanvases['canvas'].offscreenCanvas) {
+        // Store the transferred OffscreenCanvas globally in the worker
+        self.myManualCanvas = GL.offscreenCanvases['canvas'].offscreenCanvas;
+        // CRITICAL: Also set Module.canvas — the engine uses Module.canvas directly,
+        // not findCanvasEventTarget, for SDL/GL context creation
+        Module["canvas"] = self.myManualCanvas;
+        console.log('[WORKER-CANVAS] Set Module.canvas + self.myManualCanvas (' + self.myManualCanvas.width + 'x' + self.myManualCanvas.height + ')');
+        
+        // Override findCanvasEventTarget to always return our manual canvas
+        // This bypasses all Emscripten pointer/string lookup logic
+        if (typeof findCanvasEventTarget !== 'undefined') {
+          var _originalFindCanvas = findCanvasEventTarget;
+          findCanvasEventTarget = function(target) {
+            if (self.myManualCanvas) {
+              console.log('[GL-CREATE] findCanvasEventTarget returning manual canvas in worker (Module.canvas=' + (Module.canvas ? 'set' : 'null') + ')');
+              return self.myManualCanvas;
+            }
+            return _originalFindCanvas(target);
+          };
+          console.log('[WORKER-CANVAS] findCanvasEventTarget overridden to return manual canvas');
+        }
       } else {
-        console.log('[WORKER-CANVAS] Module.canvas NOT set. Module.canvas=' + (Module.canvas ? 'exists' : 'null') + ', moduleCanvasId="' + data.moduleCanvasId + '"');
+        console.log('[WORKER-CANVAS] No canvas in offscreenCanvases — this worker will use fallback');
       }
     }
   },
@@ -6605,23 +6604,42 @@ function ___pthread_create_js(pthread_ptr, attr, startRoutine, arg) {
   // Dictionary of OffscreenCanvas objects we'll transfer to the created thread to own
   var moduleCanvasId = Module["canvas"]?.id || "";
   
-  // MANUAL CANVAS TRANSFER: If Module.canvas is an OffscreenCanvas (from transferControlToOffscreen),
-  // pass it to the worker so it can render to the visible canvas
-  if (!ENVIRONMENT_IS_PTHREAD && Module["canvas"] instanceof OffscreenCanvas && !moduleCanvasId) {
-    moduleCanvasId = 'canvas';
-    Module["canvas"].id = 'canvas';
-    offscreenCanvases['canvas'] = {
-      offscreenCanvas: Module["canvas"],
-      canvasSharedPtr: _malloc(12),
-      id: 'canvas'
-    };
-    GROWABLE_HEAP_I32()[(offscreenCanvases['canvas'].canvasSharedPtr >>> 2)] = Module["canvas"].width;
-    GROWABLE_HEAP_I32()[((offscreenCanvases['canvas'].canvasSharedPtr + 4) >>> 2)] = Module["canvas"].height;
-    GROWABLE_HEAP_U32()[((offscreenCanvases['canvas'].canvasSharedPtr + 8) >>> 2)] = 0;
-    transferList.push(Module["canvas"]);
-    // Also store in a global for findCanvasEventTarget
-    Module.__transferredOffscreenCanvas = Module["canvas"];
-    console.log('[CANVAS] Passing OffscreenCanvas to worker via pthread_create (transferList size: ' + transferList.length + ')');
+  // MANUAL CANVAS TRANSFER: Transfer the OffscreenCanvas to EVERY worker
+  // First worker gets the real HTML-linked OffscreenCanvas, subsequent workers get new ones
+  if (!ENVIRONMENT_IS_PTHREAD && typeof window !== 'undefined') {
+    window.__pthreadCreateCount = (window.__pthreadCreateCount || 0) + 1;
+    var workerNum = window.__pthreadCreateCount;
+    
+    if (!window.canvasHasBeenTransferred && window.manualOffscreenCanvas) {
+      // First transfer: use the real OffscreenCanvas (linked to HTML canvas)
+      moduleCanvasId = 'canvas';
+      var manualCanvas = window.manualOffscreenCanvas;
+      offscreenCanvases['canvas'] = {
+        offscreenCanvas: manualCanvas,
+        canvasSharedPtr: _malloc(12),
+        id: 'canvas'
+      };
+      GROWABLE_HEAP_I32()[(offscreenCanvases['canvas'].canvasSharedPtr >>> 2)] = manualCanvas.width;
+      GROWABLE_HEAP_I32()[((offscreenCanvases['canvas'].canvasSharedPtr + 4) >>> 2)] = manualCanvas.height;
+      GROWABLE_HEAP_U32()[((offscreenCanvases['canvas'].canvasSharedPtr + 8) >>> 2)] = 0;
+      transferList.push(manualCanvas);
+      window.canvasHasBeenTransferred = true;
+      console.log('[CANVAS] Transferring REAL OffscreenCanvas to worker #' + workerNum);
+    } else {
+      // Subsequent workers: create a new OffscreenCanvas (not linked to HTML)
+      var dummyCanvas = new OffscreenCanvas(1280, 800);
+      moduleCanvasId = 'canvas';
+      offscreenCanvases['canvas'] = {
+        offscreenCanvas: dummyCanvas,
+        canvasSharedPtr: _malloc(12),
+        id: 'canvas'
+      };
+      GROWABLE_HEAP_I32()[(offscreenCanvases['canvas'].canvasSharedPtr >>> 2)] = 1280;
+      GROWABLE_HEAP_I32()[((offscreenCanvases['canvas'].canvasSharedPtr + 4) >>> 2)] = 800;
+      GROWABLE_HEAP_U32()[((offscreenCanvases['canvas'].canvasSharedPtr + 8) >>> 2)] = 0;
+      transferList.push(dummyCanvas);
+      console.log('[CANVAS] Transferring NEW OffscreenCanvas to worker #' + workerNum);
+    }
   }
   // Note that transferredCanvasNames might be null (so we cannot do a for-of loop).
   for (var name of transferredCanvasNames) {
@@ -12544,6 +12562,7 @@ var GL = {
     }
   },
   createContext: (/** @type {HTMLCanvasElement} */ canvas, webGLContextAttributes) => {
+    console.log('[GL-CREATE] GL.createContext called! canvas type=' + (canvas ? (canvas instanceof OffscreenCanvas ? 'OffscreenCanvas(' + canvas.width + 'x' + canvas.height + ')' : typeof canvas) : 'null') + ' hasManual=' + (!!self.myManualCanvas) + ' isPthread=' + ENVIRONMENT_IS_PTHREAD);
     // BUG: Workaround Safari WebGL issue: After successfully acquiring WebGL
     // context on a canvas, calling .getContext() will always return that
     // context independent of which 'webgl' or 'webgl2'
@@ -12676,32 +12695,26 @@ var GL = {
 var maybeCStringToJsString = cString => cString > 2 ? UTF8ToString(cString) : cString;
 
 var findCanvasEventTarget = target => {
-  // Check Module.__transferredOffscreenCanvas FIRST — this is our manually transferred canvas
-  if (Module.__transferredOffscreenCanvas) {
-    console.log('[FIND-CANVAS] Using Module.__transferredOffscreenCanvas (' + Module.__transferredOffscreenCanvas.width + 'x' + Module.__transferredOffscreenCanvas.height + ')');
-    return Module.__transferredOffscreenCanvas;
+  // PATCH B: If worker has a manually transferred canvas, always return it
+  if (typeof self !== 'undefined' && self.myManualCanvas) {
+    if (!findCanvasEventTarget._logged) {
+      findCanvasEventTarget._logged = true;
+      console.log('[FIND-CANVAS] Returning self.myManualCanvas (' + self.myManualCanvas.width + 'x' + self.myManualCanvas.height + ') target=' + (typeof target === 'string' ? target : String(target)));
+    }
+    return self.myManualCanvas;
   }
-  // Debug: log what target is being looked up
-  var targetStr = (typeof target === 'string') ? target : String(target);
-  if (typeof GL !== 'undefined' && GL.offscreenCanvases) {
-    var keys = Object.keys(GL.offscreenCanvases);
-    if (keys.length > 0) console.log('[FIND-CANVAS] target=' + targetStr + ' GL.offscreenCanvases keys=' + JSON.stringify(keys) + ' ENVIRONMENT_IS_PTHREAD=' + ENVIRONMENT_IS_PTHREAD);
-  }
-  // Check for transferred offscreen canvas first
   if (typeof GL !== 'undefined' && GL.offscreenCanvases) {
     for (var key in GL.offscreenCanvases) {
       if (key == 'canvas' && (target == 'canvas' || target == 0 || !target)) {
         var entry = GL.offscreenCanvases[key];
-        // GL.offscreenCanvases stores info objects {offscreenCanvas, canvasSharedPtr, id}
-        // Return the actual OffscreenCanvas, not the wrapper
         if (entry && entry.offscreenCanvas) return entry.offscreenCanvas;
-        if (entry) return entry; // Already an OffscreenCanvas
+        if (entry) return entry;
       }
     }
   }
   target = maybeCStringToJsString(target);
   var found = null;
-  if (GL.offscreenCanvases) {
+  if (GL.offscreenCanvases && typeof target === 'string') {
     var key1 = target.substr(1);
     if (GL.offscreenCanvases[key1]) {
       found = GL.offscreenCanvases[key1].offscreenCanvas || GL.offscreenCanvases[key1];
@@ -12719,7 +12732,7 @@ var findCanvasEventTarget = target => {
     fb.id = "game-canvas";
     if (!GL.offscreenCanvases) GL.offscreenCanvases = {};
     GL.offscreenCanvases["game-canvas"] = fb;
-    console.log("[hl2] Fallback OffscreenCanvas created");
+    console.log("[hl2] Fallback OffscreenCanvas created (worker hasManual=" + (!!self.myManualCanvas) + ")");
     return fb;
   }
   return null;
