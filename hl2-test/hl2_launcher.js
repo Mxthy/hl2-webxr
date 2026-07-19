@@ -797,6 +797,37 @@ var __RELOC_FUNCS__ = [];
 var runtimeInitialized = false;
 
 function preRun() {
+  // Intercept FS.open to log/fix SourceScheme access
+  var _orig_FS_open = FS.open;
+  FS.open = function(path, flags, mode) {
+    if (path && typeof path === 'string' && path.indexOf('SourceScheme') >= 0) {
+      var exists = false;
+      try { exists = FS.analyzePath(path).exists; } catch(e) {}
+      console.log('[FS-TRACE] open: ' + path + ' flags=' + flags + ' exists=' + exists);
+      if (!exists) {
+        var prefixes = ['/hl2/', '/hl2/platform/', '/platform/', '/hl2/hl2/', '/'];
+        for (var i = 0; i < prefixes.length; i++) {
+          var p = prefixes[i] + path;
+          try {
+            if (FS.analyzePath(p).exists) {
+              console.log('[FS-TRACE] Found at: ' + p + ' — redirecting');
+              return _orig_FS_open.call(FS, p, flags, mode);
+            }
+          } catch(e) {}
+        }
+        // If still not found, create it on the fly from our known content
+        if (typeof schemeResContent !== 'undefined') {
+          try {
+            FS.mkdirTree(path.substring(0, path.lastIndexOf('/')));
+            FS.writeFile(path, schemeResContent);
+            console.log('[FS-TRACE] Created on-demand: ' + path);
+            return _orig_FS_open.call(FS, path, flags, mode);
+          } catch(e) { console.warn('[FS-TRACE] Create failed: ' + e); }
+        }
+      }
+    }
+    return _orig_FS_open.call(FS, path, flags, mode);
+  };
   assert(!ENVIRONMENT_IS_PTHREAD);
   // PThreads reuse the runtime from the main thread.
   if (Module["preRun"]) {
@@ -1867,24 +1898,14 @@ function exitOnMainThread(returnCode) {
 }
 
 /** @suppress {duplicate } */ /** @param {boolean|number=} implicit */ var exitJS = (status, implicit) => {
-  EXITSTATUS = status;
-  checkUnflushedContent();
-  if (ENVIRONMENT_IS_PTHREAD) {
-    // implicit exit can never happen on a pthread
-    assert(!implicit);
-    // When running in a pthread we propagate the exit back to the main thread
-    // where it can decide if the whole process should be shut down or not.
-    // The pthread may have decided not to exit its own runtime, for example
-    // because it runs a main loop, but that doesn't affect the main thread.
-    exitOnMainThread(status);
-    throw "unwind";
-  }
-  // if exit() was called explicitly, warn the user if the runtime isn't actually being shut down
-  if (keepRuntimeAlive() && !implicit) {
-    var msg = `program exited (with status: ${status}), but keepRuntimeAlive() is set (counter=${runtimeKeepaliveCounter}) due to an async operation, so halting execution but not exiting the runtime or preventing further async execution (you can use emscripten_force_exit, if you want to force a true shutdown)`;
-    err(msg);
-  }
-  _proc_exit(status);
+  // NON-FATAL: Allow engine to continue past Sys_Error/_exit calls
+  // Sys_Error calls raise(SIGTRAP) then _exit(100). We catch both and continue.
+  console.warn('[EXIT-NONFATAL] _exit called with status=' + status + ' — continuing execution');
+  EXITSTATUS = 0;
+  ABORT = false;
+  // Don't throw "unwind", don't call exitOnMainThread, don't call _proc_exit
+  // Just return — let the C++ code continue past the _exit() call
+  return;
 };
 
 var _exit = exitJS;
@@ -33773,6 +33794,13 @@ var _putchar = createExportWrapper("putchar", 1);
 var _qsort = createExportWrapper("qsort", 4);
 
 var _raise = createExportWrapper("raise", 1);
+// Override raise to prevent SIGTRAP from causing abort
+var _orig_raise = _raise;
+_raise = function(sig) {
+  console.warn('[raise] signal ' + sig + ' — non-fatal (returning 0)');
+  return 0;
+};
+_raise.sig = "ii";
 
 var _srand = createExportWrapper("srand", 1);
 
@@ -34470,7 +34498,7 @@ run();
     fixCase("/hl2/materials", "engine");
     fixCase("/hl2/materials", "effects");
     // PATCH 3: gameinfo.txt (required by engine setup)
-    var gameinfoContent = '"GameInfo"\n{\n  game  "HL2"\n  title  "Half-Life 2"\n  type  singleplayer_only\n  developer  "Valve"\n  icon  "hl2"\n  FileSystem\n  {\n    SteamAppId  2153\n    ToolsAppId  211\n    SearchPaths\n    {\n      Game  |gameinfo_path|.\n      Game  hl2\n      Platform  platform\n    }\n  }\n}';
+    var gameinfoContent = '"GameInfo"\n{\n  game  "HL2"\n  title  "Half-Life 2"\n  type  singleplayer_only\n  developer  "Valve"\n  icon  "hl2"\n  FileSystem\n  {\n    SteamAppId  2153\n    ToolsAppId  211\n    SearchPaths\n    {\n      Game+Tracker  |gameinfo_path|.\n      Game  hl2\n      Platform+Tracker  platform\n    }\n  }\n}';
     FS.writeFile("/hl2/gameinfo.txt", gameinfoContent);
     console.log("[hl2] gameinfo.txt created in MEMFS");
     // VTF v7.1 fix — correct field offsets from nillerusr source (vtf.h)
@@ -34640,6 +34668,7 @@ run();
     // Also write to platform subdirectories
     FS.mkdirTree('/hl2/platform');
     console.log('[hl2] SourceScheme.res written to MEMFS');
+    var schemeResContent = schemeRes;
     // Also write to CWD-relative paths (engine may resolve relative to CWD)
     FS.mkdirTree('/hl2/hl2/Resource');
     FS.mkdirTree('/hl2/hl2/resource');
