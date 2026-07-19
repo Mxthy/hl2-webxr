@@ -144,10 +144,7 @@ canvas.emscripten { border: 0px none; background-color: black; }
       // As a default initial behavior, pop up an alert when webgl context is lost. To make your
       // application robust, you may want to override this behavior before shipping!
       // See http://www.khronos.org/registry/webgl/specs/latest/1.0/#5.15.2
-      canvasElement.addEventListener('webglcontextlost', (e) => {
-        alert('WebGL context lost. You will need to reload the page.');
-        e.preventDefault();
-      }, false);
+      // Don't add webglcontextlost listener before transfer — it may interfere with transferControlToOffscreen
 
 	  canvasElement.widthNative = screen.availWidth
 	  canvasElement.heightNative = screen.availHeight
@@ -166,7 +163,15 @@ canvas.emscripten { border: 0px none; background-color: black; }
             outputElement.scrollTop = outputElement.scrollHeight; // focus on bottom
           }
         },
-        canvas: canvasElement,
+        // Use a dummy canvas for Module.canvas — the real canvas will be transferred
+        // to the worker via pthread_create's transferredCanvasNames mechanism
+        canvas: (function() {
+          var d = document.createElement('canvas');
+          d.id = 'canvas';
+          d.width = 1280;
+          d.height = 800;
+          return d;
+        })(),
         setStatus(text) {
           Module.setStatus.last ??= { time: Date.now(), text: '' };
           if (text === Module.setStatus.last.text) return;

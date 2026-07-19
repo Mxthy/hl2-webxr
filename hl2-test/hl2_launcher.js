@@ -6577,6 +6577,10 @@ function ___pthread_create_js(pthread_ptr, attr, startRoutine, arg) {
     transferredCanvasNames = UTF8ToString(transferredCanvasNames).trim();
   }
   transferredCanvasNames = transferredCanvasNames ? transferredCanvasNames.split(",") : [];
+  // Force-include 'canvas' for offscreen canvas transfer to worker
+  if (transferredCanvasNames.indexOf('canvas') < 0) {
+    transferredCanvasNames.push('canvas');
+  }
   var offscreenCanvases = {};
   // Dictionary of OffscreenCanvas objects we'll transfer to the created thread to own
   var moduleCanvasId = Module["canvas"]?.id || "";
@@ -6634,6 +6638,8 @@ function ___pthread_create_js(pthread_ptr, attr, startRoutine, arg) {
           // this Canvas to be controlled via an OffscreenCanvas (there is no
           // way to undo this in the spec)
           canvas.controlTransferredOffscreen = true;
+          // Prevent re-transfer on subsequent pthread_create calls
+          transferredCanvasNames = transferredCanvasNames.filter(function(n) { return n !== name; });
         } else {
           err(`pthread_create: cannot transfer control of canvas "${name}" to pthread, because current browser does not support OffscreenCanvas!`);
           // If building with OFFSCREEN_FRAMEBUFFER=1 mode, we don't need to
@@ -12631,6 +12637,14 @@ var GL = {
 var maybeCStringToJsString = cString => cString > 2 ? UTF8ToString(cString) : cString;
 
 var findCanvasEventTarget = target => {
+  // Check for transferred offscreen canvas first
+  if (typeof GL !== 'undefined' && GL.offscreenCanvases) {
+    for (var key in GL.offscreenCanvases) {
+      if (key == 'canvas' && (target == 'canvas' || target == 0 || !target)) {
+        return GL.offscreenCanvases[key];
+      }
+    }
+  }
   target = maybeCStringToJsString(target);
   var found = (GL.offscreenCanvases && GL.offscreenCanvases[target.substr(1)]) ||
   (target == "canvas" && GL.offscreenCanvases && Object.keys(GL.offscreenCanvases)[0]) ||
