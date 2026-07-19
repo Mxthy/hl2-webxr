@@ -34600,29 +34600,66 @@ run();
     FS.writeFile('/hl2/scripts/surfaceproperties.txt', '"surfaceproperties"\n{\n\t"solid" { "density" "1.0" }\n\t"metal" { "density" "1.0" }\n\t"glass" { "density" "1.0" }\n\t"concrete" { "density" "1.0" }\n\t"dirt" { "density" "1.0" }\n\t"water" { "density" "1.0" }\n\t"wood" { "density" "1.0" }\n\t"player" { "density" "1.0" }\n\t"metal_barrel" { "density" "1.0" }\n\t"plastic" { "density" "1.0" }\n\t"rubber" { "density" "1.0" }\n\t"grass" { "density" "1.0" }\n\t"rock" { "density" "1.0" }\n\t"gravel" { "density" "1.0" }\n\t"cardboard" { "density" "1.0" }\n\t"paper" { "density" "1.0" }\n\t"flesh" { "density" "1.0" }\n\t"snow" { "density" "1.0" }\n\t"ice" { "density" "1.0" }\n\t"asphalt" { "density" "1.0" }\n\t"brass" { "density" "1.0" }\n\t"bronze" { "density" "1.0" }\n\t"copper" { "density" "1.0" }\n\t"iron" { "density" "1.0" }\n\t"steel" { "density" "1.0" }\n\t"slime" { "density" "1.0" }\n\t"mud" { "density" "1.0" }\n\t"chainlink" { "density" "1.0" }\n\t"tile" { "density" "1.0" }\n\t"plaster" { "density" "1.0" }\n}');
     console.log('[hl2] All script manifests written to MEMFS ✓');
     // Write SourceScheme.res (VGUI resource scheme — required by engine)
+    // Try multiple paths — engine searches "Resource/SourceScheme.res"
     FS.mkdirTree('/hl2/resource');
-    var schemeRes = '"Scheme"\n{\n\tFonts\n\t{\n\t\t"Default"\n\t\t{\n\t\t\t"1"\n\t\t\t{\n\t\t\t\t"name"\t\t"Tahoma"\n\t\t\t\t"tall"\t\t"16"\n\t\t\t}\n\t\t}\n\t}\n\tColors\n\t{\n\t\t"BaseText"\t\t"255 255 255 255"\n\t}\n}';
+    FS.mkdirTree('/hl2/Resource');
+    FS.mkdirTree('/hl2/platform/Resource');
+    var schemeRes = [
+      '"Scheme"',
+      '{',
+      '\tFonts',
+      '\t{',
+      '\t\t"Default"',
+      '\t\t{',
+      '\t\t\t"1"',
+      '\t\t\t{',
+      '\t\t\t\t"name"\t\t"Tahoma"',
+      '\t\t\t\t"tall"\t\t"16"',
+      '\t\t\t}',
+      '\t\t}',
+      '\t}',
+      '\tColors',
+      '\t{',
+      '\t\t"BaseText"\t\t"255 255 255 255"',
+      '\t\t"white"\t\t"255 255 255 255"',
+      '\t\t"black"\t\t"0 0 0 255"',
+      '\t}',
+      '\tBorders',
+      '\t{',
+      '\t\t"DefaultBorder"',
+      '\t\t{',
+      '\t\t\t"1"',
+      '\t\t\t{',
+      '\t\t\t\t"color"\t\t"0 0 0 255"',
+      '\t\t\t}',
+      '\t\t}',
+      '\t\t"NoBorder"',
+      '\t\t{',
+      '\t\t\t"1"',
+      '\t\t\t{',
+      '\t\t\t\t"color"\t\t"0 0 0 0"',
+      '\t\t\t}',
+      '\t\t}',
+      '\t}',
+      '}'
+    ].join('\n');
     FS.writeFile('/hl2/resource/SourceScheme.res', schemeRes);
-    console.log('[hl2] SourceScheme.res written to MEMFS');
+    FS.writeFile('/hl2/Resource/SourceScheme.res', schemeRes);
+    FS.writeFile('/hl2/platform/Resource/SourceScheme.res', schemeRes);
+    console.log('[hl2] SourceScheme.res written to MEMFS (resource + Resource + platform)');
     // Fix VTF textures — use v7.4 format (104-byte header) matching NVIDIA SHIELD OBB
     var createDummyVTF = function(path) {
-      // VTF v7.4 template from NVIDIA SHIELD HL2 OBB (8x8 DXT1)
+      // VTF v7.1 format — correct field offsets from nillerusr source (vtf.h)
+      // imageFormat at offset 52, numMipLevels at offset 56
       var vtf = new Uint8Array([
-        // Header (104 bytes)
-        0x56,0x54,0x46,0x00, 0x07,0x00,0x00,0x00, 0x04,0x00,0x00,0x00, 0x68,0x00,0x00,0x00,
-        0x08,0x00,0x08,0x00, 0x40,0x02,0x00,0x00, 0x01,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,
-        0x47,0x8d,0x50,0x3f, 0xe8,0xef,0x57,0x3f, 0x47,0x8d,0x50,0x3f, 0x00,0x00,0x00,0x00,
-        0x00,0x00,0x80,0x3f, 0x0d,0x00,0x00,0x00, 0x04,0x0d,0x00,0x00, 0x00,0x08,0x08,0x01,
-        0x00,0x00,0x00,0x00, 0x03,0x00,0x00,0x00, 0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,
-        0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,
-        0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,
-        // Pixel data (88 bytes — 8x8 DXT1)
-        0xff,0xff,0xff,0xff, 0xff,0xff,0xff,0xff, 0xff,0xff,0xff,0xff, 0xff,0xff,0xff,0xff,
-        0xff,0xff,0xff,0xff, 0xff,0xff,0xff,0xff, 0xff,0xff,0xff,0xff, 0xff,0xff,0xff,0xff,
-        0xff,0xff,0xff,0xff, 0xff,0xff,0xff,0xff, 0xff,0xff,0xff,0xff, 0xff,0xff,0xff,0xff,
-        0xff,0xff,0xff,0xff, 0xff,0xff,0xff,0xff, 0xff,0xff,0xff,0xff, 0xff,0xff,0xff,0xff,
-        0xff,0xff,0xff,0xff, 0xff,0xff,0xff,0xff, 0xff,0xff,0xff,0xff, 0xff,0xff,0xff,0xff,
-        0xff,0xff,0xff,0xff, 0xff,0xff,0xff,0xff
+        0x56, 0x54, 0x46, 0x00, 0x07, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00,
+        0x04, 0x00, 0x04, 0x00, 0x00, 0x40, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x3f, 0x00, 0x00, 0x00, 0x3f, 0x00, 0x00, 0x00, 0x3f, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00,
+        0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff,
+        0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff,
+        0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff,
+        0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff,
       ]);
       try { FS.writeFile(path, vtf); } catch(e) { console.warn('[hl2] VTF create failed: ' + path); }
     };
@@ -34630,6 +34667,28 @@ run();
     createDummyVTF('/hl2/materials/engine/normalizedrandomdirections2d.vtf');
     createDummyVTF('/hl2/materials/effects/flashlight_border.vtf');
     console.log('[hl2] Dummy VTF textures created in MEMFS');
+    // Debug: verify VTF files exist and check content
+    var vtfPaths = ['/hl2/materials/dev/identitylightwarp.vtf', '/hl2/materials/engine/normalizedrandomdirections2d.vtf', '/hl2/materials/effects/flashlight_border.vtf'];
+    for (var vi = 0; vi < vtfPaths.length; vi++) {
+      try {
+        var stat = FS.stat(vtfPaths[vi]);
+        var data = FS.readFile(vtfPaths[vi]);
+        console.log('[hl2] VTF ' + vtfPaths[vi] + ': ' + data.length + ' bytes — magic=' + String.fromCharCode(data[0],data[1],data[2],data[3]));
+      } catch(e) {
+        console.warn('[hl2] VTF ' + vtfPaths[vi] + ' NOT FOUND: ' + e);
+      }
+    }
+    // Debug: verify SourceScheme.res
+    var schemePaths = ['/hl2/resource/SourceScheme.res', '/hl2/Resource/SourceScheme.res', '/hl2/platform/Resource/SourceScheme.res'];
+    for (var si = 0; si < schemePaths.length; si++) {
+      try {
+        var sstat = FS.stat(schemePaths[si]);
+        var sdata = FS.readFile(schemePaths[si]);
+        console.log('[hl2] Scheme ' + schemePaths[si] + ': ' + sdata.length + ' bytes — first=' + String.fromCharCode(sdata[0],sdata[1],sdata[2],sdata[3]));
+      } catch(e) {
+        console.warn('[hl2] Scheme ' + schemePaths[si] + ' NOT FOUND');
+      }
+    }
     console.log("[hl2] gameinfo.txt created in MEMFS");
     
     // Fix VTF files — replace dummy VTFs with proper minimal VTFs
