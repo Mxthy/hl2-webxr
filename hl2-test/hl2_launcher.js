@@ -104,7 +104,7 @@ if (ENVIRONMENT_IS_NODE) {
 // include: /home/runner/work/hl2-webxr/hl2-webxr/engine/portal-port/emscripten/pre.js
 Module["arguments"] = Module["arguments"] || [];
 
-Module["arguments"].push("-game", "hl2", "-windowed", "-w", "1280", "-h", "800", "-novid", "-noip", "-language", "english", "+mat_hdr_level", "0", "+mat_colorcorrection", "1");
+Module["arguments"].push("-game", "hl2", "-windowed", "-w", "1280", "-h", "800", "-novid", "-noip", "-language", "english", "+mat_hdr_level", "0", "+mat_colorcorrection", "1", "+map", "background01");
 
 class DataLoader {
   mapsOrdered=[ "background1", "testchmb_a_00", "testchmb_a_01", "testchmb_a_02", "testchmb_a_03", "testchmb_a_04", "testchmb_a_05", "testchmb_a_06", "testchmb_a_07", "testchmb_a_08", "testchmb_a_09", "testchmb_a_10", "testchmb_a_11", "testchmb_a_13", "testchmb_a_14", "testchmb_a_15" ];
@@ -143,6 +143,7 @@ class DataLoader {
     }
   }
   async loadMap(mapName) {
+    console.log('[CHUNK-LOAD] Starting loadMap: ' + mapName);
     this.setProgress(mapName, 0);
     let resolve, reject;
     const promise = new Promise((res, rej) => {
@@ -158,6 +159,7 @@ class DataLoader {
       reject(new Error(`cannot load map ${mapName}`));
     };
     xhr.onload = e => {
+      console.log('[CHUNK-LOAD] ' + mapName + ' loaded! ' + xhr.response.byteLength + ' bytes');
       this.setProgress(mapName, 1);
       const dv = new DataView(xhr.response);
       let offset = 0;
@@ -172,9 +174,11 @@ class DataLoader {
         FS.mkdirTree(dir);
         FS.writeFile(path, blob);
       }
+      console.log('[CHUNK-LOAD] ' + mapName + ' — all files written to MEMFS ✓');
       resolve();
     };
     xhr.open("GET", chunkUrl(mapName), true);
+    console.log('[CHUNK-LOAD] Fetching: ' + chunkUrl(mapName));
     xhr.send();
     return promise;
   }
@@ -35046,6 +35050,7 @@ run();
     }).catch(function(e) {
       console.warn("[hl2] v6 shader download failed (using v1 fallback): " + e);
     });
+  }).then(function() {
     // Preflight: verify critical shader families exist
     var criticalShaders = [ "vertexlit_and_unlit_generic_vs20", "vertexlit_and_unlit_generic_ps20b", "lightmappedgeneric_vs20", "lightmappedgeneric_ps20b" ];
     var missing = [];
@@ -35076,6 +35081,7 @@ run();
       console.log("[hl2] Shader preflight OK ✓ — " + criticalShaders.length + " critical shaders found");
     }
     // Now load background1 + materials in parallel
+    console.log("[CHUNK-LOAD] About to load background1 + materials in parallel");
     return Promise.all([ dataLoader.loadMap("background1"), dataLoader.loadMap("materials") ]);
   }).then(function() {
     // Fix case-sensitive directory names (MEMFS is case-sensitive)
