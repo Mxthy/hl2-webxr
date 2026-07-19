@@ -952,31 +952,12 @@ function removeRunDependency(id) {
   }
 }
 
-/** @param {string|number=} what */ function abort(what) {
-  Module["onAbort"]?.(what);
-  what = "Aborted(" + what + ")";
-  // TODO(sbc): Should we remove printing and leave it up to whoever
-  // catches the exception?
-  err(what);
-  ABORT = true;
-  // Use a wasm runtime error, because a JS error might be seen as a foreign
-  // exception, which means we'd run destructors on it. We need the error to
-  // simply make the program stop.
-  // FIXME This approach does not work in Wasm EH because it currently does not assume
-  // all RuntimeErrors are from traps; it decides whether a RuntimeError is from
-  // a trap or not based on a hidden field within the object. So at the moment
-  // we don't have a way of throwing a wasm trap from JS. TODO Make a JS API that
-  // allows this in the wasm spec.
-  // Suppress closure compiler warning here. Closure compiler's builtin extern
-  // definition for WebAssembly.RuntimeError claims it takes no arguments even
-  // though it can.
-  // TODO(https://github.com/google/closure-compiler/pull/3913): Remove if/when upstream closure gets fixed.
-  /** @suppress {checkTypes} */ var e = new WebAssembly.RuntimeError(what);
-  // Throw the error whether or not MODULARIZE is set because abort is used
-  // in code paths apart from instantiation where an exception is expected
-  // to be thrown when abort is called.
-  // Non-fatal abort: log and continue
-  console.error('[ABORT-CAUGHT] ' + what);
+function abort(what) {
+  if (what && what.indexOf && what.indexOf('IVP_Compact_Edge') >= 0) { console.warn('[skip] ' + what); return; }
+  if (what && what.indexOf && what.indexOf('unreachable') >= 0) { console.warn('[skip] unreachable'); return; }
+  if (what !== undefined) {
+    console.log('[ABORT-CAUGHT] ' + what);
+  }
   ABORT = false;
   EXITSTATUS = 0;
   return;
@@ -2855,7 +2836,7 @@ var resolveGlobalSymbol = (symName, direct = false) => {
       if (!resolved) {
         resolved = moduleExports[sym];
       }
-      assert(resolved, `undefined symbol '${sym}'. perhaps a side module was not linked in? if this global was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment`);
+      if (!resolved) { console.warn('resolveSymbol: undefined ' + sym + ' — returning stub addr'); return 0x100000; }
       return resolved;
     }
     // TODO kill ↓↓↓ (except "symbols local to this module", it will likely be
@@ -3195,13 +3176,24 @@ var reportUndefinedSymbols = () => {
         // Ignore undefined symbols that are imported as weak.
         continue;
       }
-      assert(value, `undefined symbol '${symName}'. perhaps a side module was not linked in? if this global was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment`);
+      if (!value) {
+        // Stub undefined data symbols with a valid memory address
+        if (symName.indexOf('IVP_Compact_Edge') >= 0) {
+          entry.value = symName.indexOf('prev_table') >= 0 ? 0x800400 : 0x800000;
+          console.warn('[stub] ' + symName + ' → ' + entry.value);
+          continue;
+        }
+        console.warn('[stub] ' + symName + ' → 0x100000');
+        entry.value = 0x100000;
+        continue;
+      }
       if (typeof value == "function") {
-        /** @suppress {checkTypes} */ entry.value = addFunction(value, value.sig);
+        try { entry.value = addFunction(value, value.sig); } catch(e) { console.warn('[stub] addFunction failed for ' + symName); entry.value = 0x100000; }
       } else if (typeof value == "number") {
         entry.value = value;
       } else {
-        throw new Error(`bad export type for '${symName}': ${typeof value}`);
+        console.warn('[stub] bad export type for ' + symName + ': ' + (typeof value));
+        entry.value = 0x100000;
       }
     }
   }
@@ -5140,15 +5132,13 @@ function __ZN16IVP_Cache_Object19update_cache_objectEv(...args) {
 __ZN16IVP_Cache_Object19update_cache_objectEv.stub = true;
 
 function __ZN16IVP_Compact_Edge10next_tableE(...args) {
-  if (!wasmImports["_ZN16IVP_Compact_Edge10next_tableE"] || wasmImports["_ZN16IVP_Compact_Edge10next_tableE"].stub) abort("external symbol '_ZN16IVP_Compact_Edge10next_tableE' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN16IVP_Compact_Edge10next_tableE"](...args);
+  return 0x800000;
 }
 
 __ZN16IVP_Compact_Edge10next_tableE.stub = true;
 
 function __ZN16IVP_Compact_Edge10prev_tableE(...args) {
-  if (!wasmImports["_ZN16IVP_Compact_Edge10prev_tableE"] || wasmImports["_ZN16IVP_Compact_Edge10prev_tableE"].stub) abort("external symbol '_ZN16IVP_Compact_Edge10prev_tableE' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN16IVP_Compact_Edge10prev_tableE"](...args);
+  return 0x800400;
 }
 
 __ZN16IVP_Compact_Edge10prev_tableE.stub = true;
@@ -6541,7 +6531,7 @@ function ___pthread_create_js(pthread_ptr, attr, startRoutine, arg) {
   // fetch whatever canvases were passed to build in
   // -sOFFSCREENCANVASES_TO_PTHREAD= command line.
   if (transferredCanvasNames == 4294967295) {
-    transferredCanvasNames = "#game-canvas";
+    transferredCanvasNames = "";
   } else {
     transferredCanvasNames = UTF8ToString(transferredCanvasNames).trim();
   }
@@ -12601,20 +12591,19 @@ var maybeCStringToJsString = cString => cString > 2 ? UTF8ToString(cString) : cS
 
 var findCanvasEventTarget = target => {
   target = maybeCStringToJsString(target);
-  // When compiling with OffscreenCanvas support and looking up a canvas to target,
-  // we first look up if the target Canvas has been transferred to OffscreenCanvas use.
-  // These transfers are represented/tracked by GL.offscreenCanvases object, which contain
-  // the OffscreenCanvas element for each regular Canvas element that has been transferred.
-  // Note that each pthread/worker have their own set of GL.offscreenCanvases. That is,
-  // when an OffscreenCanvas is transferred from a pthread/main thread to another pthread,
-  // it will move in the GL.offscreenCanvases array between threads. Hence GL.offscreenCanvases
-  // represents the set of OffscreenCanvases owned by the current calling thread.
-  // First check out the list of OffscreenCanvases by CSS selector ID ('#myCanvasID')
-  return GL.offscreenCanvases[target.substr(1)] || // Remove '#' prefix
-  // If not found, if one is querying by using DOM tag name selector 'canvas', grab the first
-  // OffscreenCanvas that we can find.
-  (target == "canvas" && Object.keys(GL.offscreenCanvases)[0]) || // If that is not found either, query via the regular DOM selector.
+  var found = (GL.offscreenCanvases && GL.offscreenCanvases[target.substr(1)]) ||
+  (target == "canvas" && GL.offscreenCanvases && Object.keys(GL.offscreenCanvases)[0]) ||
   (typeof document != "undefined" && document.querySelector(target));
+  if (found) return found;
+  if (typeof OffscreenCanvas != "undefined") {
+    var fb = new OffscreenCanvas(1280, 800);
+    fb.id = "game-canvas";
+    if (!GL.offscreenCanvases) GL.offscreenCanvases = {};
+    GL.offscreenCanvases["game-canvas"] = fb;
+    console.log("[hl2] Fallback OffscreenCanvas created");
+    return fb;
+  }
+  return null;
 };
 
 var setCanvasElementSizeCallingThread = (target, width, height) => {
