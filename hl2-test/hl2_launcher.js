@@ -1008,7 +1008,10 @@ function abort(what) {
   if (what && what.indexOf && what.indexOf('unreachable') >= 0) { console.warn('[skip] unreachable'); return; }
   if (what !== undefined) {
     console.log('[ABORT-CAUGHT] ' + what);
+  } else {
+    console.log('[ABORT-CAUGHT] abort called with undefined reason');
   }
+  try { console.log('[ABORT-STACK] ' + new Error().stack.split('\n').slice(0,8).join(' | ')); } catch(e) {}
   ABORT = false;
   EXITSTATUS = 0;
   return;
@@ -1949,6 +1952,7 @@ function exitOnMainThread(returnCode) {
   // NON-FATAL: Allow engine to continue past Sys_Error/_exit calls
   // Sys_Error calls raise(SIGTRAP) then _exit(100). We catch both and continue.
   console.warn('[EXIT-NONFATAL] _exit called with status=' + status + ' — continuing execution');
+  try { console.warn('[EXIT-STACK] ' + new Error().stack.split('\n').slice(0,5).join(' | ')); } catch(e) {}
   EXITSTATUS = 0;
   ABORT = false;
   // Don't throw "unwind", don't call exitOnMainThread, don't call _proc_exit
@@ -24223,7 +24227,7 @@ function _emscripten_set_keyup_callback_on_thread(target, userData, useCapture, 
 
 _emscripten_set_keyup_callback_on_thread.sig = "ippipp";
 
-function _emscripten_set_main_loop(func, fps, simulateInfiniteLoop) {
+function _emscripten_set_main_loop(func, fps, simulateInfiniteLoop) { console.log("[MAIN-LOOP] emscripten_set_main_loop CALLED!");
   func >>>= 0;
   var iterFunc = getWasmTableEntry(func);
   setMainLoop(iterFunc, fps, simulateInfiniteLoop);
@@ -34563,6 +34567,7 @@ run();
     createDummyVTF('/hl2/materials/console/startup_loading_4by3.vtf');
     createDummyVTF('/hl2/materials/console/background01_4by3.vtf');
     console.log('[hl2] VTF v7.1 textures + background images created in MEMFS');
+    console.log('[STEP-1] About to write SourceScheme.res...');
 
     // Write SourceScheme.res (VGUI resource scheme — required by engine)
     FS.mkdirTree('/hl2/resource');
@@ -34704,20 +34709,27 @@ run();
     FS.writeFile('/hl2/resource/sourcescheme.res', schemeRes);
     FS.writeFile('/hl2/Resource/SourceScheme.res', schemeRes);
     FS.writeFile('/hl2/platform/Resource/SourceScheme.res', schemeRes);
-    FS.writeFile('/hl2/platform/resource/sourcescheme.res', schemeRes);
-    FS.mkdirTree('/platform/Resource');
-    FS.writeFile('/platform/Resource/SourceScheme.res', schemeRes);
-    FS.writeFile('/platform/resource/sourcescheme.res', schemeRes);
-    // Also write without hl2 prefix (engine may look relative to working dir)
-    FS.mkdirTree('/Resource');
-    FS.writeFile('/Resource/SourceScheme.res', schemeRes);
-    FS.writeFile('/resource/sourcescheme.res', schemeRes);
-    // bin directory (some Source builds look there)
-    FS.mkdirTree('/bin/Resource');
-    FS.writeFile('/bin/Resource/SourceScheme.res', schemeRes);
-    // Also write to platform subdirectories
-    FS.mkdirTree('/hl2/platform');
-    console.log('[hl2] SourceScheme.res written to MEMFS');
+    console.log('[STEP-2] SourceScheme.res written, about to write manifests...');
+    // Wrap all SourceScheme.res copies in try-catch — directory may not exist
+    var schemeDirs = [
+      '/hl2/platform/resource', '/platform/Resource', '/platform/resource',
+      '/Resource', '/resource', '/bin/Resource', '/hl2/platform'
+    ];
+    for (var sd = 0; sd < schemeDirs.length; sd++) {
+      try { FS.mkdirTree(schemeDirs[sd]); } catch(e) {}
+    }
+    var schemePaths = [
+      '/hl2/platform/resource/sourcescheme.res',
+      '/platform/Resource/SourceScheme.res',
+      '/platform/resource/sourcescheme.res',
+      '/Resource/SourceScheme.res',
+      '/resource/sourcescheme.res',
+      '/bin/Resource/SourceScheme.res'
+    ];
+    for (var sp = 0; sp < schemePaths.length; sp++) {
+      try { FS.writeFile(schemePaths[sp], schemeRes); } catch(e) {}
+    }
+    console.log('[hl2] SourceScheme.res written to MEMFS (all paths)');
     // Write surfaceproperties_manifest.txt + surfaceproperties.txt (physics material system — required by engine)
     FS.mkdirTree('/hl2/scripts');
     var surfaceManifest = [
@@ -34752,6 +34764,7 @@ run();
       '}'
     ].join('\n');
     FS.writeFile('/hl2/scripts/game_sounds_manifest.txt', gameSoundsManifest);
+    console.log('[STEP-4] game_sounds written, about to write soundscapes...');
     // Minimal game_sounds.txt (empty but valid)
     FS.writeFile('/hl2/scripts/game_sounds.txt', '"game_sounds"\n{\n}\n');
     FS.writeFile('/hl2/scripts/game_sounds_vehicles.txt', '"game_sounds"\n{\n}\n');
@@ -34779,6 +34792,7 @@ run();
       '}'
     ].join('\n');
     FS.writeFile('/hl2/scripts/soundscapes_manifest.txt', soundscapesManifest);
+    console.log('[STEP-5] soundscapes written, about to write _modmanifest...');
     FS.writeFile('/hl2/scripts/soundscapes.txt', '"soundscapes"\n{\n}\n');
     // _modmanifest.txt (mod resource manifest)
     var modManifest = [
@@ -34790,6 +34804,7 @@ run();
       '}'
     ].join('\n');
     FS.writeFile('/hl2/scripts/_modmanifest.txt', modManifest);
+    console.log('[STEP-6] _modmanifest written, about to write hud/kb...');
     // vgui resource files
     FS.mkdirTree('/hl2/resource');
     var hudLayout = [
@@ -34819,16 +34834,19 @@ run();
   // ---- Shader + Asset chunk loading ----
   // Load order: shaders → background1 + materials → engine start
   // Shaders MUST be in MEMFS before callMain() — without them the engine aborts
-  addRunDependency("load_game_data");
+  console.log("[SHADER-LOAD] Reached shader loading block. dataLoader: " + (typeof dataLoader) + ", loadMapCached: " + (typeof dataLoader !== "undefined" && !!dataLoader.loadMapCached));
+  try { addRunDependency("load_game_data"); } catch(e) { console.error("[SHADER-LOAD] addRunDependency FAILED: " + e); }
+  console.log("[SHADER-LOAD] addRunDependency done, starting chain...");
   // Load shaders chunk first (critical, non-optional)
   var loadShaders = (typeof dataLoader !== "undefined" && dataLoader.loadMapCached) ? dataLoader.loadMapCached("shaders") : Promise.reject(new Error("dataLoader not available"));
+  loadShaders.catch(function(e) { console.error("[SHADER-LOAD] loadShaders REJECTED: " + e); });
   loadShaders.then(function() {
     console.log("[hl2] shaders.data loaded — " + FS.readdir("/hl2/shaders").length + " shader dirs in MEMFS");
     // === v6 SHADER OVERWRITE ===
     // The retail 2153 shaders are version 1 (2004 format).
     // The nillerusr engine (Source 2013) requires version 6 shaders.
     // Download v6 shaders from R2 and overwrite the v1 files in MEMFS.
-    fetchChunk("shaders_v6").then(function(v6Buffer) {
+    return fetchChunk("shaders_v6").then(function(v6Buffer) {
       var dv = new DataView(v6Buffer);
       var off = 0;
       var replaced = 0;
@@ -34850,7 +34868,7 @@ run();
           console.warn("[hl2] v6 shader overwrite failed for " + path + ": " + e);
         }
       }
-      console.log("[hl2] v6 shaders: " + replaced + " files overwritten in MEMFS");
+      console.log("[hl2] v6 shaders: " + replaced + " files overwritten in MEMFS ✓ — engine can now start");
     }).catch(function(e) {
       console.warn("[hl2] v6 shader download failed (using v1 fallback): " + e);
     });
@@ -34881,7 +34899,7 @@ run();
       console.error("[hl2] MISSING SHADERS: " + missing.join(", "));
       console.error("[hl2] Engine will crash on shader loading!");
     } else {
-      console.log("[hl2] Shader preflight OK ✓");
+      console.log("[hl2] Shader preflight OK ✓ — " + criticalShaders.length + " critical shaders found");
     }
     // Now load background1 + materials in parallel
     return Promise.all([ dataLoader.loadMap("background1"), dataLoader.loadMap("materials") ]);
