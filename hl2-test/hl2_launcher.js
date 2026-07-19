@@ -6520,7 +6520,11 @@ function ___assert_fail(condition, filename, line, func) {
   condition >>>= 0;
   filename >>>= 0;
   func >>>= 0;
-  abort(`Assertion failed: ${UTF8ToString(condition)}, at: ` + [ filename ? UTF8ToString(filename) : "unknown filename", line, func ? UTF8ToString(func) : "unknown function" ]);
+  var condStr = condition ? UTF8ToString(condition) : "(null)";
+  var fileStr = filename ? UTF8ToString(filename) : "unknown";
+  var funcStr = func ? UTF8ToString(func) : "unknown";
+  console.error("[ASSERT-FAIL] condition: " + condStr + " at: " + fileStr + ":" + line + " in: " + funcStr);
+  abort(`Assertion failed: ${condStr}, at: ` + [ fileStr, line, funcStr ]);
 }
 
 ___assert_fail.sig = "vppip";
@@ -34538,9 +34542,40 @@ run();
   }
   // ---- Pre-load essential manifest files (must exist before engine start) ----
     // PATCH 3: gameinfo.txt (required by engine setup)
-    var gameinfoContent = '"GameInfo"\n{\n  game  "HL2"\n  title  "Half-Life 2"\n  type  singleplayer_only\n  developer  "Valve"\n  icon  "hl2"\n  FileSystem\n  {\n    SteamAppId  2153\n    ToolsAppId  211\n    SearchPaths\n    {\n      Game+Tracker  |gameinfo_path|.\n      Game  hl2\n      Platform+Tracker  platform\n    }\n  }\n}';
+    var gameinfoContent = [
+      '"GameInfo"',
+      '{',
+      '\tgame\t"hl2"',
+      '\ttitle\t"HALF-LIFE 2"',
+      '\ttype\t"singleplayer_only"',
+      '\tnomapmissingmodel\t"0"',
+      '\tnomodels\t"0"',
+      '\tnohimodels\t"1"',
+      '\tnocrosshair\t"0"',
+      '\tdeveloper\t"VALVE"',
+      '\tdeveloper_url\t"1"',
+      '\ticon\t"hl2"',
+      '\tFileSystem',
+      '\t{',
+      '\t\tSteamAppId\t2153',
+      '\t\tToolsAppId\t211',
+      '\t\tSearchPaths',
+      '\t\t{',
+      '\t\t\tGame+GameBin\t|gameinfo_path|.',
+      '\t\t\tPlatform+GameBin\t|gameinfo_path|.',
+      '\t\t\tGame\t\t\t|gameinfo_path|.',
+      '\t\t\tPlatform\t\t|gameinfo_path|platform',
+      '\t\t}',
+      '\t}',
+      '}'
+    ].join('\n');
     FS.writeFile("/hl2/gameinfo.txt", gameinfoContent);
-    console.log("[hl2] gameinfo.txt created in MEMFS");
+    // steam.inf — REQUIRED by Source Engine for SteamAPI initialization
+    // Without this, the engine aborts during "Cache materials" phase
+    var steamInf = 'PatchVersion=1.0.0.0\nProductName=hl2\nappID=2153\n';
+    FS.writeFile("/hl2/steam.inf", steamInf);
+    FS.writeFile("/steam.inf", steamInf);
+    console.log("[hl2] gameinfo.txt + steam.inf created in MEMFS");
     // VTF v7.1 fix — correct field offsets from nillerusr source (vtf.h)
     // imageFormat at offset 52, numMipLevels at offset 56, header size = 64
     var createDummyVTF = function(path) {

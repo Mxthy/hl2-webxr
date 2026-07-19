@@ -43,6 +43,24 @@
             if (frameCountElement) frameCountElement.textContent = 'Frames: ' + window.__frameCount;
         };
 
+        // After engine init, try manual render
+        setTimeout(function() {
+          if (typeof window.Module !== 'undefined') {
+            console.log('[MANUAL-RENDER] Checking available functions...');
+            console.log('[MANUAL-RENDER] _Engine_RenderSingleFrame: ' + typeof window.Module._Engine_RenderSingleFrame);
+            console.log('[MANUAL-RENDER] _Engine_DisableAutoRender: ' + typeof window.Module._Engine_DisableAutoRender);
+            
+            if (typeof window.Module._Engine_RenderSingleFrame === 'function') {
+              try {
+                console.log('[MANUAL-RENDER] Calling Engine_RenderSingleFrame...');
+                window.Module._Engine_RenderSingleFrame();
+                console.log('[MANUAL-RENDER] RenderSingleFrame returned!');
+              } catch(e) {
+                console.log('[MANUAL-RENDER] RenderSingleFrame error: ' + e.message);
+              }
+            }
+          }
+        }, 50000);
         window.Module = {
             canvas: null, 
             arguments: [
