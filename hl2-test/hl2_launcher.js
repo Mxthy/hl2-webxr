@@ -104,7 +104,7 @@ if (ENVIRONMENT_IS_NODE) {
 // include: /home/runner/work/hl2-webxr/hl2-webxr/engine/portal-port/emscripten/pre.js
 Module["arguments"] = Module["arguments"] || [];
 
-Module["arguments"].push("-game", "hl2", "-windowed", "-w", "1280", "-h", "800", "-novid", "-noip", "-language", "english", "+mat_hdr_level", "0", "+mat_colorcorrection", "1", "+map", "background01");
+Module["arguments"].push("-game", "hl2", "-windowed", "-w", "1280", "-h", "800", "-novid", "-noip", "-language", "english", "+mat_hdr_level", "0", "+mat_colorcorrection", "1", "+mat_queue_mode", "0", "-nomessagebox", "-console", "+cl_showfps", "1", "+map", "background01");
 
 class DataLoader {
   mapsOrdered=[ "background1", "testchmb_a_00", "testchmb_a_01", "testchmb_a_02", "testchmb_a_03", "testchmb_a_04", "testchmb_a_05", "testchmb_a_06", "testchmb_a_07", "testchmb_a_08", "testchmb_a_09", "testchmb_a_10", "testchmb_a_11", "testchmb_a_13", "testchmb_a_14", "testchmb_a_15" ];
@@ -711,11 +711,15 @@ if (ENVIRONMENT_IS_PTHREAD) {
         console.warn("[WORKER] ✅ ESCAPE_SIGTRAP caught — stack unwound successfully, continuing execution");
         ABORT = false;
         EXITSTATUS = 0;
-        // Don't re-throw — let the worker continue
+        // Check if main loop was set up
+        console.log("[POST-UNWIND] MainLoop.func = " + (typeof MainLoop?.func) + " MainLoop.arg = " + MainLoop?.arg);
+        console.log("[POST-UNWIND] wasmTable size = " + (wasmTable?.length || 'unknown'));
       } else if (ex instanceof WebAssembly.RuntimeError && (ex.message?.includes('unreachable') || ex.message?.includes('Aborted'))) {
         err(`worker: caught non-fatal RuntimeError (continuing): ${ex.message?.substring(0, 80)}`);
         ABORT = false;
         EXITSTATUS = 0;
+        // Check main loop state after unreachable
+        console.log("[POST-UNREACHABLE] MainLoop.func = " + (typeof MainLoop?.func) + " MainLoop.arg = " + MainLoop?.arg);
       } else {
         err(`worker: onmessage() captured an uncaught exception: ${ex}`);
         if (ex?.stack) err(ex.stack);
@@ -1170,18 +1174,21 @@ function createWasm() {
   var _raiseCallCount = 0;
   wasmImports["raise"] = function(sig) {
     _raiseCallCount++;
-    if (_raiseCallCount <= 5) {
-      console.error("🔥 INTERCEPTED SIGNAL: " + sig + " (call #" + _raiseCallCount + ")");
+    if (_raiseCallCount <= 10) {
+      console.error("🔥 INTERCEPTED SIGNAL: " + sig + " (call #" + _raiseCallCount + ") — returning 0");
     }
-    if (sig === 5) {
-      console.warn("⚠️ Bypassing SIGTRAP (Assertion Failure) via JS Exception Unwind!");
-      // Throw a JS exception to unwind the C++ call stack
-      // This prevents the 'unreachable' opcode after raise() from killing the worker
-      throw "ESCAPE_SIGTRAP";
-    }
+    // Return 0 (success) — the code after call raise should continue
+    // raise is NOT marked noreturn in libmaterialsystem.so
     return 0;
   };
-  console.log("[OVERRIDE] wasmImports['raise'] replaced with SIGTRAP-unwind for side modules");
+  console.log("[OVERRIDE] wasmImports['raise'] replaced with return-0 for side modules");
+  
+  // Heartbeat: log every 5 seconds to check if engine is alive
+  var _heartbeatCount = 0;
+  setInterval(function() {
+    _heartbeatCount++;
+    console.log("[HEARTBEAT] tick #" + _heartbeatCount + " — ABORT=" + ABORT + " EXITSTATUS=" + EXITSTATUS);
+  }, 5000);
   
   // Also intercept SDL_ReportAssertion to get the assertion details
   var _orig_SDL_ReportAssertion = wasmImports["SDL_ReportAssertion"];
@@ -1983,7 +1990,7 @@ var convertI32PairToI53Checked = (lo, hi) => {
   return rtn;
 };
 
-function _proc_exit(code) {
+var _orig_proc_exit = function(code) {
   if (ENVIRONMENT_IS_PTHREAD) return proxyToMainThread(0, 0, 1, code);
   EXITSTATUS = code;
   if (!keepRuntimeAlive()) {
@@ -1992,6 +1999,14 @@ function _proc_exit(code) {
     ABORT = true;
   }
   quit_(code, new ExitStatus(code));
+};
+function _proc_exit(code) {
+  console.warn('[PROC-EXIT] _proc_exit(' + code + ') called — making non-fatal');
+  try { console.warn('[PROC-EXIT-STACK] ' + new Error().stack.split('\n').slice(1,6).join(' | ')); } catch(e) {}
+  EXITSTATUS = 0;
+  ABORT = false;
+  // Don't call quit_, don't throw ExitStatus — just return
+  return;
 }
 
 _proc_exit.sig = "vi";
