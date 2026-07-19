@@ -415,6 +415,18 @@ if (ENVIRONMENT_IS_NODE) {
   defaultPrintErr = (...args) => fs.writeSync(2, args.join(" ") + "\n");
 }
 
+var _origDefaultPrint = defaultPrint;
+defaultPrint = function(text) {
+  if (text === '' || text === '\n' || (typeof text === 'string' && text.trim() === '')) {
+    // Log empty print calls with a stack trace to find who's printing the empty message
+    try {
+      var stack = new Error().stack;
+      var frames = stack.split('\n').slice(1, 5);
+      console.warn('[EMPTY-PRINT] empty printf — caller: ' + frames.join(' | '));
+    } catch(e) {}
+  }
+  _origDefaultPrint(text);
+};
 var out = Module["print"] || defaultPrint;
 
 var err = Module["printErr"] || defaultPrintErr;
@@ -691,7 +703,12 @@ if (ENVIRONMENT_IS_PTHREAD) {
         err(msgData);
       }
     } catch (ex) {
-      if (ex instanceof WebAssembly.RuntimeError && (ex.message?.includes('unreachable') || ex.message?.includes('Aborted'))) {
+      if (ex === "ESCAPE_SIGTRAP") {
+        console.warn("[WORKER] ✅ ESCAPE_SIGTRAP caught — stack unwound successfully, continuing execution");
+        ABORT = false;
+        EXITSTATUS = 0;
+        // Don't re-throw — let the worker continue
+      } else if (ex instanceof WebAssembly.RuntimeError && (ex.message?.includes('unreachable') || ex.message?.includes('Aborted'))) {
         err(`worker: caught non-fatal RuntimeError (continuing): ${ex.message?.substring(0, 80)}`);
         ABORT = false;
         EXITSTATUS = 0;
@@ -1149,14 +1166,57 @@ function createWasm() {
   var _raiseCallCount = 0;
   wasmImports["raise"] = function(sig) {
     _raiseCallCount++;
-    console.warn("[SIDE-MODULE raise] signal " + sig + " intercepted — non-fatal (call #" + _raiseCallCount + ")");
-    if (_raiseCallCount > 3) {
-      console.warn("[SIDE-MODULE raise] suppressing further raise logs");
-      // Stop logging but still return 0
+    if (_raiseCallCount <= 5) {
+      console.error("🔥 INTERCEPTED SIGNAL: " + sig + " (call #" + _raiseCallCount + ")");
+    }
+    if (sig === 5) {
+      console.warn("⚠️ Bypassing SIGTRAP (Assertion Failure) via JS Exception Unwind!");
+      // Throw a JS exception to unwind the C++ call stack
+      // This prevents the 'unreachable' opcode after raise() from killing the worker
+      throw "ESCAPE_SIGTRAP";
     }
     return 0;
   };
-  console.log("[OVERRIDE] wasmImports['raise'] replaced with no-op for side modules");
+  console.log("[OVERRIDE] wasmImports['raise'] replaced with SIGTRAP-unwind for side modules");
+  
+  // Also intercept SDL_ReportAssertion to get the assertion details
+  var _orig_SDL_ReportAssertion = wasmImports["SDL_ReportAssertion"];
+  wasmImports["SDL_ReportAssertion"] = function(data, func, file, line) {
+    // SDL_AssertData structure:
+    // int always_ignore (4 bytes)
+    // int trigger_count (4 bytes)  
+    // const char* condition (4 bytes)
+    // const char* filename (4 bytes)
+    // int linenum (4 bytes)
+    // char function[128] (128 bytes)
+    // Total: 148 bytes (approximately)
+    
+    var condStr = "(unknown)", fileStr = "(unknown)", funcStr = "(unknown)";
+    try {
+      // Read condition string pointer
+      var condPtr = HEAPU32[(data + 8) >>> 2];
+      if (condPtr) condStr = UTF8ToString(condPtr);
+      // Read filename string pointer
+      var filePtr = HEAPU32[(data + 12) >>> 2];
+      if (filePtr) fileStr = UTF8ToString(filePtr);
+      // Read line number
+      var lineNum = HEAPU32[(data + 16) >>> 2];
+      // Read function name (inline char[128] at offset 20)
+      var funcPtr = data + 20;
+      funcStr = UTF8ToString(funcPtr);
+      
+      console.error("🚨 SDL ASSERTION FAILED!");
+      console.error("   Condition: " + condStr);
+      console.error("   File: " + fileStr + ":" + lineNum);
+      console.error("   Function: " + funcStr);
+    } catch(e) {
+      console.error("[SDL_ASSERT] Error reading assert data: " + e);
+      console.error("[SDL_ASSERT] data=" + data + " func=" + func + " file=" + file + " line=" + line);
+    }
+    // Still throw to unwind — the assertion is fatal
+    throw "ESCAPE_SIGTRAP";
+  };
+  console.log("[OVERRIDE] wasmImports['SDL_ReportAssertion'] intercepted for assertion details");
     LDSO.init();
     loadDylibs();
     wasmExports = applySignatureConversions(wasmExports);
