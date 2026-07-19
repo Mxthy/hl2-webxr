@@ -27632,7 +27632,7 @@ function _emscripten_get_main_loop_timing(mode, value) {
 
 _emscripten_get_main_loop_timing.sig = "vpp";
 
-var _emscripten_set_main_loop_arg = function(func, arg, fps, simulateInfiniteLoop) {
+var _emscripten_set_main_loop_arg = function(func, arg, fps, simulateInfiniteLoop) { console.log('[MAIN-LOOP-ARG] emscripten_set_main_loop_arg CALLED!');
   func >>>= 0;
   arg >>>= 0;
   var iterFunc = () => getWasmTableEntry(func)(arg);
@@ -34566,7 +34566,35 @@ run();
     createDummyVTF('/hl2/materials/console/startup_loading.vtf');
     createDummyVTF('/hl2/materials/console/startup_loading_4by3.vtf');
     createDummyVTF('/hl2/materials/console/background01_4by3.vtf');
-    console.log('[hl2] VTF v7.1 textures + background images created in MEMFS');
+    // Background material .vmt files — engine needs these to render the background
+    var bgVMT = '"UnlitGeneric"\n{\n  "$basetexture" "console/background01_widescreen"\n  "$vertexcolor" "1"\n  "$vertexalpha" "1"\n  "$ignorez" "1"\n  "$nofog" "1"\n}\n';
+    var startupVMT = '"UnlitGeneric"\n{\n  "$basetexture" "console/startup_loading"\n  "$vertexcolor" "1"\n  "$vertexalpha" "1"\n  "$ignorez" "1"\n  "$nofog" "1"\n}\n';
+    try {
+      FS.mkdirTree('/hl2/materials/console');
+      FS.writeFile('/hl2/materials/console/background01_widescreen.vmt', bgVMT);
+      FS.writeFile('/hl2/materials/console/startup_loading.vmt', startupVMT);
+      FS.writeFile('/hl2/materials/console/startup_loading_4by3.vmt', startupVMT);
+      FS.writeFile('/hl2/materials/console/background01_4by3.vmt', bgVMT);
+    } catch(e) { console.warn('[hl2] VMT create failed: ' + e); }
+    // chapterbackgrounds.txt — tells the engine which background to use
+    var chapterBG = '"chapterbackgrounds"\n{\n  "1" "background01_widescreen"\n  "2" "background01_widescreen"\n}\n';
+    try {
+      FS.mkdirTree('/hl2/scripts');
+      FS.writeFile('/hl2/scripts/chapterbackgrounds.txt', chapterBG);
+    } catch(e) { console.warn('[hl2] chapterbackgrounds.txt create failed: ' + e); }
+    console.log('[hl2] VTF v7.1 + VMT + chapterbackgrounds created in MEMFS');
+    // Additional config files the engine needs during 'Cache materials'
+    try {
+      FS.mkdirTree('/hl2/scripts');
+      FS.writeFile('/hl2/scripts/cheatcodes.txt', '"cheatcodes"\n{\n}\n');
+      FS.writeFile('/hl2/scripts/mod_cheatcodes.txt', '"cheatcodes"\n{\n}\n');
+      FS.writeFile('/hl2/scripts/plugin_animations.txt', '"plugin_animations"\n{\n}\n');
+      FS.writeFile('/hl2/scripts/debugoptions.txt', '"debugoptions"\n{\n}\n');
+      // enginevguilayout.res — VGUI layout for engine console/UI
+      var vguiLayout = '"enginevguilayout"\n{\n  "Console"\n  {\n    "xpos" "0"\n    "ypos" "0"\n    "wide" "1280"\n    "tall" "800"\n  }\n}\n';
+      FS.writeFile('/hl2/scripts/enginevguilayout.res', vguiLayout);
+      console.log('[hl2] Additional config files (cheatcodes, debugoptions, vguilayout) created');
+    } catch(e) { console.warn('[hl2] Config files create failed: ' + e); }
     console.log('[STEP-1] About to write SourceScheme.res...');
 
     // Write SourceScheme.res (VGUI resource scheme — required by engine)
