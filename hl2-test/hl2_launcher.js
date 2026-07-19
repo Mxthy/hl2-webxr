@@ -798,9 +798,15 @@ var runtimeInitialized = false;
 
 function preRun() {
   // Intercept FS.open to log/fix SourceScheme access
+  console.log('[FS-TRACE] FS.open override installed in preRun, ENVIRONMENT_IS_PTHREAD=' + ENVIRONMENT_IS_PTHREAD);
   var _orig_FS_open = FS.open;
+  var _fs_open_count = 0;
   FS.open = function(path, flags, mode) {
-    if (path && typeof path === 'string' && path.indexOf('SourceScheme') >= 0) {
+    _fs_open_count++;
+    if (_fs_open_count <= 5 || (path && typeof path === 'string' && (path.indexOf('Scheme') >= 0 || path.indexOf('scheme') >= 0 || path.indexOf('Resource') >= 0 || path.indexOf('gameinfo') >= 0))) {
+      console.log('[FS-TRACE] #' + _fs_open_count + ' open: ' + path);
+    }
+    if (path && typeof path === 'string' && (path.toLowerCase().indexOf('sourcescheme') >= 0)) {
       var exists = false;
       try { exists = FS.analyzePath(path).exists; } catch(e) {}
       console.log('[FS-TRACE] open: ' + path + ' flags=' + flags + ' exists=' + exists);
@@ -34654,14 +34660,20 @@ run();
       '\t}',
       '}'
     ].join('\n');
+    // Write BOTH mixed-case AND all-lowercase paths (filesystem lowercases paths!)
     FS.writeFile('/hl2/resource/SourceScheme.res', schemeRes);
     FS.writeFile('/hl2/Resource/SourceScheme.res', schemeRes);
+    FS.writeFile('/hl2/resource/sourcescheme.res', schemeRes);
+    FS.writeFile('/hl2/Resource/SourceScheme.res', schemeRes);
     FS.writeFile('/hl2/platform/Resource/SourceScheme.res', schemeRes);
+    FS.writeFile('/hl2/platform/resource/sourcescheme.res', schemeRes);
     FS.mkdirTree('/platform/Resource');
     FS.writeFile('/platform/Resource/SourceScheme.res', schemeRes);
+    FS.writeFile('/platform/resource/sourcescheme.res', schemeRes);
     // Also write without hl2 prefix (engine may look relative to working dir)
     FS.mkdirTree('/Resource');
     FS.writeFile('/Resource/SourceScheme.res', schemeRes);
+    FS.writeFile('/resource/sourcescheme.res', schemeRes);
     // bin directory (some Source builds look there)
     FS.mkdirTree('/bin/Resource');
     FS.writeFile('/bin/Resource/SourceScheme.res', schemeRes);
