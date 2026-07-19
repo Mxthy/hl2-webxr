@@ -1758,6 +1758,34 @@ var GOTHandler = {
   }
 };
 
+// Main thread: handle rendered frame messages from GL worker
+var __mainCanvasCtx2D = null;
+var __frameCounter = 0;
+function __handleRenderedFrame(bitmap) {
+  try {
+    if (!__mainCanvasCtx2D) {
+      if (typeof window !== 'undefined' && window.__htmlCanvasCtx2D) {
+        __mainCanvasCtx2D = window.__htmlCanvasCtx2D;
+      } else {
+        var c = document.getElementById('canvas');
+        if (!c) return;
+        __mainCanvasCtx2D = c.getContext('2d');
+      }
+    }
+    if (__mainCanvasCtx2D && bitmap) {
+      __mainCanvasCtx2D.drawImage(bitmap, 0, 0, __mainCanvasCtx2D.canvas.width, __mainCanvasCtx2D.canvas.height);
+      bitmap.close();
+      __frameCounter++;
+      if (__frameCounter % 30 === 0) {
+        console.log('[RENDER] Frame #' + __frameCounter + ' drawn to HTML canvas');
+        if (typeof window !== 'undefined' && window.__updateFrameCount) window.__updateFrameCount();
+      }
+    }
+  } catch(e) {
+    console.warn('[RENDER] drawImage failed: ' + e);
+  }
+}
+
 var terminateWorker = worker => {
   worker.terminate();
   // terminate() can be asynchronous, so in theory the worker can continue
@@ -2063,6 +2091,11 @@ var PThread = {
     worker.onmessage = e => {
       var d = e["data"];
       var cmd = d.cmd;
+      // Handle rendered frame from GL worker
+      if (cmd === '__renderedFrame') {
+        __handleRenderedFrame(d.bitmap);
+        return;
+      }
       // If this message is intended to a recipient that is not the main
       // thread, forward it to the target thread.
       if (d.targetThread && d.targetThread != _pthread_self()) {
@@ -6604,42 +6637,23 @@ function ___pthread_create_js(pthread_ptr, attr, startRoutine, arg) {
   // Dictionary of OffscreenCanvas objects we'll transfer to the created thread to own
   var moduleCanvasId = Module["canvas"]?.id || "";
   
-  // MANUAL CANVAS TRANSFER: Transfer the OffscreenCanvas to EVERY worker
-  // First worker gets the real HTML-linked OffscreenCanvas, subsequent workers get new ones
-  if (!ENVIRONMENT_IS_PTHREAD && typeof window !== 'undefined') {
-    window.__pthreadCreateCount = (window.__pthreadCreateCount || 0) + 1;
-    var workerNum = window.__pthreadCreateCount;
-    
-    if (!window.canvasHasBeenTransferred && window.manualOffscreenCanvas) {
-      // First transfer: use the real OffscreenCanvas (linked to HTML canvas)
-      moduleCanvasId = 'canvas';
-      var manualCanvas = window.manualOffscreenCanvas;
-      offscreenCanvases['canvas'] = {
-        offscreenCanvas: manualCanvas,
-        canvasSharedPtr: _malloc(12),
-        id: 'canvas'
-      };
-      GROWABLE_HEAP_I32()[(offscreenCanvases['canvas'].canvasSharedPtr >>> 2)] = manualCanvas.width;
-      GROWABLE_HEAP_I32()[((offscreenCanvases['canvas'].canvasSharedPtr + 4) >>> 2)] = manualCanvas.height;
-      GROWABLE_HEAP_U32()[((offscreenCanvases['canvas'].canvasSharedPtr + 8) >>> 2)] = 0;
-      transferList.push(manualCanvas);
-      window.canvasHasBeenTransferred = true;
-      console.log('[CANVAS] Transferring REAL OffscreenCanvas to worker #' + workerNum);
-    } else {
-      // Subsequent workers: create a new OffscreenCanvas (not linked to HTML)
-      var dummyCanvas = new OffscreenCanvas(1280, 800);
-      moduleCanvasId = 'canvas';
-      offscreenCanvases['canvas'] = {
-        offscreenCanvas: dummyCanvas,
-        canvasSharedPtr: _malloc(12),
-        id: 'canvas'
-      };
-      GROWABLE_HEAP_I32()[(offscreenCanvases['canvas'].canvasSharedPtr >>> 2)] = 1280;
-      GROWABLE_HEAP_I32()[((offscreenCanvases['canvas'].canvasSharedPtr + 4) >>> 2)] = 800;
-      GROWABLE_HEAP_U32()[((offscreenCanvases['canvas'].canvasSharedPtr + 8) >>> 2)] = 0;
-      transferList.push(dummyCanvas);
-      console.log('[CANVAS] Transferring NEW OffscreenCanvas to worker #' + workerNum);
-    }
+  // MANUAL CANVAS TRANSFER: Transfer the OffscreenCanvas to the FIRST worker only
+  // With +mat_queue_mode 0, the Source Engine renders synchronously in Worker 1 (main thread)
+  // This is where GL.createContext fires — the manual canvas is waiting there
+  if (!ENVIRONMENT_IS_PTHREAD && typeof window !== 'undefined' && window.manualOffscreenCanvas && !window.canvasHasBeenTransferred) {
+    moduleCanvasId = 'canvas';
+    var manualCanvas = window.manualOffscreenCanvas;
+    offscreenCanvases['canvas'] = {
+      offscreenCanvas: manualCanvas,
+      canvasSharedPtr: _malloc(12),
+      id: 'canvas'
+    };
+    GROWABLE_HEAP_I32()[(offscreenCanvases['canvas'].canvasSharedPtr >>> 2)] = manualCanvas.width;
+    GROWABLE_HEAP_I32()[((offscreenCanvases['canvas'].canvasSharedPtr + 4) >>> 2)] = manualCanvas.height;
+    GROWABLE_HEAP_U32()[((offscreenCanvases['canvas'].canvasSharedPtr + 8) >>> 2)] = 0;
+    transferList.push(manualCanvas);
+    window.canvasHasBeenTransferred = true;
+    console.log('[CANVAS] Transferring OffscreenCanvas to FIRST worker (mat_queue_mode 0 = single-threaded render)');
   }
   // Note that transferredCanvasNames might be null (so we cannot do a for-of loop).
   for (var name of transferredCanvasNames) {
@@ -18662,6 +18676,20 @@ function _eglQueryString(display, name) {
 _eglQueryString.sig = "ppi";
 
 function _eglSwapBuffers(dpy, surface) {
+  console.log('[SWAP] _eglSwapBuffers called! isPthread=' + ENVIRONMENT_IS_PTHREAD + ' hasContext=' + (!!GL.currentContext));
+  // CAPTURE FRAME: Before swapping, grab the rendered content as ImageBitmap
+  // and post it to the main thread for display on the visible HTML canvas
+  if (ENVIRONMENT_IS_PTHREAD && GL.currentContext && GL.currentContext.GLctx) {
+    try {
+      var glCanvas = GL.currentContext.GLctx.canvas;
+      if (glCanvas instanceof OffscreenCanvas && glCanvas.transferToImageBitmap) {
+        var bitmap = glCanvas.transferToImageBitmap();
+        postMessage({cmd: '__renderedFrame', bitmap: bitmap}, [bitmap]);
+      }
+    } catch(e) {
+      // transferToImageBitmap might fail if no frame was rendered yet
+    }
+  }
   if (ENVIRONMENT_IS_PTHREAD) return proxyToMainThread(158, 0, 1, dpy, surface);
   dpy >>>= 0;
   surface >>>= 0;
@@ -31392,9 +31420,9 @@ for (/**@suppress{duplicate}*/ var i = 0; i <= 288; ++i) {
 }
 
 registerPreMainLoop(() => {
-  // If the current GL context is an OffscreenCanvas, but it was initialized
-  // with implicit swap mode, perform the swap on behalf of the user.
+  // FRAME: Auto-commit path for OffscreenCanvas
   if (GL.currentContext && !GL.currentContextIsProxied && !GL.currentContext.attributes.explicitSwapControl && GL.currentContext.GLctx.commit) {
+    console.log('[SWAP] Auto-commit in main loop (GL.currentContext.GLctx.commit)');
     GL.currentContext.GLctx.commit();
   }
 });
@@ -34527,7 +34555,14 @@ run();
     createDummyVTF('/hl2/materials/dev/identitylightwarp.vtf');
     createDummyVTF('/hl2/materials/engine/normalizedrandomdirections2d.vtf');
     createDummyVTF('/hl2/materials/effects/flashlight_border.vtf');
-    console.log('[hl2] VTF v7.1 textures created in MEMFS');
+    // Background image — CRITICAL: without this, the engine calls _exit(0) and
+    // never enters the render loop. Use the same createDummyVTF format that works.
+    try { FS.mkdirTree('/hl2/materials/console'); } catch(e) {}
+    createDummyVTF('/hl2/materials/console/background01_widescreen.vtf');
+    createDummyVTF('/hl2/materials/console/startup_loading.vtf');
+    createDummyVTF('/hl2/materials/console/startup_loading_4by3.vtf');
+    createDummyVTF('/hl2/materials/console/background01_4by3.vtf');
+    console.log('[hl2] VTF v7.1 textures + background images created in MEMFS');
 
     // Write SourceScheme.res (VGUI resource scheme — required by engine)
     FS.mkdirTree('/hl2/resource');

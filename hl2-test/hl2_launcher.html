@@ -11,29 +11,49 @@
     </style>
 </head>
 <body>
-    <canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
+    <canvas id="canvas" width="1280" height="800" oncontextmenu="event.preventDefault()"></canvas>
 
     <div id="debug-overlay">
         <h2>λ HL2 WebXR - Rendering Test</h2>
         <div id="loading-status" style="color: yellow;">Booting Engine...</div>
+        <div id="frame-count" style="color: #0f0; font-size: 12px;">Frames: 0</div>
     </div>
 
     <script>
         const htmlCanvas = document.getElementById('canvas');
         const statusElement = document.getElementById('loading-status');
-        
-        // 1. Manuelle OffscreenCanvas-Erstellung
-        const offscreen = htmlCanvas.transferControlToOffscreen();
-        offscreen.width = 1280;
-        offscreen.height = 800;
+        const frameCountElement = document.getElementById('frame-count');
 
-        // 2. Global für den JS-Patch speichern
-        window.manualOffscreenCanvas = offscreen;
-        window.canvasHasBeenTransferred = false; // Flag für den Multiple-Worker-Fix
+        // NOT using transferControlToOffscreen — the main thread needs canvas access
+        // for drawImage with ImageBitmaps from the GL worker.
+        // The GL worker renders to its own fallback OffscreenCanvas and sends
+        // ImageBitmaps back via postMessage.
+
+        window.manualOffscreenCanvas = null;  // No manual transfer — let workers create their own
+        window.canvasHasBeenTransferred = true;  // Skip transfer logic
+        window.__frameCount = 0;
+        
+        // Expose the 2D context for the rendered frame handler
+        window.__htmlCanvas = htmlCanvas;
+        window.__htmlCanvasCtx2D = htmlCanvas.getContext('2d');
+        
+        // Frame counter update
+        window.__updateFrameCount = function() {
+            window.__frameCount++;
+            if (frameCountElement) frameCountElement.textContent = 'Frames: ' + window.__frameCount;
+        };
 
         window.Module = {
             canvas: null, 
-            arguments: ['-game', 'hl2', '-windowed', '-w', '1280', '-h', '800', '-novid', '-noip'],
+            arguments: [
+                '-game', 'hl2', 
+                '-windowed', 
+                '-w', '1280', 
+                '-h', '800', 
+                '-novid', 
+                '-noip', 
+                '+mat_queue_mode', '0'
+            ],
             
             preRun: [
                 function() {
@@ -48,10 +68,6 @@
             onRuntimeInitialized: () => {
                 statusElement.textContent = "ENGINE RUNTIME READY!";
                 statusElement.style.color = "#0f0";
-                
-                if (Module.wasmExports) {
-                    Module._Engine_DisableAutoRender = Module.wasmExports.Engine_DisableAutoRender;
-                }
             }
         };
 
