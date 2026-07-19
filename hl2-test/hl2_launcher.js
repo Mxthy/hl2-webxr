@@ -803,7 +803,21 @@ function preRun() {
   var _fs_open_count = 0;
   FS.open = function(path, flags, mode) {
     _fs_open_count++;
-    if (_fs_open_count <= 5 || (path && typeof path === 'string' && (path.indexOf('Scheme') >= 0 || path.indexOf('scheme') >= 0 || path.indexOf('Resource') >= 0 || path.indexOf('gameinfo') >= 0))) {
+    if (_fs_open_count <= 5 || (path && typeof path === 'string' && (path.indexOf('Scheme') >= 0 || path.indexOf('scheme') >= 0 || path.indexOf('Resource') >= 0 || path.indexOf('gameinfo') >= 0 || path.indexOf('surfaceprop') >= 0 || path.indexOf('manifest') >= 0 || path.indexOf('scripts/') >= 0))) {
+      // Check existence for debugging
+      if (path && typeof path === 'string' && path.indexOf('surfaceproperties_manifest') >= 0) {
+        try {
+          var exists = FS.analyzePath(path).exists;
+          console.log('[FS-TRACE] surfaceproperties_manifest EXISTS=' + exists + ' at ' + path);
+          if (!exists) {
+            // List /hl2/scripts/ contents
+            try {
+              var dir = FS.readdir('/hl2/scripts/');
+              console.log('[FS-TRACE] /hl2/scripts/ contents: ' + JSON.stringify(dir));
+            } catch(e2) { console.log('[FS-TRACE] Cannot list /hl2/scripts/: ' + e2); }
+          }
+        } catch(e) { console.log('[FS-TRACE] analyzePath error: ' + e); }
+      }
       console.log('[FS-TRACE] #' + _fs_open_count + ' open: ' + path);
     }
     if (path && typeof path === 'string' && (path.toLowerCase().indexOf('sourcescheme') >= 0)) {
@@ -34399,110 +34413,7 @@ run();
   } catch (e) {
     console.warn("[hl2] /MOD/ setup error:", e);
   }
-  // ---- Shader + Asset chunk loading ----
-  // Load order: shaders → background1 + materials → engine start
-  // Shaders MUST be in MEMFS before callMain() — without them the engine aborts
-  addRunDependency("load_game_data");
-  // Load shaders chunk first (critical, non-optional)
-  var loadShaders = (typeof dataLoader !== "undefined" && dataLoader.loadMapCached) ? dataLoader.loadMapCached("shaders") : Promise.reject(new Error("dataLoader not available"));
-  loadShaders.then(function() {
-    console.log("[hl2] shaders.data loaded — " + FS.readdir("/hl2/shaders").length + " shader dirs in MEMFS");
-    // === v6 SHADER OVERWRITE ===
-    // The retail 2153 shaders are version 1 (2004 format).
-    // The nillerusr engine (Source 2013) requires version 6 shaders.
-    // Download v6 shaders from R2 and overwrite the v1 files in MEMFS.
-    fetchChunk("shaders_v6").then(function(v6Buffer) {
-      var dv = new DataView(v6Buffer);
-      var off = 0;
-      var replaced = 0;
-      while (off + 8 <= v6Buffer.byteLength) {
-        var pathLen = dv.getInt32(off, true);
-        var dataLen = dv.getInt32(off + 4, true);
-        off += 8;
-        if (pathLen <= 0 || pathLen > 256 || dataLen <= 0 || dataLen > 5e7) break;
-        var pathBytes = new Uint8Array(v6Buffer, off, pathLen);
-        var path = (new TextDecoder).decode(pathBytes);
-        off += pathLen;
-        var shaderData = new Uint8Array(v6Buffer, off, dataLen);
-        off += dataLen;
-        // Overwrite the v1 shader file in MEMFS
-        try {
-          FS.writeFile(path, shaderData);
-          replaced++;
-        } catch (e) {
-          console.warn("[hl2] v6 shader overwrite failed for " + path + ": " + e);
-        }
-      }
-      console.log("[hl2] v6 shaders: " + replaced + " files overwritten in MEMFS");
-    }).catch(function(e) {
-      console.warn("[hl2] v6 shader download failed (using v1 fallback): " + e);
-    });
-    // Preflight: verify critical shader families exist
-    var criticalShaders = [ "vertexlit_and_unlit_generic_vs20", "vertexlit_and_unlit_generic_ps20b", "lightmappedgeneric_vs20", "lightmappedgeneric_ps20b" ];
-    var missing = [];
-    try {
-      var fxcDir = "/hl2/shaders/fxc";
-      if (FS.analyzePath(fxcDir).exists) {
-        var files = FS.readdir(fxcDir);
-        for (var i = 0; i < criticalShaders.length; i++) {
-          var found = false;
-          for (var j = 0; j < files.length; j++) {
-            if (files[j].indexOf(criticalShaders[i]) >= 0) {
-              found = true;
-              break;
-            }
-          }
-          if (!found) missing.push(criticalShaders[i]);
-        }
-      } else {
-        console.warn("[hl2] /hl2/shaders/fxc not found — shaders may not be loaded");
-      }
-    } catch (e) {
-      console.warn("[hl2] shader preflight error:", e);
-    }
-    if (missing.length > 0) {
-      console.error("[hl2] MISSING SHADERS: " + missing.join(", "));
-      console.error("[hl2] Engine will crash on shader loading!");
-    } else {
-      console.log("[hl2] Shader preflight OK ✓");
-    }
-    // Now load background1 + materials in parallel
-    return Promise.all([ dataLoader.loadMap("background1"), dataLoader.loadMap("materials") ]);
-  }).then(function() {
-    // Fix case-sensitive directory names (MEMFS is case-sensitive)
-    var fixCase = function(dir, correctName) {
-      try {
-        var entries = FS.readdir(dir);
-        for (var i = 0; i < entries.length; i++) {
-          var e = entries[i];
-          if (e.toLowerCase() === correctName && e !== correctName) {
-            var src = dir + "/" + e;
-            var dst = dir + "/" + correctName;
-            if (!FS.analyzePath(dst).exists) {
-              var stat = FS.stat(src);
-              if (FS.isDir(stat.mode)) {
-                FS.mkdir(dst);
-                var subEntries = FS.readdir(src);
-                for (var j = 0; j < subEntries.length; j++) {
-                  if (subEntries[j] === "." || subEntries[j] === "..") continue;
-                  FS.symlink(src + "/" + subEntries[j], dst + "/" + subEntries[j]);
-                }
-              } else {
-                FS.symlink(src, dst);
-              }
-              console.log("[hl2] Fixed case: " + src + " -> " + dst);
-            }
-          }
-        }
-      } catch (e) {
-        console.warn("[hl2] Case fix error: " + e);
-      }
-    };
-    fixCase("/hl2/materials", "console");
-    fixCase("/hl2/materials", "debug");
-    fixCase("/hl2/materials", "dev");
-    fixCase("/hl2/materials", "engine");
-    fixCase("/hl2/materials", "effects");
+  // ---- Pre-load essential manifest files (must exist before engine start) ----
     // PATCH 3: gameinfo.txt (required by engine setup)
     var gameinfoContent = '"GameInfo"\n{\n  game  "HL2"\n  title  "Half-Life 2"\n  type  singleplayer_only\n  developer  "Valve"\n  icon  "hl2"\n  FileSystem\n  {\n    SteamAppId  2153\n    ToolsAppId  211\n    SearchPaths\n    {\n      Game+Tracker  |gameinfo_path|.\n      Game  hl2\n      Platform+Tracker  platform\n    }\n  }\n}';
     FS.writeFile("/hl2/gameinfo.txt", gameinfoContent);
@@ -34526,6 +34437,7 @@ run();
     createDummyVTF('/hl2/materials/engine/normalizedrandomdirections2d.vtf');
     createDummyVTF('/hl2/materials/effects/flashlight_border.vtf');
     console.log('[hl2] VTF v7.1 textures created in MEMFS');
+
     // Write SourceScheme.res (VGUI resource scheme — required by engine)
     FS.mkdirTree('/hl2/resource');
     FS.mkdirTree('/hl2/Resource');
@@ -34680,26 +34592,6 @@ run();
     // Also write to platform subdirectories
     FS.mkdirTree('/hl2/platform');
     console.log('[hl2] SourceScheme.res written to MEMFS');
-    var schemeResContent = schemeRes;
-    // Also write to CWD-relative paths (engine may resolve relative to CWD)
-    FS.mkdirTree('/hl2/hl2/Resource');
-    FS.mkdirTree('/hl2/hl2/resource');
-    FS.writeFile('/hl2/hl2/Resource/SourceScheme.res', schemeRes);
-    FS.writeFile('/hl2/hl2/resource/SourceScheme.res', schemeRes);
-    // Write to bin (some Source builds use bin/ as search root)
-    FS.mkdirTree('/bin/hl2/Resource');
-    FS.writeFile('/bin/hl2/Resource/SourceScheme.res', schemeRes);
-    console.log('[hl2] SourceScheme.res also written to CWD-relative paths');
-    // Also write relative to CWD
-    try {
-      var cwd = FS.cwd();
-      console.log('[hl2] MEMFS CWD: ' + cwd);
-      FS.mkdirTree(cwd + '/Resource');
-      FS.writeFile(cwd + '/Resource/SourceScheme.res', schemeRes);
-      console.log('[hl2] SourceScheme.res written to CWD: ' + cwd + '/Resource/');
-    } catch(e) {
-      console.warn('[hl2] CWD SourceScheme write: ' + e);
-    }
     // Write surfaceproperties_manifest.txt + surfaceproperties.txt (physics material system — required by engine)
     FS.mkdirTree('/hl2/scripts');
     var surfaceManifest = [
@@ -34797,6 +34689,137 @@ run();
     // modtext (mod text file)
     FS.writeFile('/hl2/scripts/modtext.txt', '"modtext"\n{\n}\n');
     console.log('[hl2] ALL script manifests written to MEMFS (soundscapes, _modmanifest, hud, kb)');
+
+  // ---- Shader + Asset chunk loading ----
+  // Load order: shaders → background1 + materials → engine start
+  // Shaders MUST be in MEMFS before callMain() — without them the engine aborts
+  addRunDependency("load_game_data");
+  // Load shaders chunk first (critical, non-optional)
+  var loadShaders = (typeof dataLoader !== "undefined" && dataLoader.loadMapCached) ? dataLoader.loadMapCached("shaders") : Promise.reject(new Error("dataLoader not available"));
+  loadShaders.then(function() {
+    console.log("[hl2] shaders.data loaded — " + FS.readdir("/hl2/shaders").length + " shader dirs in MEMFS");
+    // === v6 SHADER OVERWRITE ===
+    // The retail 2153 shaders are version 1 (2004 format).
+    // The nillerusr engine (Source 2013) requires version 6 shaders.
+    // Download v6 shaders from R2 and overwrite the v1 files in MEMFS.
+    fetchChunk("shaders_v6").then(function(v6Buffer) {
+      var dv = new DataView(v6Buffer);
+      var off = 0;
+      var replaced = 0;
+      while (off + 8 <= v6Buffer.byteLength) {
+        var pathLen = dv.getInt32(off, true);
+        var dataLen = dv.getInt32(off + 4, true);
+        off += 8;
+        if (pathLen <= 0 || pathLen > 256 || dataLen <= 0 || dataLen > 5e7) break;
+        var pathBytes = new Uint8Array(v6Buffer, off, pathLen);
+        var path = (new TextDecoder).decode(pathBytes);
+        off += pathLen;
+        var shaderData = new Uint8Array(v6Buffer, off, dataLen);
+        off += dataLen;
+        // Overwrite the v1 shader file in MEMFS
+        try {
+          FS.writeFile(path, shaderData);
+          replaced++;
+        } catch (e) {
+          console.warn("[hl2] v6 shader overwrite failed for " + path + ": " + e);
+        }
+      }
+      console.log("[hl2] v6 shaders: " + replaced + " files overwritten in MEMFS");
+    }).catch(function(e) {
+      console.warn("[hl2] v6 shader download failed (using v1 fallback): " + e);
+    });
+    // Preflight: verify critical shader families exist
+    var criticalShaders = [ "vertexlit_and_unlit_generic_vs20", "vertexlit_and_unlit_generic_ps20b", "lightmappedgeneric_vs20", "lightmappedgeneric_ps20b" ];
+    var missing = [];
+    try {
+      var fxcDir = "/hl2/shaders/fxc";
+      if (FS.analyzePath(fxcDir).exists) {
+        var files = FS.readdir(fxcDir);
+        for (var i = 0; i < criticalShaders.length; i++) {
+          var found = false;
+          for (var j = 0; j < files.length; j++) {
+            if (files[j].indexOf(criticalShaders[i]) >= 0) {
+              found = true;
+              break;
+            }
+          }
+          if (!found) missing.push(criticalShaders[i]);
+        }
+      } else {
+        console.warn("[hl2] /hl2/shaders/fxc not found — shaders may not be loaded");
+      }
+    } catch (e) {
+      console.warn("[hl2] shader preflight error:", e);
+    }
+    if (missing.length > 0) {
+      console.error("[hl2] MISSING SHADERS: " + missing.join(", "));
+      console.error("[hl2] Engine will crash on shader loading!");
+    } else {
+      console.log("[hl2] Shader preflight OK ✓");
+    }
+    // Now load background1 + materials in parallel
+    return Promise.all([ dataLoader.loadMap("background1"), dataLoader.loadMap("materials") ]);
+  }).then(function() {
+    // Fix case-sensitive directory names (MEMFS is case-sensitive)
+    var fixCase = function(dir, correctName) {
+      try {
+        var entries = FS.readdir(dir);
+        for (var i = 0; i < entries.length; i++) {
+          var e = entries[i];
+          if (e.toLowerCase() === correctName && e !== correctName) {
+            var src = dir + "/" + e;
+            var dst = dir + "/" + correctName;
+            if (!FS.analyzePath(dst).exists) {
+              var stat = FS.stat(src);
+              if (FS.isDir(stat.mode)) {
+                FS.mkdir(dst);
+                var subEntries = FS.readdir(src);
+                for (var j = 0; j < subEntries.length; j++) {
+                  if (subEntries[j] === "." || subEntries[j] === "..") continue;
+                  FS.symlink(src + "/" + subEntries[j], dst + "/" + subEntries[j]);
+                }
+              } else {
+                FS.symlink(src, dst);
+              }
+              console.log("[hl2] Fixed case: " + src + " -> " + dst);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("[hl2] Case fix error: " + e);
+      }
+    };
+    fixCase("/hl2/materials", "console");
+    fixCase("/hl2/materials", "debug");
+    fixCase("/hl2/materials", "dev");
+    fixCase("/hl2/materials", "engine");
+    fixCase("/hl2/materials", "effects");
+    // [MOVED] gameinfo + VTF writing moved to pre-load section
+
+    // [MOVED] scheme writing moved to pre-load section
+
+    var schemeResContent = schemeRes;
+    // Also write to CWD-relative paths (engine may resolve relative to CWD)
+    FS.mkdirTree('/hl2/hl2/Resource');
+    FS.mkdirTree('/hl2/hl2/resource');
+    FS.writeFile('/hl2/hl2/Resource/SourceScheme.res', schemeRes);
+    FS.writeFile('/hl2/hl2/resource/SourceScheme.res', schemeRes);
+    // Write to bin (some Source builds use bin/ as search root)
+    FS.mkdirTree('/bin/hl2/Resource');
+    FS.writeFile('/bin/hl2/Resource/SourceScheme.res', schemeRes);
+    console.log('[hl2] SourceScheme.res also written to CWD-relative paths');
+    // Also write relative to CWD
+    try {
+      var cwd = FS.cwd();
+      console.log('[hl2] MEMFS CWD: ' + cwd);
+      FS.mkdirTree(cwd + '/Resource');
+      FS.writeFile(cwd + '/Resource/SourceScheme.res', schemeRes);
+      console.log('[hl2] SourceScheme.res written to CWD: ' + cwd + '/Resource/');
+    } catch(e) {
+      console.warn('[hl2] CWD SourceScheme write: ' + e);
+    }
+    // [MOVED] manifest writing moved to pre-load section
+
     // PATCH 5: Shader version — patch .vcs files from version 1 to version 6
     try {
       var fxcDir = "/hl2/shaders/fxc";
