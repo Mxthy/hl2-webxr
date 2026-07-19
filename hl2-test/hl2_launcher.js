@@ -1142,6 +1142,21 @@ function createWasm() {
       dynamicLibraries = metadata.neededDynlibs.concat(dynamicLibraries);
     }
     mergeLibSymbols(wasmExports, "main");
+  // Override 'raise' in wasmImports so side modules (.so) get a no-op instead
+  // of the real raise() which triggers action_abort → abort → __abort_js
+  // The main module's internal calls to raise use the WASM table, not wasmImports
+  var _orig_raise_wasm = wasmImports["raise"];
+  var _raiseCallCount = 0;
+  wasmImports["raise"] = function(sig) {
+    _raiseCallCount++;
+    console.warn("[SIDE-MODULE raise] signal " + sig + " intercepted — non-fatal (call #" + _raiseCallCount + ")");
+    if (_raiseCallCount > 3) {
+      console.warn("[SIDE-MODULE raise] suppressing further raise logs");
+      // Stop logging but still return 0
+    }
+    return 0;
+  };
+  console.log("[OVERRIDE] wasmImports['raise'] replaced with no-op for side modules");
     LDSO.init();
     loadDylibs();
     wasmExports = applySignatureConversions(wasmExports);
@@ -6590,12 +6605,35 @@ function ___cxa_throw(ptr, type, destructor) {
   ptr >>>= 0;
   type >>>= 0;
   destructor >>>= 0;
+  // Log the C++ exception details before the assert kills us
+  var excMsg = "";
+  try {
+    // Try to read the exception object from WASM heap
+    // C++ exceptions typically have a message at offset 0 (std::exception::what())
+    var whatPtr = HEAPU32[ptr >>> 2];
+    if (whatPtr) {
+      excMsg = UTF8ToString(whatPtr);
+    }
+  } catch(e) { excMsg = "(could not read: " + e + ")"; }
+  console.error("[CXA_THROW] C++ exception thrown! ptr=" + ptr + " type=" + type + " msg='" + excMsg + "'");
+  // Also try to get the type name
+  try {
+    var typeInfoPtr = HEAPU32[(type + 8) >>> 2]; // __type_info name pointer
+    if (typeInfoPtr) {
+      var typeName = UTF8ToString(typeInfoPtr);
+      console.error("[CXA_THROW] Exception type: " + typeName);
+    }
+  } catch(e) {}
+  
   var info = new ExceptionInfo(ptr);
-  // Initialize ExceptionInfo content after it was allocated in __cxa_allocate_exception.
   info.init(type, destructor);
   exceptionLast = ptr;
   uncaughtExceptionCount++;
-  assert(false, "Exception thrown, but exception catching is not enabled. Compile with -sNO_DISABLE_EXCEPTION_CATCHING or -sEXCEPTION_CATCHING_ALLOWED=[..] to catch. (note: in dynamic linking, if a side module wants exceptions, the main module must be built with that support)");
+  // Instead of assert(false) which kills us, just log and return
+  // This lets the WASM code continue (it should hit unreachable after this)
+  console.error("[CXA_THROW] Exception catching is DISABLED — exception will become abort/unreachable");
+  // Don't call assert — let the WASM handle it
+  _setThrew(1, 0);
 }
 
 ___cxa_throw.sig = "vppp";
@@ -13249,6 +13287,7 @@ _emscripten_set_main_loop_timing.sig = "iii";
      * @param {number=} arg
      * @param {boolean=} noSetTiming
      */ var setMainLoop = (iterFunc, fps, simulateInfiniteLoop, arg, noSetTiming) => {
+  console.log("[SET-MAIN-LOOP] setMainLoop called! fps=" + fps + " simulateInfinite=" + simulateInfiniteLoop + " iterFunc=" + (typeof iterFunc));
   assert(!MainLoop.func, "emscripten_set_main_loop: there can only be one main loop function at once: call emscripten_cancel_main_loop to cancel the previous one before setting a new one with different parameters.");
   MainLoop.func = iterFunc;
   MainLoop.arg = arg;
@@ -34629,6 +34668,18 @@ run();
       var vguiLayout = '"enginevguilayout"\n{\n  "Console"\n  {\n    "xpos" "0"\n    "ypos" "0"\n    "wide" "1280"\n    "tall" "800"\n  }\n}\n';
       FS.writeFile('/hl2/scripts/enginevguilayout.res', vguiLayout);
       console.log('[hl2] Additional config files (cheatcodes, debugoptions, vguilayout) created');
+    // GameUI resources — VGUI2 main menu needs these or it throws fatal error
+    try {
+      FS.mkdirTree('/hl2/resource');
+      // clientscheme.res — main menu layout
+      var clientScheme = '"Clientscheme"\n{\n  "Scheme"\n  {\n    "Colors"\n    {\n      "White" "255 255 255 255"\n      "Black" "0 0 0 255"\n    }\n  }\n}\n';
+      FS.writeFile('/hl2/resource/clientscheme.res', clientScheme);
+      // Minimal TTF font (empty but valid enough to not crash)
+      FS.writeFile('/hl2/resource/halflife2.ttf', new Uint8Array(0));
+      // GameUI localization file
+      FS.writeFile('/hl2/resource/gameui_english.txt', '"lang"\n{\n  "Language" "english"\n}\n');
+      console.log('[hl2] GameUI resources (clientscheme, font, gameui_english) created');
+    } catch(e) { console.warn('[hl2] GameUI resource create failed: ' + e); }
     } catch(e) { console.warn('[hl2] Config files create failed: ' + e); }
     console.log('[STEP-1] About to write SourceScheme.res...');
 
