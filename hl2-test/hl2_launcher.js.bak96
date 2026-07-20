@@ -1842,35 +1842,11 @@ var convertI32PairToI53Checked = (lo, hi) => {
 };
 
 function _proc_exit(code) {
-  if (ENVIRONMENT_IS_PTHREAD) return proxyToMainThread(0, 0, 1, code);
-  EXITSTATUS = code;
-  if (!keepRuntimeAlive()) {
-    PThread.terminateAllThreads();
-    Module["onExit"]?.(code);
-    ABORT = true;
-  }
-  quit_(code, new ExitStatus(code));
-}
-
-_proc_exit.sig = "vi";
-
-var handleException = e => {
-  // Certain exception types we do not treat as errors since they are used for
-  // internal control flow.
-  // 1. ExitStatus, which is thrown by exit()
-  // 2. "unwind", which is thrown by emscripten_unwind_to_js_event_loop() and others
-  //    that wish to return to JS event loop.
-  if (e instanceof ExitStatus || e == "unwind") {
-    return EXITSTATUS;
-  }
-  checkStackCookie();
-  if (e instanceof WebAssembly.RuntimeError) {
-    if (_emscripten_stack_get_current() <= 0) {
-      err("Stack overflow detected.  You can try increasing -sSTACK_SIZE (currently set to 67108864)");
-    }
-  }
-  quit_(1, e);
-};
+  console.warn('[PROC-EXIT] _proc_exit(' + code + ') — throwing ESCAPE_EXIT to skip unreachable');
+  EXITSTATUS = 0;
+  ABORT = false;
+  throw "ESCAPE_EXIT";
+};;
 
 var runtimeKeepalivePop = () => {
   assert(runtimeKeepaliveCounter > 0);
@@ -4153,7 +4129,7 @@ function __Z15Studio_MaxFramePK10CStudioHdriPKf(...args) {
 __Z15Studio_MaxFramePK10CStudioHdriPKf.stub = true;
 
 function __Z17em_loop_iterationv(...args) {
-  if (!wasmImports["_Z17em_loop_iterationv"] || wasmImports["_Z17em_loop_iterationv"].stub) abort("external symbol '_Z17em_loop_iterationv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  if (!wasmImports["_Z17em_loop_iterationv"] || wasmImports["_Z17em_loop_iterationv"].stub) console.warn('[EM-LOOP] em_loop_iteration not found in side modules — using JS no-op fallback'); return 0;
   return wasmImports["_Z17em_loop_iterationv"](...args);
 }
 
@@ -13106,6 +13082,7 @@ _emscripten_set_main_loop_timing.sig = "iii";
      * @param {number=} arg
      * @param {boolean=} noSetTiming
      */ var setMainLoop = (iterFunc, fps, simulateInfiniteLoop, arg, noSetTiming) => {
+  console.log("[SET-MAIN-LOOP] setMainLoop called! fps=" + fps + " simulateInfinite=" + simulateInfiniteLoop + " iterFunc=" + typeof iterFunc);
   assert(!MainLoop.func, "emscripten_set_main_loop: there can only be one main loop function at once: call emscripten_cancel_main_loop to cancel the previous one before setting a new one with different parameters.");
   MainLoop.func = iterFunc;
   MainLoop.arg = arg;
