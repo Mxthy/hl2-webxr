@@ -666,8 +666,9 @@ if (ENVIRONMENT_IS_PTHREAD) {
         ABORT = false;
         EXITSTATUS = 0;
         try {
-          setMainLoop(__Z17em_loop_iterationv, 0, true);
-          console.log("[POST-UNWIND] Main loop started (unwind exception is normal)");
+          var renderFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : __Z17em_loop_iterationv;
+          setMainLoop(renderFn, 0, true);
+          console.log("[POST-UNWIND] Main loop started with Engine_RenderSingleFrame");
         } catch(mlEx) {
           if (mlEx === "unwind") {
             console.log("[POST-UNWIND] Main loop started (unwind exception is normal)");
@@ -676,9 +677,20 @@ if (ENVIRONMENT_IS_PTHREAD) {
           }
         }
       } else if (ex === "ESCAPE_EXIT") {
-        console.warn("[WORKER] ESCAPE_EXIT caught — _proc_exit bypassed, continuing");
+        console.warn("[WORKER] ESCAPE_EXIT caught — _proc_exit bypassed, starting main loop");
         ABORT = false;
         EXITSTATUS = 0;
+        try {
+          var renderFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : __Z17em_loop_iterationv;
+          setMainLoop(renderFn, 0, true);
+          console.log("[POST-EXIT] Main loop started with Engine_RenderSingleFrame");
+        } catch(mlEx) {
+          if (mlEx === "unwind") {
+            console.log("[POST-EXIT] Main loop started (unwind exception is normal)");
+          } else {
+            console.error("[POST-EXIT] Failed to start main loop: " + mlEx);
+          }
+        }
       } else if (ex instanceof WebAssembly.RuntimeError && (ex.message?.includes('unreachable') || ex.message?.includes('Aborted'))) {
         err(`worker: caught non-fatal RuntimeError (continuing): ${ex.message?.substring(0, 80)}`);
         ABORT = false;
@@ -1836,8 +1848,9 @@ var convertI32PairToI53Checked = (lo, hi) => {
 };
 
 function _proc_exit(code) {
-  if (ENVIRONMENT_IS_PTHREAD) return proxyToMainThread(0, 0, 1, code);
-  console.warn('[PROC-EXIT] _proc_exit(' + code + ') — throwing ESCAPE_EXIT to skip unreachable');
+  // PATCH: Don't proxy to main thread — throw ESCAPE_EXIT directly in the current thread
+  // This ensures the pthread's onmessage catch handler can catch it and start the main loop
+  console.warn('[PROC-EXIT] _proc_exit(' + code + ') — throwing ESCAPE_EXIT (thread: ' + (ENVIRONMENT_IS_PTHREAD ? 'worker' : 'main') + ')');
   EXITSTATUS = 0;
   ABORT = false;
   throw "ESCAPE_EXIT";
@@ -1848,6 +1861,10 @@ _proc_exit.sig = "vi";
 var handleException = e => {
   if (e instanceof ExitStatus || e == "unwind") {
     return EXITSTATUS;
+  }
+  if (e === "ESCAPE_EXIT") {
+    console.warn("[HANDLE-EXC] ESCAPE_EXIT caught — keeping runtime alive");
+    return EXITSTATUS || 0;
   }
   if (e instanceof WebAssembly.RuntimeError) {
     var msg = e.message || '';
@@ -4146,8 +4163,8 @@ function __Z15Studio_MaxFramePK10CStudioHdriPKf(...args) {
 __Z15Studio_MaxFramePK10CStudioHdriPKf.stub = true;
 
 function __Z17em_loop_iterationv(...args) {
-  if (!wasmImports["_Z17em_loop_iterationv"] || wasmImports["_Z17em_loop_iterationv"].stub) console.warn('[EM-LOOP] em_loop_iteration not found — using JS no-op fallback'); return 0;
-  return wasmImports["_Z17em_loop_iterationv"](...args);
+  // No-op: Engine_RenderSingleFrame calls this internally, so we must NOT call it back
+  return 0;
 }
 
 __Z17em_loop_iterationv.stub = true;

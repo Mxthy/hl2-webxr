@@ -85,7 +85,7 @@
                    dirs.forEach(function(d) {
                        try { FS.mkdir(d); } catch(e) {}
                    });
-                   FS.writeFile('/hl2/gameinfo.txt', '"GameInfo"\n{\n\tgame\t"HL2"\n\ttitle\t"Half-Life 2"\n\ttype\tsingleplayer_only\n\tsupports_hd "1"\n\tdeveloper\t"Valve"\n\tdeveloper_url\t"http://www.valvesoftware.com"\n\tmanual_url\t"http://www.valvesoftware.com"\n\ticon\t"hl2"\n\t\n\tFileSystem\n\t{\n\t\tSteamAppId\t2153\n\t\tToolsAppId\t211\n\t\tSearchPaths\n\t\t{\n\t\t\tGame\t|gameinfo_path|.\n\t\t\tGame\thl2\n\t\t\tPlatform\tplatform\n\t\t}\n\t}\n}\n');
+                   FS.writeFile('/hl2/gameinfo.txt', '"GameInfo"\n{\n\tgame\t"HL2"\n\ttitle\t"Half-Life 2"\n\ttype\tsingleplayer_only\n\tsupports_hd "1"\n\tdeveloper\t"Valve"\n\tdeveloper_url\t"http://www.valvesoftware.com"\n\tmanual_url\t"http://www.valvesoftware.com"\n\ticon\t"hl2"\n\t\n\tFileSystem\n\t{\n\t\tSteamAppId\t2153\n\t\tToolsAppId\t211\n\t\tSearchPaths\n\t\t{\n\t\t\tGame\t|gameinfo_path|.\n\t\t\tWritePath\t|gameinfo_path|.\n\t\t\tGame\thl2\n\t\t\tPlatform\tplatform\n\t\t}\n\t}\n}\n');
                    // Create steam.inf
                    FS.writeFile('/hl2/steam.inf', '2153\nSource Engine\n1.0.0.0\n');
                    // Create writeable MOD directory
