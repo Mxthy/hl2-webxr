@@ -20,21 +20,21 @@ patches_applied = 0
 # ============================================================
 # PATCH 1: Fallback OffscreenCanvas in do_create_context
 # ============================================================
-old_create_context = """    var canvas = findCanvasEventTarget(target);
-    if (!canvas) {
+old_create_context = """  var canvas = findCanvasEventTarget(target);
+  if (!canvas) {
+    return 0;
+  }"""
+new_create_context = """  var canvas = findCanvasEventTarget(target);
+  if (!canvas) {
+    // FALLBACK: Worker has no DOM access — create standalone OffscreenCanvas
+    if (typeof OffscreenCanvas !== 'undefined') {
+      canvas = new OffscreenCanvas(1280, 800);
+      console.log('[GL] Fallback OffscreenCanvas(1280,800) created for worker');
+    } else {
+      console.error('[GL] No canvas and no OffscreenCanvas available');
       return 0;
-    }"""
-new_create_context = """    var canvas = findCanvasEventTarget(target);
-    if (!canvas) {
-      // FALLBACK: Worker has no DOM access — create standalone OffscreenCanvas
-      if (typeof OffscreenCanvas !== 'undefined') {
-        canvas = new OffscreenCanvas(1280, 800);
-        console.log('[GL] Fallback OffscreenCanvas(1280,800) created for worker');
-      } else {
-        console.error('[GL] No canvas and no OffscreenCanvas available');
-        return 0;
-      }
-    }"""
+    }
+  }"""
 if old_create_context in js:
     js = js.replace(old_create_context, new_create_context, 1)
     patches_applied += 1
