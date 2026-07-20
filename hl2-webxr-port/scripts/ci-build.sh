@@ -485,7 +485,7 @@ POST_JS_EOF
   fi
 
   # === BUILD #97: em_loop_iteration KEEPALIVE patch ===
-  # The Source Engine defines em_loop_iteration() as 'static' in sys_dll2.cpp.
+  # The Source Engine defines em_loop_iteration() as 'void' (not static) in sys_dll2.cpp.
   # wasm-ld DCE strips it because no exported function references it directly.
   # The main WASM imports _Z17em_loop_iterationv from env, but no side module exports it.
   # Fix: Add EMSCRIPTEN_KEEPALIVE (WITHOUT extern "C") to prevent DCE.
@@ -499,10 +499,10 @@ POST_JS_EOF
         sed -i '1s/^/#include <emscripten.h>\n/' "$sys_dll"
       fi
       # Replace 'static void em_loop_iteration()' with KEEPALIVE version
-      # The function might be 'static void em_loop_iteration()' or 'static void em_loop_iteration(void)'
-      sed -i 's/static void em_loop_iteration *( *void *)/EMSCRIPTEN_KEEPALIVE void em_loop_iteration(void)/g' "$sys_dll"
+      # The function is "void em_loop_iteration()" or "void em_loop_iteration(void)"
+      sed -i 's/^void em_loop_iteration *( *void *)/EMSCRIPTEN_KEEPALIVE void em_loop_iteration(void)/g' "$sys_dll"
       # Also handle 'static void em_loop_iteration()' without void
-      sed -i 's/static void em_loop_iteration *()/EMSCRIPTEN_KEEPALIVE void em_loop_iteration(void)/g' "$sys_dll"
+      sed -i 's/^void em_loop_iteration *()/EMSCRIPTEN_KEEPALIVE void em_loop_iteration(void)/g' "$sys_dll"
       # Verify the patch was applied
       if grep -q 'EMSCRIPTEN_KEEPALIVE.*em_loop_iteration' "$sys_dll"; then
         log "  ✓ em_loop_iteration now has EMSCRIPTEN_KEEPALIVE"
