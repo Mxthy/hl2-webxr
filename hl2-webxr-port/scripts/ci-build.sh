@@ -236,62 +236,12 @@ int _ZN11IVP_Mindist22recalc_invalid_mindistEv(void* self) {
     return 0;
 }
 
-// -----------------------------------------------------------------------
-// IVP_Compact_Edge static data members
-// -----------------------------------------------------------------------
-// These are GOT.mem imports in the main WASM — the engine expects them
-// from a side module (libvphysics.so) but they're not exported there.
-// Define them here as zeroed arrays so the physics engine has valid
-// memory to read/write instead of NULL (which causes stack overflow
-// and null-function RuntimeErrors).
-// 256 pointer-sized entries = 2048 bytes on 64-bit, 1024 on 32-bit.
-// -----------------------------------------------------------------------
-__attribute__((used, visibility("default")))
-void* _ZN16IVP_Compact_Edge10next_tableE[256] = {0};
-
-__attribute__((used, visibility("default")))
-void* _ZN16IVP_Compact_Edge10prev_tableE[256] = {0};
-
 } // extern "C"
 
 #endif // __EMSCRIPTEN__
 EOF
   log "  patch: emscripten_stubs.cpp (with IVP_Mindist weak stubs)"
   
-
-  # Patch 5e (pre): pre.js — Globale Variablen + SAB Konstanten
-  PRE_JS="$ENGINE_DIR/emscripten/pre.js"
-  cat > "$PRE_JS" << 'PRE_JS_EOF'
-// pre.js - Globale Variablen vor dem Emscripten-Bundle initialisieren
-var canvasElement = null;
-var statusElement = null;
-var progressElement = null;
-var spinnerElement = null;
-
-var Module = Module || {};
-
-// SharedArrayBuffer Layout-Konstanten für die WebXR-Engine-Brücke
-var FRAME_READY_OFFSET = 0;
-var HMD_POSE_OFFSET = 4;
-var LEFT_VIEW_OFFSET = 32;
-var LEFT_PROJ_OFFSET = 96;
-var RIGHT_VIEW_OFFSET = 160;
-var RIGHT_PROJ_OFFSET = 224;
-var CTRL_LEFT_POSE_OFFSET = 288;
-var CTRL_LEFT_DATA_OFFSET = 320;
-var CTRL_RIGHT_POSE_OFFSET = 352;
-var CTRL_RIGHT_DATA_OFFSET = 384;
-var CONTROLLERS_ACTIVE_OFFSET = 416;
-var SAB_TOTAL_SIZE = 512;
-
-if (typeof document !== 'undefined') {
-  canvasElement = document.getElementById('game-canvas') || document.getElementById('canvas');
-  statusElement = document.getElementById('status');
-  progressElement = document.getElementById('progress');
-  spinnerElement = document.getElementById('spinner');
-}
-PRE_JS_EOF
-  log "  patch: pre.js (globals + SAB constants)"
 
   # Patch 6 (post): post.js — Shader + Asset Chunk Loading vor callMain()
   POST_JS="$ENGINE_DIR/emscripten/post.js"
@@ -343,6 +293,37 @@ PRE_JS_EOF
   loadShaders.then(function() {
     console.log('[hl2] shaders.data loaded — ' +
       FS.readdir('/hl2/shaders').length + ' shader dirs in MEMFS')
+
+    // === v6 SHADER OVERWRITE ===
+    // The retail 2153 shaders are version 1 (2004 format).
+    // The nillerusr engine (Source 2013) requires version 6 shaders.
+    // Download v6 shaders from R2 and overwrite the v1 files in MEMFS.
+    fetchChunk('shaders_v6').then(function(v6Buffer) {
+      var dv = new DataView(v6Buffer)
+      var off = 0
+      var replaced = 0
+      while (off + 8 <= v6Buffer.byteLength) {
+        var pathLen = dv.getInt32(off, true)
+        var dataLen = dv.getInt32(off + 4, true)
+        off += 8
+        if (pathLen <= 0 || pathLen > 256 || dataLen <= 0 || dataLen > 50000000) break
+        var pathBytes = new Uint8Array(v6Buffer, off, pathLen)
+        var path = new TextDecoder().decode(pathBytes)
+        off += pathLen
+        var shaderData = new Uint8Array(v6Buffer, off, dataLen)
+        off += dataLen
+        // Overwrite the v1 shader file in MEMFS
+        try {
+          FS.writeFile(path, shaderData)
+          replaced++
+        } catch(e) {
+          console.warn('[hl2] v6 shader overwrite failed for ' + path + ': ' + e)
+        }
+      }
+      console.log('[hl2] v6 shaders: ' + replaced + ' files overwritten in MEMFS')
+    }).catch(function(e) {
+      console.warn('[hl2] v6 shader download failed (using v1 fallback): ' + e)
+    })
     // Preflight: verify critical shader families exist
     var criticalShaders = [
       'vertexlit_and_unlit_generic_vs20',
@@ -409,6 +390,81 @@ PRE_JS_EOF
     fixCase('/hl2/materials', 'dev')
     fixCase('/hl2/materials', 'engine')
     fixCase('/hl2/materials', 'effects')
+    // PATCH 3: gameinfo.txt (required by engine setup)
+    var gameinfoContent = '"GameInfo"\n{\n  game  "HL2"\n  title  "Half-Life 2"\n  type  singleplayer_only\n  developer  "Valve"\n  icon  "hl2"\n  FileSystem\n  {\n    SteamAppId  2153\n    ToolsAppId  211\n    SearchPaths\n    {\n      Game  |gameinfo_path|.\n      Game  hl2\n      Platform  platform\n    }\n  }\n}'
+    FS.writeFile('/hl2/gameinfo.txt', gameinfoContent)
+    console.log('[hl2] gameinfo.txt created in MEMFS')
+
+    // PATCH 4: VTF files — replace dummy VTFs with proper VTF format
+    var vtfFixList = [
+      '/hl2/materials/dev/identitylightwarp.vtf',
+      '/hl2/materials/engine/normalizedrandomdirections2d.vtf',
+      '/hl2/materials/effects/flashlight_border.vtf'
+    ]
+    var vtfFixed = 0
+    for (var vi = 0; vi < vtfFixList.length; vi++) {
+      var vtfPath = vtfFixList[vi]
+      if (FS.analyzePath(vtfPath).exists) {
+        var existing = FS.readFile(vtfPath)
+        if (existing[0] !== 0x56) {
+          var vtfHeader = new Uint8Array(84)
+          vtfHeader[0] = 0x56; vtfHeader[1] = 0x54; vtfHeader[2] = 0x46; vtfHeader[3] = 0x00
+          vtfHeader[4] = 7; vtfHeader[8] = 1; vtfHeader[12] = 80
+          vtfHeader[16] = 4; vtfHeader[18] = 4
+          vtfHeader[20] = 0x00; vtfHeader[21] = 0x40
+          vtfHeader[24] = 1; vtfHeader[44] = 12; vtfHeader[48] = 1
+          vtfHeader[52] = 12; vtfHeader[56] = 1; vtfHeader[57] = 1; vtfHeader[58] = 1
+          vtfHeader[80] = 128; vtfHeader[81] = 128; vtfHeader[82] = 128; vtfHeader[83] = 255
+          var fullImage = new Uint8Array(64)
+          for (var fi = 0; fi < 16; fi++) { fullImage[fi*4]=128; fullImage[fi*4+1]=128; fullImage[fi*4+2]=128; fullImage[fi*4+3]=255 }
+          var fullVtf = new Uint8Array(80 + 4 + 64)
+          fullVtf.set(vtfHeader.subarray(0,80), 0)
+          fullVtf.set(vtfHeader.subarray(80,84), 80)
+          fullVtf.set(fullImage, 84)
+          FS.writeFile(vtfPath, fullVtf)
+          vtfFixed++
+        }
+      }
+    }
+    console.log('[hl2] Fixed ' + vtfFixed + ' VTF files in MEMFS')
+
+    // PATCH 5: Shader version — patch .vcs files from version 1 to version 6
+    try {
+      var fxcDir = '/hl2/shaders/fxc'
+      var shaderFiles = FS.readdir(fxcDir)
+      var versionPatched = 0
+      for (var sfi = 0; sfi < shaderFiles.length; sfi++) {
+        var sfn = shaderFiles[sfi]
+        if (sfn === '.' || sfn === '..') continue
+        if (sfn.indexOf('.vcs') < 0) continue
+        var sfp = fxcDir + '/' + sfn
+        var sdata = FS.readFile(sfp)
+        if (sdata.length >= 4 && sdata[0] === 1 && sdata[1] === 0 && sdata[2] === 0 && sdata[3] === 0) {
+          sdata[0] = 6
+          FS.writeFile(sfp, sdata)
+          versionPatched++
+        }
+      }
+      console.log('[hl2] Patched ' + versionPatched + ' shader files from version 1 to version 6')
+    } catch(e) { console.warn('[hl2] Shader version patch error: ' + e) }
+
+    // PATCH 6: Shader case-insensitive symlinks (MEMFS is case-sensitive)
+    try {
+      var fxcDir2 = '/hl2/shaders/fxc'
+      var shaderFiles2 = FS.readdir(fxcDir2)
+      var caseFixed = 0
+      for (var si = 0; si < shaderFiles2.length; si++) {
+        var fname = shaderFiles2[si]
+        if (fname === '.' || fname === '..') continue
+        var lower = fname.toLowerCase()
+        if (lower !== fname && !FS.analyzePath(fxcDir2 + '/' + lower).exists) {
+          FS.symlink(fxcDir2 + '/' + fname, fxcDir2 + '/' + lower)
+          caseFixed++
+        }
+      }
+      console.log('[hl2] Fixed ' + caseFixed + ' shader filename cases')
+    } catch(e) { console.warn('[hl2] Shader case fix error: ' + e) }
+
     console.log('[hl2] All chunks loaded, starting engine...')
     removeRunDependency('load_game_data')
   }).catch(function(err) {
@@ -427,6 +483,33 @@ POST_JS_EOF
     python3 "$REPO_ROOT/scripts/webxr_glmain_patch.py" "$gl_rmain" || true
     log "  patch: gl_rmain.cpp WebXR matrix override"
   fi
+
+  # === BUILD #97: em_loop_iteration KEEPALIVE patch ===
+  # The Source Engine defines em_loop_iteration() as 'static' in sys_dll2.cpp.
+  # wasm-ld DCE strips it because no exported function references it directly.
+  # The main WASM imports _Z17em_loop_iterationv from env, but no side module exports it.
+  # Fix: Make it extern "C" with EMSCRIPTEN_KEEPALIVE to prevent DCE and name mangling.
+  for sys_dll in "$ENGINE_DIR/engine/gamedll/sys_dll2.cpp" "$ENGINE_DIR/engine/sys_dll2.cpp"; do
+    if [ -f "$sys_dll" ]; then
+      log "  patch: em_loop_iteration KEEPALIVE in $sys_dll"
+      # Add #include <emscripten.h> if not present
+      if ! grep -q 'emscripten.h' "$sys_dll"; then
+        sed -i '1s/^/#include <emscripten.h>\n/' "$sys_dll"
+      fi
+      # Replace 'static void em_loop_iteration()' with KEEPALIVE version
+      # The function might be 'static void em_loop_iteration()' or 'static void em_loop_iteration(void)'
+      sed -i 's/static void em_loop_iteration *( *void *)/extern "C" EMSCRIPTEN_KEEPALIVE void em_loop_iteration(void)/g' "$sys_dll"
+      # Also handle 'static void em_loop_iteration()' without void
+      sed -i 's/static void em_loop_iteration *()/extern "C" EMSCRIPTEN_KEEPALIVE void em_loop_iteration(void)/g' "$sys_dll"
+      # Verify the patch was applied
+      if grep -q 'EMSCRIPTEN_KEEPALIVE.*em_loop_iteration' "$sys_dll"; then
+        log "  ✓ em_loop_iteration now has EMSCRIPTEN_KEEPALIVE"
+      else
+        log "  WARNING: em_loop_iteration patch not applied — function may not exist in this file"
+      fi
+      break
+    fi
+  done
 
   checkpoint_mark "source_patches"
 }
@@ -609,15 +692,16 @@ emcc_link() {
   fi
   echo "$_erm_hash" > "$_erm_cache" 2>/dev/null || true
 
-  # Force re-link if emscripten_stubs.cpp content changed (IVP_Compact_Edge fix etc.)
-  _stubs_hash=$(grep -A999 'emscripten_stubs.cpp' "$REPO_ROOT/scripts/ci-build.sh" | grep -m1 -B999 'EOF' | md5sum | cut -c1-8)
-  _stubs_cache="$ENGINE_DIR/build/.stubs_hash"
-  if [ -f "$_stubs_cache" ] && [ "$(cat "$_stubs_cache")" != "$_stubs_hash" ]; then
-    log "emscripten_stubs.cpp changed — forcing emcc_link + stubs re-compile"
+  # Also force re-link if source_patches changed (e.g. em_loop_iteration patch)
+  _sp_hash=$(grep "em_loop_iteration\|EMSCRIPTEN_KEEPALIVE.*em_loop" "$REPO_ROOT/scripts/ci-build.sh" | md5sum | cut -c1-8)
+  _sp_cache="$ENGINE_DIR/build/.sp_hash"
+  if [ -f "$_sp_cache" ] && [ "$(cat "$_sp_cache")" != "$_sp_hash" ]; then
+    log "Source patches changed — forcing emcc_link re-run"
     sed -i '/emcc_link/d' "$checkpoint_file" 2>/dev/null || true
-    rm -f "$ENGINE_DIR/build/emscripten_stubs.o" 2>/dev/null || true
+    # Also clear source_patches checkpoint to re-apply patches
+    sed -i '/source_patches/d' "$checkpoint_file" 2>/dev/null || true
   fi
-  echo "$_stubs_hash" > "$_stubs_cache" 2>/dev/null || true
+  echo "$_sp_hash" > "$_sp_cache" 2>/dev/null || true
 
   checkpoint_done "emcc_link" && { log "emcc_link: skip"; return; }
   log "EXPORTED_RUNTIME_METHODS: $(grep "EXPORTED_RUNTIME_METHODS" "$REPO_ROOT/scripts/ci-build.sh" | head -1 | tr -s ' ')"
@@ -696,6 +780,7 @@ emcc_link() {
     -sOFFSCREENCANVASES_TO_PTHREAD="#game-canvas" \
     -sOFFSCREENCANVAS_SUPPORT=1 \
     "-sEXPORTED_RUNTIME_METHODS=['wasmMemory','addRunDependency','removeRunDependency','FS','callMain','abort','HEAPU8','ccall','cwrap','wasmExports','getValue','setValue','HEAPF32','HEAPU32','lengthBytesUTF8','stringToUTF8','UTF8ToString']" \
+    -sEXPORTED_FUNCTIONS=_em_loop_iteration \
     --pre-js emscripten/pre.js \
     --post-js emscripten/post.js \
     -sERROR_ON_UNDEFINED_SYMBOLS=0 \
@@ -714,6 +799,9 @@ emcc_link() {
   # GL stubs + dlsym/dlopen intercept + GL version spoof
   python3 "$REPO_ROOT/scripts/gl_stubs_patch.py" build/launcher_main/hl2_launcher.js || true
   python3 "$REPO_ROOT/scripts/gl_stubs_patch.py" build/install/hl2_launcher.js || true
+  # Runtime safety patches: non-fatal abort, exception handling, GL fallback
+  python3 "$REPO_ROOT/scripts/runtime_patches.py" build/launcher_main/hl2_launcher.js || true
+  python3 "$REPO_ROOT/scripts/runtime_patches.py" build/install/hl2_launcher.js || true
   cp -r emscripten/assets build/install/ 2>/dev/null || true
 
   # Verify EXPORTED_RUNTIME_METHODS were applied

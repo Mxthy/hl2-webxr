@@ -6,6 +6,7 @@ on:
     paths:
       - 'scripts/ci-build.sh'
       - '.github/workflows/build.yml'
+      - 'scripts/runtime_patches.py'
       - 'scripts/gl_stubs_patch.py'
       - 'scripts/webxr_glmain_patch.py'
       - 'emscripten/webxr_bridge.cpp'

@@ -484,6 +484,33 @@ POST_JS_EOF
     log "  patch: gl_rmain.cpp WebXR matrix override"
   fi
 
+  # === BUILD #97: em_loop_iteration KEEPALIVE patch ===
+  # The Source Engine defines em_loop_iteration() as 'static' in sys_dll2.cpp.
+  # wasm-ld DCE strips it because no exported function references it directly.
+  # The main WASM imports _Z17em_loop_iterationv from env, but no side module exports it.
+  # Fix: Make it extern "C" with EMSCRIPTEN_KEEPALIVE to prevent DCE and name mangling.
+  for sys_dll in "$ENGINE_DIR/engine/gamedll/sys_dll2.cpp" "$ENGINE_DIR/engine/sys_dll2.cpp"; do
+    if [ -f "$sys_dll" ]; then
+      log "  patch: em_loop_iteration KEEPALIVE in $sys_dll"
+      # Add #include <emscripten.h> if not present
+      if ! grep -q 'emscripten.h' "$sys_dll"; then
+        sed -i '1s/^/#include <emscripten.h>\n/' "$sys_dll"
+      fi
+      # Replace 'static void em_loop_iteration()' with KEEPALIVE version
+      # The function might be 'static void em_loop_iteration()' or 'static void em_loop_iteration(void)'
+      sed -i 's/static void em_loop_iteration *( *void *)/extern "C" EMSCRIPTEN_KEEPALIVE void em_loop_iteration(void)/g' "$sys_dll"
+      # Also handle 'static void em_loop_iteration()' without void
+      sed -i 's/static void em_loop_iteration *()/extern "C" EMSCRIPTEN_KEEPALIVE void em_loop_iteration(void)/g' "$sys_dll"
+      # Verify the patch was applied
+      if grep -q 'EMSCRIPTEN_KEEPALIVE.*em_loop_iteration' "$sys_dll"; then
+        log "  ✓ em_loop_iteration now has EMSCRIPTEN_KEEPALIVE"
+      else
+        log "  WARNING: em_loop_iteration patch not applied — function may not exist in this file"
+      fi
+      break
+    fi
+  done
+
   checkpoint_mark "source_patches"
 }
 
@@ -665,6 +692,17 @@ emcc_link() {
   fi
   echo "$_erm_hash" > "$_erm_cache" 2>/dev/null || true
 
+  # Also force re-link if source_patches changed (e.g. em_loop_iteration patch)
+  _sp_hash=$(grep "em_loop_iteration\|EMSCRIPTEN_KEEPALIVE.*em_loop" "$REPO_ROOT/scripts/ci-build.sh" | md5sum | cut -c1-8)
+  _sp_cache="$ENGINE_DIR/build/.sp_hash"
+  if [ -f "$_sp_cache" ] && [ "$(cat "$_sp_cache")" != "$_sp_hash" ]; then
+    log "Source patches changed — forcing emcc_link re-run"
+    sed -i '/emcc_link/d' "$checkpoint_file" 2>/dev/null || true
+    # Also clear source_patches checkpoint to re-apply patches
+    sed -i '/source_patches/d' "$checkpoint_file" 2>/dev/null || true
+  fi
+  echo "$_sp_hash" > "$_sp_cache" 2>/dev/null || true
+
   checkpoint_done "emcc_link" && { log "emcc_link: skip"; return; }
   log "EXPORTED_RUNTIME_METHODS: $(grep "EXPORTED_RUNTIME_METHODS" "$REPO_ROOT/scripts/ci-build.sh" | head -1 | tr -s ' ')"
   emsdk_env
@@ -742,6 +780,7 @@ emcc_link() {
     -sOFFSCREENCANVASES_TO_PTHREAD="#game-canvas" \
     -sOFFSCREENCANVAS_SUPPORT=1 \
     "-sEXPORTED_RUNTIME_METHODS=['wasmMemory','addRunDependency','removeRunDependency','FS','callMain','abort','HEAPU8','ccall','cwrap','wasmExports','getValue','setValue','HEAPF32','HEAPU32','lengthBytesUTF8','stringToUTF8','UTF8ToString']" \
+    -sEXPORTED_FUNCTIONS=_em_loop_iteration \
     --pre-js emscripten/pre.js \
     --post-js emscripten/post.js \
     -sERROR_ON_UNDEFINED_SYMBOLS=0 \

@@ -5,9 +5,8 @@ on:
     branches: [main, master]
     paths:
       - 'scripts/ci-build.sh'
-      - 'scripts/runtime_patches.py'
-      - 'scripts/create_dummy_vtfs.py'
       - '.github/workflows/build.yml'
+      - 'scripts/runtime_patches.py'
       - 'scripts/gl_stubs_patch.py'
       - 'scripts/webxr_glmain_patch.py'
       - 'emscripten/webxr_bridge.cpp'
