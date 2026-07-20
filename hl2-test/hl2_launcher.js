@@ -3200,7 +3200,7 @@ var reportUndefinedSymbols = () => {
   }
 };
 
-  var loadDylibs = () => {
+var loadDylibs = () => {
   if (!dynamicLibraries.length) {
     reportUndefinedSymbols();
     return;
@@ -3310,1205 +3310,1138 @@ function _ApproximateProcessMemoryUsage(...args) {
   return wasmImports["ApproximateProcessMemoryUsage"](...args);
 }
 
-_ApproximateProcessMemoryUsage.stub = false;
+_ApproximateProcessMemoryUsage.stub = true;
 
 function _BuildCmdLine(...args) {
   if (!wasmImports["BuildCmdLine"] || wasmImports["BuildCmdLine"].stub) abort("external symbol 'BuildCmdLine' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["BuildCmdLine"](...args);
 }
 
-_BuildCmdLine.stub = false;
+_BuildCmdLine.stub = true;
 
 function _COM_TimestampedLog(...args) {
   if (!wasmImports["COM_TimestampedLog"] || wasmImports["COM_TimestampedLog"].stub) abort("external symbol 'COM_TimestampedLog' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["COM_TimestampedLog"](...args);
 }
 
-_COM_TimestampedLog.stub = false;
+_COM_TimestampedLog.stub = true;
 
 function _CallAssertFailedNotifyFunc(...args) {
   if (!wasmImports["CallAssertFailedNotifyFunc"] || wasmImports["CallAssertFailedNotifyFunc"].stub) abort("external symbol 'CallAssertFailedNotifyFunc' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["CallAssertFailedNotifyFunc"](...args);
 }
 
-_CallAssertFailedNotifyFunc.stub = false;
+_CallAssertFailedNotifyFunc.stub = true;
 
 function _ColorSpewMessage(...args) {
   if (!wasmImports["ColorSpewMessage"] || wasmImports["ColorSpewMessage"].stub) abort("external symbol 'ColorSpewMessage' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["ColorSpewMessage"](...args);
 }
 
-_ColorSpewMessage.stub = false;
+_ColorSpewMessage.stub = true;
 
 function _CommandLine_Tier0(...args) {
   if (!wasmImports["CommandLine_Tier0"] || wasmImports["CommandLine_Tier0"].stub) abort("external symbol 'CommandLine_Tier0' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["CommandLine_Tier0"](...args);
 }
 
-_CommandLine_Tier0.stub = false;
+_CommandLine_Tier0.stub = true;
 
 function _ConDColorMsg(...args) {
   if (!wasmImports["ConDColorMsg"] || wasmImports["ConDColorMsg"].stub) abort("external symbol 'ConDColorMsg' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["ConDColorMsg"](...args);
 }
 
-_ConDColorMsg.stub = false;
+_ConDColorMsg.stub = true;
 
 function _ConDMsg(...args) {
   if (!wasmImports["ConDMsg"] || wasmImports["ConDMsg"].stub) abort("external symbol 'ConDMsg' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["ConDMsg"](...args);
 }
 
-_ConDMsg.stub = false;
+_ConDMsg.stub = true;
 
 function _CreateSimpleThread(...args) {
   if (!wasmImports["CreateSimpleThread"] || wasmImports["CreateSimpleThread"].stub) abort("external symbol 'CreateSimpleThread' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["CreateSimpleThread"](...args);
 }
 
-_CreateSimpleThread.stub = false;
+_CreateSimpleThread.stub = true;
 
 function _CreateThreadPool(...args) {
   if (!wasmImports["CreateThreadPool"] || wasmImports["CreateThreadPool"].stub) abort("external symbol 'CreateThreadPool' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["CreateThreadPool"](...args);
 }
 
-_CreateThreadPool.stub = false;
+_CreateThreadPool.stub = true;
 
 function _D3DPERF_SetOptions(...args) {
   if (!wasmImports["D3DPERF_SetOptions"] || wasmImports["D3DPERF_SetOptions"].stub) abort("external symbol 'D3DPERF_SetOptions' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["D3DPERF_SetOptions"](...args);
 }
 
-_D3DPERF_SetOptions.stub = false;
+_D3DPERF_SetOptions.stub = true;
 
 function _D3DXCompileShader(...args) {
   if (!wasmImports["D3DXCompileShader"] || wasmImports["D3DXCompileShader"].stub) abort("external symbol 'D3DXCompileShader' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["D3DXCompileShader"](...args);
 }
 
-_D3DXCompileShader.stub = false;
+_D3DXCompileShader.stub = true;
 
 function _D3DXCreateMatrixStack(...args) {
   if (!wasmImports["D3DXCreateMatrixStack"] || wasmImports["D3DXCreateMatrixStack"].stub) abort("external symbol 'D3DXCreateMatrixStack' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["D3DXCreateMatrixStack"](...args);
 }
 
-_D3DXCreateMatrixStack.stub = false;
+_D3DXCreateMatrixStack.stub = true;
 
 function _D3DXMatrixIdentity(...args) {
   if (!wasmImports["D3DXMatrixIdentity"] || wasmImports["D3DXMatrixIdentity"].stub) abort("external symbol 'D3DXMatrixIdentity' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["D3DXMatrixIdentity"](...args);
 }
 
-_D3DXMatrixIdentity.stub = false;
+_D3DXMatrixIdentity.stub = true;
 
 function _D3DXMatrixInverse(...args) {
   if (!wasmImports["D3DXMatrixInverse"] || wasmImports["D3DXMatrixInverse"].stub) abort("external symbol 'D3DXMatrixInverse' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["D3DXMatrixInverse"](...args);
 }
 
-_D3DXMatrixInverse.stub = false;
+_D3DXMatrixInverse.stub = true;
 
 function _D3DXMatrixMultiply(...args) {
   if (!wasmImports["D3DXMatrixMultiply"] || wasmImports["D3DXMatrixMultiply"].stub) abort("external symbol 'D3DXMatrixMultiply' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["D3DXMatrixMultiply"](...args);
 }
 
-_D3DXMatrixMultiply.stub = false;
+_D3DXMatrixMultiply.stub = true;
 
 function _D3DXMatrixOrthoOffCenterRH(...args) {
   if (!wasmImports["D3DXMatrixOrthoOffCenterRH"] || wasmImports["D3DXMatrixOrthoOffCenterRH"].stub) abort("external symbol 'D3DXMatrixOrthoOffCenterRH' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["D3DXMatrixOrthoOffCenterRH"](...args);
 }
 
-_D3DXMatrixOrthoOffCenterRH.stub = false;
+_D3DXMatrixOrthoOffCenterRH.stub = true;
 
 function _D3DXMatrixPerspectiveOffCenterRH(...args) {
   if (!wasmImports["D3DXMatrixPerspectiveOffCenterRH"] || wasmImports["D3DXMatrixPerspectiveOffCenterRH"].stub) abort("external symbol 'D3DXMatrixPerspectiveOffCenterRH' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["D3DXMatrixPerspectiveOffCenterRH"](...args);
 }
 
-_D3DXMatrixPerspectiveOffCenterRH.stub = false;
+_D3DXMatrixPerspectiveOffCenterRH.stub = true;
 
 function _D3DXMatrixPerspectiveRH(...args) {
   if (!wasmImports["D3DXMatrixPerspectiveRH"] || wasmImports["D3DXMatrixPerspectiveRH"].stub) abort("external symbol 'D3DXMatrixPerspectiveRH' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["D3DXMatrixPerspectiveRH"](...args);
 }
 
-_D3DXMatrixPerspectiveRH.stub = false;
+_D3DXMatrixPerspectiveRH.stub = true;
 
 function _D3DXMatrixTranslation(...args) {
   if (!wasmImports["D3DXMatrixTranslation"] || wasmImports["D3DXMatrixTranslation"].stub) abort("external symbol 'D3DXMatrixTranslation' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["D3DXMatrixTranslation"](...args);
 }
 
-_D3DXMatrixTranslation.stub = false;
+_D3DXMatrixTranslation.stub = true;
 
 function _D3DXMatrixTranspose(...args) {
   if (!wasmImports["D3DXMatrixTranspose"] || wasmImports["D3DXMatrixTranspose"].stub) abort("external symbol 'D3DXMatrixTranspose' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["D3DXMatrixTranspose"](...args);
 }
 
-_D3DXMatrixTranspose.stub = false;
+_D3DXMatrixTranspose.stub = true;
 
 function _D3DXPlaneNormalize(...args) {
   if (!wasmImports["D3DXPlaneNormalize"] || wasmImports["D3DXPlaneNormalize"].stub) abort("external symbol 'D3DXPlaneNormalize' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["D3DXPlaneNormalize"](...args);
 }
 
-_D3DXPlaneNormalize.stub = false;
+_D3DXPlaneNormalize.stub = true;
 
 function _D3DXPlaneTransform(...args) {
   if (!wasmImports["D3DXPlaneTransform"] || wasmImports["D3DXPlaneTransform"].stub) abort("external symbol 'D3DXPlaneTransform' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["D3DXPlaneTransform"](...args);
 }
 
-_D3DXPlaneTransform.stub = false;
+_D3DXPlaneTransform.stub = true;
 
 function _D3DXVec3TransformCoord(...args) {
   if (!wasmImports["D3DXVec3TransformCoord"] || wasmImports["D3DXVec3TransformCoord"].stub) abort("external symbol 'D3DXVec3TransformCoord' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["D3DXVec3TransformCoord"](...args);
 }
 
-_D3DXVec3TransformCoord.stub = false;
+_D3DXVec3TransformCoord.stub = true;
 
 function _D3DXVec4Normalize(...args) {
   if (!wasmImports["D3DXVec4Normalize"] || wasmImports["D3DXVec4Normalize"].stub) abort("external symbol 'D3DXVec4Normalize' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["D3DXVec4Normalize"](...args);
 }
 
-_D3DXVec4Normalize.stub = false;
+_D3DXVec4Normalize.stub = true;
 
 function _D3DXVec4Transform(...args) {
   if (!wasmImports["D3DXVec4Transform"] || wasmImports["D3DXVec4Transform"].stub) abort("external symbol 'D3DXVec4Transform' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["D3DXVec4Transform"](...args);
 }
 
-_D3DXVec4Transform.stub = false;
+_D3DXVec4Transform.stub = true;
 
 function _DWarning(...args) {
   if (!wasmImports["DWarning"] || wasmImports["DWarning"].stub) abort("external symbol 'DWarning' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["DWarning"](...args);
 }
 
-_DWarning.stub = false;
+_DWarning.stub = true;
 
 function _DebugLogger(...args) {
   if (!wasmImports["DebugLogger"] || wasmImports["DebugLogger"].stub) abort("external symbol 'DebugLogger' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["DebugLogger"](...args);
 }
 
-_DebugLogger.stub = false;
+_DebugLogger.stub = true;
 
 function _DeclareCurrentThreadIsMainThread(...args) {
   if (!wasmImports["DeclareCurrentThreadIsMainThread"] || wasmImports["DeclareCurrentThreadIsMainThread"].stub) abort("external symbol 'DeclareCurrentThreadIsMainThread' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["DeclareCurrentThreadIsMainThread"](...args);
 }
 
-_DeclareCurrentThreadIsMainThread.stub = false;
+_DeclareCurrentThreadIsMainThread.stub = true;
 
 function _DefaultSpewFunc(...args) {
   if (!wasmImports["DefaultSpewFunc"] || wasmImports["DefaultSpewFunc"].stub) abort("external symbol 'DefaultSpewFunc' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["DefaultSpewFunc"](...args);
 }
 
-_DefaultSpewFunc.stub = false;
+_DefaultSpewFunc.stub = true;
 
 function _DestroyThreadPool(...args) {
   if (!wasmImports["DestroyThreadPool"] || wasmImports["DestroyThreadPool"].stub) abort("external symbol 'DestroyThreadPool' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["DestroyThreadPool"](...args);
 }
 
-_DestroyThreadPool.stub = false;
+_DestroyThreadPool.stub = true;
 
 function _DevMsg(...args) {
   if (!wasmImports["DevMsg"] || wasmImports["DevMsg"].stub) abort("external symbol 'DevMsg' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["DevMsg"](...args);
 }
 
-_DevMsg.stub = false;
+_DevMsg.stub = true;
 
 function _DevWarning(...args) {
   if (!wasmImports["DevWarning"] || wasmImports["DevWarning"].stub) abort("external symbol 'DevWarning' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["DevWarning"](...args);
 }
 
-_DevWarning.stub = false;
+_DevWarning.stub = true;
 
 function _Direct3DCreate9(...args) {
   if (!wasmImports["Direct3DCreate9"] || wasmImports["Direct3DCreate9"].stub) abort("external symbol 'Direct3DCreate9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["Direct3DCreate9"](...args);
 }
 
-_Direct3DCreate9.stub = false;
+_Direct3DCreate9.stub = true;
 
 function _DoNewAssertDialog(...args) {
   if (!wasmImports["DoNewAssertDialog"] || wasmImports["DoNewAssertDialog"].stub) abort("external symbol 'DoNewAssertDialog' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["DoNewAssertDialog"](...args);
 }
 
-_DoNewAssertDialog.stub = false;
+_DoNewAssertDialog.stub = true;
 
 function _Error(...args) {
   if (!wasmImports["Error"] || wasmImports["Error"].stub) abort("external symbol 'Error' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["Error"](...args);
 }
 
-_Error.stub = false;
+_Error.stub = true;
 
 function _GetAssertDialogParent(...args) {
   if (!wasmImports["GetAssertDialogParent"] || wasmImports["GetAssertDialogParent"].stub) abort("external symbol 'GetAssertDialogParent' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["GetAssertDialogParent"](...args);
 }
 
-_GetAssertDialogParent.stub = false;
+_GetAssertDialogParent.stub = true;
 
 function _GetCPUFrequencyResults(...args) {
   if (!wasmImports["GetCPUFrequencyResults"] || wasmImports["GetCPUFrequencyResults"].stub) abort("external symbol 'GetCPUFrequencyResults' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["GetCPUFrequencyResults"](...args);
 }
 
-_GetCPUFrequencyResults.stub = false;
+_GetCPUFrequencyResults.stub = true;
 
 function _GetCPUInformation(...args) {
   if (!wasmImports["GetCPUInformation"] || wasmImports["GetCPUInformation"].stub) abort("external symbol 'GetCPUInformation' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["GetCPUInformation"](...args);
 }
 
-_GetCPUInformation.stub = false;
+_GetCPUInformation.stub = true;
 
 function _GetMemoryInformation(...args) {
   if (!wasmImports["GetMemoryInformation"] || wasmImports["GetMemoryInformation"].stub) abort("external symbol 'GetMemoryInformation' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["GetMemoryInformation"](...args);
 }
 
-_GetMemoryInformation.stub = false;
+_GetMemoryInformation.stub = true;
 
 function _GetOpenGLEntryPoints(...args) {
   if (!wasmImports["GetOpenGLEntryPoints"] || wasmImports["GetOpenGLEntryPoints"].stub) abort("external symbol 'GetOpenGLEntryPoints' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["GetOpenGLEntryPoints"](...args);
 }
 
-_GetOpenGLEntryPoints.stub = false;
+_GetOpenGLEntryPoints.stub = true;
 
 function _GetSpewOutputColor(...args) {
   if (!wasmImports["GetSpewOutputColor"] || wasmImports["GetSpewOutputColor"].stub) abort("external symbol 'GetSpewOutputColor' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["GetSpewOutputColor"](...args);
 }
 
-_GetSpewOutputColor.stub = false;
+_GetSpewOutputColor.stub = true;
 
 function _GetSpewOutputFunc(...args) {
   if (!wasmImports["GetSpewOutputFunc"] || wasmImports["GetSpewOutputFunc"].stub) abort("external symbol 'GetSpewOutputFunc' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["GetSpewOutputFunc"](...args);
 }
 
-_GetSpewOutputFunc.stub = false;
+_GetSpewOutputFunc.stub = true;
 
 function _GetSpewOutputGroup(...args) {
   if (!wasmImports["GetSpewOutputGroup"] || wasmImports["GetSpewOutputGroup"].stub) abort("external symbol 'GetSpewOutputGroup' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["GetSpewOutputGroup"](...args);
 }
 
-_GetSpewOutputGroup.stub = false;
+_GetSpewOutputGroup.stub = true;
 
 function _HushAsserts(...args) {
   if (!wasmImports["HushAsserts"] || wasmImports["HushAsserts"].stub) abort("external symbol 'HushAsserts' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["HushAsserts"](...args);
 }
 
-_HushAsserts.stub = false;
+_HushAsserts.stub = true;
 
 function _KeyValuesSystem(...args) {
   if (!wasmImports["KeyValuesSystem"] || wasmImports["KeyValuesSystem"].stub) abort("external symbol 'KeyValuesSystem' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["KeyValuesSystem"](...args);
 }
 
-_KeyValuesSystem.stub = false;
+_KeyValuesSystem.stub = true;
 
 function _Log(...args) {
   if (!wasmImports["Log"] || wasmImports["Log"].stub) abort("external symbol 'Log' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["Log"](...args);
 }
 
-_Log.stub = false;
+_Log.stub = true;
 
 function _MemAllocScratch(...args) {
   if (!wasmImports["MemAllocScratch"] || wasmImports["MemAllocScratch"].stub) abort("external symbol 'MemAllocScratch' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["MemAllocScratch"](...args);
 }
 
-_MemAllocScratch.stub = false;
+_MemAllocScratch.stub = true;
 
 function _MemFreeScratch(...args) {
   if (!wasmImports["MemFreeScratch"] || wasmImports["MemFreeScratch"].stub) abort("external symbol 'MemFreeScratch' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["MemFreeScratch"](...args);
 }
 
-_MemFreeScratch.stub = false;
+_MemFreeScratch.stub = true;
 
 function _MinidumpUserStreamInfoGet(...args) {
   if (!wasmImports["MinidumpUserStreamInfoGet"] || wasmImports["MinidumpUserStreamInfoGet"].stub) abort("external symbol 'MinidumpUserStreamInfoGet' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["MinidumpUserStreamInfoGet"](...args);
 }
 
-_MinidumpUserStreamInfoGet.stub = false;
+_MinidumpUserStreamInfoGet.stub = true;
 
 function _MinidumpUserStreamInfoSetHeader(...args) {
   if (!wasmImports["MinidumpUserStreamInfoSetHeader"] || wasmImports["MinidumpUserStreamInfoSetHeader"].stub) abort("external symbol 'MinidumpUserStreamInfoSetHeader' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["MinidumpUserStreamInfoSetHeader"](...args);
 }
 
-_MinidumpUserStreamInfoSetHeader.stub = false;
+_MinidumpUserStreamInfoSetHeader.stub = true;
 
 function _Msg(...args) {
   if (!wasmImports["Msg"] || wasmImports["Msg"].stub) abort("external symbol 'Msg' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["Msg"](...args);
 }
 
-_Msg.stub = false;
+_Msg.stub = true;
 
 function _Plat_BeginWatchdogTimer(...args) {
   if (!wasmImports["Plat_BeginWatchdogTimer"] || wasmImports["Plat_BeginWatchdogTimer"].stub) abort("external symbol 'Plat_BeginWatchdogTimer' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["Plat_BeginWatchdogTimer"](...args);
 }
 
-_Plat_BeginWatchdogTimer.stub = false;
+_Plat_BeginWatchdogTimer.stub = true;
 
 function _Plat_DebugString(...args) {
   if (!wasmImports["Plat_DebugString"] || wasmImports["Plat_DebugString"].stub) abort("external symbol 'Plat_DebugString' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["Plat_DebugString"](...args);
 }
 
-_Plat_DebugString.stub = false;
+_Plat_DebugString.stub = true;
 
 function _Plat_EndWatchdogTimer(...args) {
   if (!wasmImports["Plat_EndWatchdogTimer"] || wasmImports["Plat_EndWatchdogTimer"].stub) abort("external symbol 'Plat_EndWatchdogTimer' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["Plat_EndWatchdogTimer"](...args);
 }
 
-_Plat_EndWatchdogTimer.stub = false;
+_Plat_EndWatchdogTimer.stub = true;
 
 function _Plat_FloatTime(...args) {
   if (!wasmImports["Plat_FloatTime"] || wasmImports["Plat_FloatTime"].stub) abort("external symbol 'Plat_FloatTime' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["Plat_FloatTime"](...args);
 }
 
-_Plat_FloatTime.stub = false;
+_Plat_FloatTime.stub = true;
 
 function _Plat_GetCommandLine(...args) {
   if (!wasmImports["Plat_GetCommandLine"] || wasmImports["Plat_GetCommandLine"].stub) abort("external symbol 'Plat_GetCommandLine' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["Plat_GetCommandLine"](...args);
 }
 
-_Plat_GetCommandLine.stub = false;
+_Plat_GetCommandLine.stub = true;
 
 function _Plat_GetCommandLineA(...args) {
   if (!wasmImports["Plat_GetCommandLineA"] || wasmImports["Plat_GetCommandLineA"].stub) abort("external symbol 'Plat_GetCommandLineA' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["Plat_GetCommandLineA"](...args);
 }
 
-_Plat_GetCommandLineA.stub = false;
+_Plat_GetCommandLineA.stub = true;
 
 function _Plat_GetMemPageSize(...args) {
   if (!wasmImports["Plat_GetMemPageSize"] || wasmImports["Plat_GetMemPageSize"].stub) abort("external symbol 'Plat_GetMemPageSize' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["Plat_GetMemPageSize"](...args);
 }
 
-_Plat_GetMemPageSize.stub = false;
+_Plat_GetMemPageSize.stub = true;
 
 function _Plat_GetPagedPoolInfo(...args) {
   if (!wasmImports["Plat_GetPagedPoolInfo"] || wasmImports["Plat_GetPagedPoolInfo"].stub) abort("external symbol 'Plat_GetPagedPoolInfo' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["Plat_GetPagedPoolInfo"](...args);
 }
 
-_Plat_GetPagedPoolInfo.stub = false;
+_Plat_GetPagedPoolInfo.stub = true;
 
 function _Plat_IsInBenchmarkMode(...args) {
   if (!wasmImports["Plat_IsInBenchmarkMode"] || wasmImports["Plat_IsInBenchmarkMode"].stub) abort("external symbol 'Plat_IsInBenchmarkMode' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["Plat_IsInBenchmarkMode"](...args);
 }
 
-_Plat_IsInBenchmarkMode.stub = false;
+_Plat_IsInBenchmarkMode.stub = true;
 
 function _Plat_IsInDebugSession(...args) {
   if (!wasmImports["Plat_IsInDebugSession"] || wasmImports["Plat_IsInDebugSession"].stub) abort("external symbol 'Plat_IsInDebugSession' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["Plat_IsInDebugSession"](...args);
 }
 
-_Plat_IsInDebugSession.stub = false;
+_Plat_IsInDebugSession.stub = true;
 
 function _Plat_MSTime(...args) {
   if (!wasmImports["Plat_MSTime"] || wasmImports["Plat_MSTime"].stub) abort("external symbol 'Plat_MSTime' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["Plat_MSTime"](...args);
 }
 
-_Plat_MSTime.stub = false;
+_Plat_MSTime.stub = true;
 
 function _Plat_SetBenchmarkMode(...args) {
   if (!wasmImports["Plat_SetBenchmarkMode"] || wasmImports["Plat_SetBenchmarkMode"].stub) abort("external symbol 'Plat_SetBenchmarkMode' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["Plat_SetBenchmarkMode"](...args);
 }
 
-_Plat_SetBenchmarkMode.stub = false;
+_Plat_SetBenchmarkMode.stub = true;
 
 function _Plat_SetCommandLine(...args) {
   if (!wasmImports["Plat_SetCommandLine"] || wasmImports["Plat_SetCommandLine"].stub) abort("external symbol 'Plat_SetCommandLine' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["Plat_SetCommandLine"](...args);
 }
 
-_Plat_SetCommandLine.stub = false;
+_Plat_SetCommandLine.stub = true;
 
 function _Plat_SetWatchdogHandlerFunction(...args) {
   if (!wasmImports["Plat_SetWatchdogHandlerFunction"] || wasmImports["Plat_SetWatchdogHandlerFunction"].stub) abort("external symbol 'Plat_SetWatchdogHandlerFunction' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["Plat_SetWatchdogHandlerFunction"](...args);
 }
 
-_Plat_SetWatchdogHandlerFunction.stub = false;
+_Plat_SetWatchdogHandlerFunction.stub = true;
 
 function _Plat_VerifyHardwareKeyPrompt(...args) {
   if (!wasmImports["Plat_VerifyHardwareKeyPrompt"] || wasmImports["Plat_VerifyHardwareKeyPrompt"].stub) abort("external symbol 'Plat_VerifyHardwareKeyPrompt' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["Plat_VerifyHardwareKeyPrompt"](...args);
 }
 
-_Plat_VerifyHardwareKeyPrompt.stub = false;
+_Plat_VerifyHardwareKeyPrompt.stub = true;
 
 function _RandomFloat(...args) {
   if (!wasmImports["RandomFloat"] || wasmImports["RandomFloat"].stub) abort("external symbol 'RandomFloat' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["RandomFloat"](...args);
 }
 
-_RandomFloat.stub = false;
+_RandomFloat.stub = true;
 
 function _RandomFloatExp(...args) {
   if (!wasmImports["RandomFloatExp"] || wasmImports["RandomFloatExp"].stub) abort("external symbol 'RandomFloatExp' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["RandomFloatExp"](...args);
 }
 
-_RandomFloatExp.stub = false;
+_RandomFloatExp.stub = true;
 
 function _RandomInt(...args) {
   if (!wasmImports["RandomInt"] || wasmImports["RandomInt"].stub) abort("external symbol 'RandomInt' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["RandomInt"](...args);
 }
 
-_RandomInt.stub = false;
+_RandomInt.stub = true;
 
 function _RandomSeed(...args) {
   if (!wasmImports["RandomSeed"] || wasmImports["RandomSeed"].stub) abort("external symbol 'RandomSeed' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["RandomSeed"](...args);
 }
 
-_RandomSeed.stub = false;
+_RandomSeed.stub = true;
 
 function _ReleaseThreadHandle(...args) {
   if (!wasmImports["ReleaseThreadHandle"] || wasmImports["ReleaseThreadHandle"].stub) abort("external symbol 'ReleaseThreadHandle' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["ReleaseThreadHandle"](...args);
 }
 
-_ReleaseThreadHandle.stub = false;
+_ReleaseThreadHandle.stub = true;
 
 function _RunTSListTests(...args) {
   if (!wasmImports["RunTSListTests"] || wasmImports["RunTSListTests"].stub) abort("external symbol 'RunTSListTests' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["RunTSListTests"](...args);
 }
 
-_RunTSListTests.stub = false;
+_RunTSListTests.stub = true;
 
 function _RunTSQueueTests(...args) {
   if (!wasmImports["RunTSQueueTests"] || wasmImports["RunTSQueueTests"].stub) abort("external symbol 'RunTSQueueTests' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["RunTSQueueTests"](...args);
 }
 
-_RunTSQueueTests.stub = false;
+_RunTSQueueTests.stub = true;
 
 function _SetAssertDialogParent(...args) {
   if (!wasmImports["SetAssertDialogParent"] || wasmImports["SetAssertDialogParent"].stub) abort("external symbol 'SetAssertDialogParent' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["SetAssertDialogParent"](...args);
 }
 
-_SetAssertDialogParent.stub = false;
+_SetAssertDialogParent.stub = true;
 
 function _ShouldUseNewAssertDialog(...args) {
   if (!wasmImports["ShouldUseNewAssertDialog"] || wasmImports["ShouldUseNewAssertDialog"].stub) abort("external symbol 'ShouldUseNewAssertDialog' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["ShouldUseNewAssertDialog"](...args);
 }
 
-_ShouldUseNewAssertDialog.stub = false;
+_ShouldUseNewAssertDialog.stub = true;
 
 function _SpewActivate(...args) {
   if (!wasmImports["SpewActivate"] || wasmImports["SpewActivate"].stub) abort("external symbol 'SpewActivate' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["SpewActivate"](...args);
 }
 
-_SpewActivate.stub = false;
+_SpewActivate.stub = true;
 
 function _SpewOutputFunc(...args) {
   if (!wasmImports["SpewOutputFunc"] || wasmImports["SpewOutputFunc"].stub) abort("external symbol 'SpewOutputFunc' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["SpewOutputFunc"](...args);
 }
 
-_SpewOutputFunc.stub = false;
+_SpewOutputFunc.stub = true;
 
 function _SteamAPI_GetHSteamPipe(...args) {
   if (!wasmImports["SteamAPI_GetHSteamPipe"] || wasmImports["SteamAPI_GetHSteamPipe"].stub) abort("external symbol 'SteamAPI_GetHSteamPipe' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["SteamAPI_GetHSteamPipe"](...args);
 }
 
-_SteamAPI_GetHSteamPipe.stub = false;
+_SteamAPI_GetHSteamPipe.stub = true;
 
 function _SteamAPI_GetHSteamUser(...args) {
   if (!wasmImports["SteamAPI_GetHSteamUser"] || wasmImports["SteamAPI_GetHSteamUser"].stub) abort("external symbol 'SteamAPI_GetHSteamUser' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["SteamAPI_GetHSteamUser"](...args);
 }
 
-_SteamAPI_GetHSteamUser.stub = false;
+_SteamAPI_GetHSteamUser.stub = true;
 
 function _SteamAPI_InitSafe(...args) {
   if (!wasmImports["SteamAPI_InitSafe"] || wasmImports["SteamAPI_InitSafe"].stub) abort("external symbol 'SteamAPI_InitSafe' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["SteamAPI_InitSafe"](...args);
 }
 
-_SteamAPI_InitSafe.stub = false;
+_SteamAPI_InitSafe.stub = true;
 
 function _SteamAPI_RegisterCallResult(...args) {
   if (!wasmImports["SteamAPI_RegisterCallResult"] || wasmImports["SteamAPI_RegisterCallResult"].stub) abort("external symbol 'SteamAPI_RegisterCallResult' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["SteamAPI_RegisterCallResult"](...args);
 }
 
-_SteamAPI_RegisterCallResult.stub = false;
+_SteamAPI_RegisterCallResult.stub = true;
 
 function _SteamAPI_RegisterCallback(...args) {
   if (!wasmImports["SteamAPI_RegisterCallback"] || wasmImports["SteamAPI_RegisterCallback"].stub) abort("external symbol 'SteamAPI_RegisterCallback' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["SteamAPI_RegisterCallback"](...args);
 }
 
-_SteamAPI_RegisterCallback.stub = false;
+_SteamAPI_RegisterCallback.stub = true;
 
 function _SteamAPI_RunCallbacks(...args) {
   if (!wasmImports["SteamAPI_RunCallbacks"] || wasmImports["SteamAPI_RunCallbacks"].stub) abort("external symbol 'SteamAPI_RunCallbacks' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["SteamAPI_RunCallbacks"](...args);
 }
 
-_SteamAPI_RunCallbacks.stub = false;
+_SteamAPI_RunCallbacks.stub = true;
 
 function _SteamAPI_SetBreakpadAppID(...args) {
   if (!wasmImports["SteamAPI_SetBreakpadAppID"] || wasmImports["SteamAPI_SetBreakpadAppID"].stub) abort("external symbol 'SteamAPI_SetBreakpadAppID' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["SteamAPI_SetBreakpadAppID"](...args);
 }
 
-_SteamAPI_SetBreakpadAppID.stub = false;
+_SteamAPI_SetBreakpadAppID.stub = true;
 
 function _SteamAPI_SetMiniDumpComment(...args) {
   if (!wasmImports["SteamAPI_SetMiniDumpComment"] || wasmImports["SteamAPI_SetMiniDumpComment"].stub) abort("external symbol 'SteamAPI_SetMiniDumpComment' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["SteamAPI_SetMiniDumpComment"](...args);
 }
 
-_SteamAPI_SetMiniDumpComment.stub = false;
+_SteamAPI_SetMiniDumpComment.stub = true;
 
 function _SteamAPI_SetTryCatchCallbacks(...args) {
   if (!wasmImports["SteamAPI_SetTryCatchCallbacks"] || wasmImports["SteamAPI_SetTryCatchCallbacks"].stub) abort("external symbol 'SteamAPI_SetTryCatchCallbacks' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["SteamAPI_SetTryCatchCallbacks"](...args);
 }
 
-_SteamAPI_SetTryCatchCallbacks.stub = false;
+_SteamAPI_SetTryCatchCallbacks.stub = true;
 
 function _SteamAPI_Shutdown(...args) {
   if (!wasmImports["SteamAPI_Shutdown"] || wasmImports["SteamAPI_Shutdown"].stub) abort("external symbol 'SteamAPI_Shutdown' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["SteamAPI_Shutdown"](...args);
 }
 
-_SteamAPI_Shutdown.stub = false;
+_SteamAPI_Shutdown.stub = true;
 
 function _SteamAPI_UnregisterCallResult(...args) {
   if (!wasmImports["SteamAPI_UnregisterCallResult"] || wasmImports["SteamAPI_UnregisterCallResult"].stub) abort("external symbol 'SteamAPI_UnregisterCallResult' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["SteamAPI_UnregisterCallResult"](...args);
 }
 
-_SteamAPI_UnregisterCallResult.stub = false;
+_SteamAPI_UnregisterCallResult.stub = true;
 
 function _SteamAPI_UnregisterCallback(...args) {
   if (!wasmImports["SteamAPI_UnregisterCallback"] || wasmImports["SteamAPI_UnregisterCallback"].stub) abort("external symbol 'SteamAPI_UnregisterCallback' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["SteamAPI_UnregisterCallback"](...args);
 }
 
-_SteamAPI_UnregisterCallback.stub = false;
+_SteamAPI_UnregisterCallback.stub = true;
 
 function _SteamAPI_UseBreakpadCrashHandler(...args) {
   if (!wasmImports["SteamAPI_UseBreakpadCrashHandler"] || wasmImports["SteamAPI_UseBreakpadCrashHandler"].stub) abort("external symbol 'SteamAPI_UseBreakpadCrashHandler' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["SteamAPI_UseBreakpadCrashHandler"](...args);
 }
 
-_SteamAPI_UseBreakpadCrashHandler.stub = false;
+_SteamAPI_UseBreakpadCrashHandler.stub = true;
 
 function _SteamClient(...args) {
   if (!wasmImports["SteamClient"] || wasmImports["SteamClient"].stub) abort("external symbol 'SteamClient' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["SteamClient"](...args);
 }
 
-_SteamClient.stub = false;
+_SteamClient.stub = true;
 
 function _SteamGameServer_GetHSteamPipe(...args) {
   if (!wasmImports["SteamGameServer_GetHSteamPipe"] || wasmImports["SteamGameServer_GetHSteamPipe"].stub) abort("external symbol 'SteamGameServer_GetHSteamPipe' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["SteamGameServer_GetHSteamPipe"](...args);
 }
 
-_SteamGameServer_GetHSteamPipe.stub = false;
+_SteamGameServer_GetHSteamPipe.stub = true;
 
 function _SteamGameServer_GetHSteamUser(...args) {
   if (!wasmImports["SteamGameServer_GetHSteamUser"] || wasmImports["SteamGameServer_GetHSteamUser"].stub) abort("external symbol 'SteamGameServer_GetHSteamUser' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["SteamGameServer_GetHSteamUser"](...args);
 }
 
-_SteamGameServer_GetHSteamUser.stub = false;
+_SteamGameServer_GetHSteamUser.stub = true;
 
 function _SteamGameServer_GetIPCCallCount(...args) {
   if (!wasmImports["SteamGameServer_GetIPCCallCount"] || wasmImports["SteamGameServer_GetIPCCallCount"].stub) abort("external symbol 'SteamGameServer_GetIPCCallCount' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["SteamGameServer_GetIPCCallCount"](...args);
 }
 
-_SteamGameServer_GetIPCCallCount.stub = false;
+_SteamGameServer_GetIPCCallCount.stub = true;
 
 function _SteamGameServer_InitSafe(...args) {
   if (!wasmImports["SteamGameServer_InitSafe"] || wasmImports["SteamGameServer_InitSafe"].stub) abort("external symbol 'SteamGameServer_InitSafe' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["SteamGameServer_InitSafe"](...args);
 }
 
-_SteamGameServer_InitSafe.stub = false;
+_SteamGameServer_InitSafe.stub = true;
 
 function _SteamGameServer_RunCallbacks(...args) {
   if (!wasmImports["SteamGameServer_RunCallbacks"] || wasmImports["SteamGameServer_RunCallbacks"].stub) abort("external symbol 'SteamGameServer_RunCallbacks' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["SteamGameServer_RunCallbacks"](...args);
 }
 
-_SteamGameServer_RunCallbacks.stub = false;
+_SteamGameServer_RunCallbacks.stub = true;
 
 function _SteamGameServer_Shutdown(...args) {
   if (!wasmImports["SteamGameServer_Shutdown"] || wasmImports["SteamGameServer_Shutdown"].stub) abort("external symbol 'SteamGameServer_Shutdown' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["SteamGameServer_Shutdown"](...args);
 }
 
-_SteamGameServer_Shutdown.stub = false;
+_SteamGameServer_Shutdown.stub = true;
 
 function _ThreadGetCurrentId(...args) {
   if (!wasmImports["ThreadGetCurrentId"] || wasmImports["ThreadGetCurrentId"].stub) abort("external symbol 'ThreadGetCurrentId' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["ThreadGetCurrentId"](...args);
 }
 
-_ThreadGetCurrentId.stub = false;
+_ThreadGetCurrentId.stub = true;
 
 function _ThreadGetPriority(...args) {
   if (!wasmImports["ThreadGetPriority"] || wasmImports["ThreadGetPriority"].stub) abort("external symbol 'ThreadGetPriority' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["ThreadGetPriority"](...args);
 }
 
-_ThreadGetPriority.stub = false;
+_ThreadGetPriority.stub = true;
 
 function _ThreadInMainThread(...args) {
   if (!wasmImports["ThreadInMainThread"] || wasmImports["ThreadInMainThread"].stub) abort("external symbol 'ThreadInMainThread' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["ThreadInMainThread"](...args);
 }
 
-_ThreadInMainThread.stub = false;
+_ThreadInMainThread.stub = true;
 
 function _ThreadInterlockedAssignIf64(...args) {
   if (!wasmImports["ThreadInterlockedAssignIf64"] || wasmImports["ThreadInterlockedAssignIf64"].stub) abort("external symbol 'ThreadInterlockedAssignIf64' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["ThreadInterlockedAssignIf64"](...args);
 }
 
-_ThreadInterlockedAssignIf64.stub = false;
+_ThreadInterlockedAssignIf64.stub = true;
 
 function _ThreadJoin(...args) {
   if (!wasmImports["ThreadJoin"] || wasmImports["ThreadJoin"].stub) abort("external symbol 'ThreadJoin' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["ThreadJoin"](...args);
 }
 
-_ThreadJoin.stub = false;
+_ThreadJoin.stub = true;
 
 function _ThreadSetAffinity(...args) {
   if (!wasmImports["ThreadSetAffinity"] || wasmImports["ThreadSetAffinity"].stub) abort("external symbol 'ThreadSetAffinity' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["ThreadSetAffinity"](...args);
 }
 
-_ThreadSetAffinity.stub = false;
+_ThreadSetAffinity.stub = true;
 
 function _ThreadSetDebugName(...args) {
   if (!wasmImports["ThreadSetDebugName"] || wasmImports["ThreadSetDebugName"].stub) abort("external symbol 'ThreadSetDebugName' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["ThreadSetDebugName"](...args);
 }
 
-_ThreadSetDebugName.stub = false;
+_ThreadSetDebugName.stub = true;
 
 function _ThreadSetPriority(...args) {
   if (!wasmImports["ThreadSetPriority"] || wasmImports["ThreadSetPriority"].stub) abort("external symbol 'ThreadSetPriority' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["ThreadSetPriority"](...args);
 }
 
-_ThreadSetPriority.stub = false;
+_ThreadSetPriority.stub = true;
 
 function _ToGLConnectLibraries(...args) {
   if (!wasmImports["ToGLConnectLibraries"] || wasmImports["ToGLConnectLibraries"].stub) abort("external symbol 'ToGLConnectLibraries' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["ToGLConnectLibraries"](...args);
 }
 
-_ToGLConnectLibraries.stub = false;
+_ToGLConnectLibraries.stub = true;
 
 function _ToGLDisconnectLibraries(...args) {
   if (!wasmImports["ToGLDisconnectLibraries"] || wasmImports["ToGLDisconnectLibraries"].stub) abort("external symbol 'ToGLDisconnectLibraries' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["ToGLDisconnectLibraries"](...args);
 }
 
-_ToGLDisconnectLibraries.stub = false;
+_ToGLDisconnectLibraries.stub = true;
 
 function _VStdLib_GetICVarFactory(...args) {
   if (!wasmImports["VStdLib_GetICVarFactory"] || wasmImports["VStdLib_GetICVarFactory"].stub) abort("external symbol 'VStdLib_GetICVarFactory' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["VStdLib_GetICVarFactory"](...args);
 }
 
-_VStdLib_GetICVarFactory.stub = false;
+_VStdLib_GetICVarFactory.stub = true;
 
 function _Warning(...args) {
   if (!wasmImports["Warning"] || wasmImports["Warning"].stub) abort("external symbol 'Warning' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["Warning"](...args);
 }
 
-_Warning.stub = false;
+_Warning.stub = true;
 
 function _WarningV(...args) {
   if (!wasmImports["WarningV"] || wasmImports["WarningV"].stub) abort("external symbol 'WarningV' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["WarningV"](...args);
 }
 
-_WarningV.stub = false;
+_WarningV.stub = true;
 
 function _WriteMiniDump(...args) {
   if (!wasmImports["WriteMiniDump"] || wasmImports["WriteMiniDump"].stub) abort("external symbol 'WriteMiniDump' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["WriteMiniDump"](...args);
 }
 
-_WriteMiniDump.stub = false;
+_WriteMiniDump.stub = true;
 
 function __ExitOnFatalAssert(...args) {
   if (!wasmImports["_ExitOnFatalAssert"] || wasmImports["_ExitOnFatalAssert"].stub) abort("external symbol '_ExitOnFatalAssert' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ExitOnFatalAssert"](...args);
 }
 
-__ExitOnFatalAssert.stub = false;
-__ExitOnFatalAssert.sig = 'v';
+__ExitOnFatalAssert.stub = true;
 
 function __SpewInfo(...args) {
   if (!wasmImports["_SpewInfo"] || wasmImports["_SpewInfo"].stub) abort("external symbol '_SpewInfo' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_SpewInfo"](...args);
 }
 
-__SpewInfo.stub = false;
-__SpewInfo.sig = 'v';
+__SpewInfo.stub = true;
 
 function __SpewMessage(...args) {
   if (!wasmImports["_SpewMessage"] || wasmImports["_SpewMessage"].stub) abort("external symbol '_SpewMessage' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_SpewMessage"](...args);
 }
 
-__SpewMessage.stub = false;
-__SpewMessage.sig = 'v';
+__SpewMessage.stub = true;
 
 function __Z10ConWarningPKcz(...args) {
   if (!wasmImports["_Z10ConWarningPKcz"] || wasmImports["_Z10ConWarningPKcz"].stub) abort("external symbol '_Z10ConWarningPKcz' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_Z10ConWarningPKcz"](...args);
 }
 
-__Z10ConWarningPKcz.stub = false;
-__Z10ConWarningPKcz.sig = 'v';
+__Z10ConWarningPKcz.stub = true;
 
 function __Z10DevWarningPKcz(...args) {
   if (!wasmImports["_Z10DevWarningPKcz"] || wasmImports["_Z10DevWarningPKcz"].stub) abort("external symbol '_Z10DevWarningPKcz' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_Z10DevWarningPKcz"](...args);
 }
 
-__Z10DevWarningPKcz.stub = false;
-__Z10DevWarningPKcz.sig = 'v';
+__Z10DevWarningPKcz.stub = true;
 
 function __Z11ConColorMsgRK5ColorPKcz(...args) {
   if (!wasmImports["_Z11ConColorMsgRK5ColorPKcz"] || wasmImports["_Z11ConColorMsgRK5ColorPKcz"].stub) abort("external symbol '_Z11ConColorMsgRK5ColorPKcz' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_Z11ConColorMsgRK5ColorPKcz"](...args);
 }
 
-__Z11ConColorMsgRK5ColorPKcz.stub = false;
-__Z11ConColorMsgRK5ColorPKcz.sig = 'v';
+__Z11ConColorMsgRK5ColorPKcz.stub = true;
 
 function __Z11ivp_messagePKcz(...args) {
   if (!wasmImports["_Z11ivp_messagePKcz"] || wasmImports["_Z11ivp_messagePKcz"].stub) abort("external symbol '_Z11ivp_messagePKcz' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_Z11ivp_messagePKcz"](...args);
 }
 
-__Z11ivp_messagePKcz.stub = false;
-__Z11ivp_messagePKcz.sig = 'v';
+__Z11ivp_messagePKcz.stub = true;
 
 function __Z15Studio_MaxFramePK10CStudioHdriPKf(...args) {
   if (!wasmImports["_Z15Studio_MaxFramePK10CStudioHdriPKf"] || wasmImports["_Z15Studio_MaxFramePK10CStudioHdriPKf"].stub) abort("external symbol '_Z15Studio_MaxFramePK10CStudioHdriPKf' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_Z15Studio_MaxFramePK10CStudioHdriPKf"](...args);
 }
 
-__Z15Studio_MaxFramePK10CStudioHdriPKf.stub = false;
-__Z15Studio_MaxFramePK10CStudioHdriPKf.sig = 'v';
+__Z15Studio_MaxFramePK10CStudioHdriPKf.stub = true;
 
 function __Z17em_loop_iterationv(...args) {
   if (!wasmImports["_Z17em_loop_iterationv"] || wasmImports["_Z17em_loop_iterationv"].stub) console.warn('[EM-LOOP] em_loop_iteration not found — using JS no-op fallback'); return 0;
   return wasmImports["_Z17em_loop_iterationv"](...args);
 }
 
-__Z17em_loop_iterationv.stub = false;
-__Z17em_loop_iterationv.sig = 'v';
+__Z17em_loop_iterationv.stub = true;
 
 function __Z22Studio_BoneIndexByNamePK10CStudioHdrPKc(...args) {
   if (!wasmImports["_Z22Studio_BoneIndexByNamePK10CStudioHdrPKc"] || wasmImports["_Z22Studio_BoneIndexByNamePK10CStudioHdrPKc"].stub) abort("external symbol '_Z22Studio_BoneIndexByNamePK10CStudioHdrPKc' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_Z22Studio_BoneIndexByNamePK10CStudioHdrPKc"](...args);
 }
 
-__Z22Studio_BoneIndexByNamePK10CStudioHdrPKc.stub = false;
-__Z22Studio_BoneIndexByNamePK10CStudioHdrPKc.sig = 'v';
+__Z22Studio_BoneIndexByNamePK10CStudioHdrPKc.stub = true;
 
 function __Z25Studio_RunBoneFlexDriversPfPK10CStudioHdrPK6VectorPK11matrix3x4_tRS7_(...args) {
   if (!wasmImports["_Z25Studio_RunBoneFlexDriversPfPK10CStudioHdrPK6VectorPK11matrix3x4_tRS7_"] || wasmImports["_Z25Studio_RunBoneFlexDriversPfPK10CStudioHdrPK6VectorPK11matrix3x4_tRS7_"].stub) abort("external symbol '_Z25Studio_RunBoneFlexDriversPfPK10CStudioHdrPK6VectorPK11matrix3x4_tRS7_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_Z25Studio_RunBoneFlexDriversPfPK10CStudioHdrPK6VectorPK11matrix3x4_tRS7_"](...args);
 }
 
-__Z25Studio_RunBoneFlexDriversPfPK10CStudioHdrPK6VectorPK11matrix3x4_tRS7_.stub = false;
-__Z25Studio_RunBoneFlexDriversPfPK10CStudioHdrPK6VectorPK11matrix3x4_tRS7_.sig = 'v';
+__Z25Studio_RunBoneFlexDriversPfPK10CStudioHdrPK6VectorPK11matrix3x4_tRS7_.stub = true;
 
 function __Z32Studio_CalcDefaultPoseParametersPK10CStudioHdrPfi(...args) {
   if (!wasmImports["_Z32Studio_CalcDefaultPoseParametersPK10CStudioHdrPfi"] || wasmImports["_Z32Studio_CalcDefaultPoseParametersPK10CStudioHdrPfi"].stub) abort("external symbol '_Z32Studio_CalcDefaultPoseParametersPK10CStudioHdrPfi' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_Z32Studio_CalcDefaultPoseParametersPK10CStudioHdrPfi"](...args);
 }
 
-__Z32Studio_CalcDefaultPoseParametersPK10CStudioHdrPfi.stub = false;
-__Z32Studio_CalcDefaultPoseParametersPK10CStudioHdrPfi.sig = 'v';
+__Z32Studio_CalcDefaultPoseParametersPK10CStudioHdrPfi.stub = true;
 
 function __Z6ConMsgPKcz(...args) {
   if (!wasmImports["_Z6ConMsgPKcz"] || wasmImports["_Z6ConMsgPKcz"].stub) abort("external symbol '_Z6ConMsgPKcz' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_Z6ConMsgPKcz"](...args);
 }
 
-__Z6ConMsgPKcz.stub = false;
-__Z6ConMsgPKcz.sig = 'v';
+__Z6ConMsgPKcz.stub = true;
 
 function __Z6DevMsgPKcz(...args) {
   if (!wasmImports["_Z6DevMsgPKcz"] || wasmImports["_Z6DevMsgPKcz"].stub) abort("external symbol '_Z6DevMsgPKcz' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_Z6DevMsgPKcz"](...args);
 }
 
-__Z6DevMsgPKcz.stub = false;
-__Z6DevMsgPKcz.sig = 'v';
+__Z6DevMsgPKcz.stub = true;
 
 function __Z6p_freePv(...args) {
   if (!wasmImports["_Z6p_freePv"] || wasmImports["_Z6p_freePv"].stub) abort("external symbol '_Z6p_freePv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_Z6p_freePv"](...args);
 }
 
-__Z6p_freePv.stub = false;
-__Z6p_freePv.sig = 'v';
+__Z6p_freePv.stub = true;
 
 function __Z8p_mallocj(...args) {
   if (!wasmImports["_Z8p_mallocj"] || wasmImports["_Z8p_mallocj"].stub) abort("external symbol '_Z8p_mallocj' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_Z8p_mallocj"](...args);
 }
 
-__Z8p_mallocj.stub = false;
-__Z8p_mallocj.sig = 'v';
+__Z8p_mallocj.stub = true;
 
 function __ZN10CStudioHdr12RunFlexRulesEPKfPf(...args) {
   if (!wasmImports["_ZN10CStudioHdr12RunFlexRulesEPKfPf"] || wasmImports["_ZN10CStudioHdr12RunFlexRulesEPKfPf"].stub) abort("external symbol '_ZN10CStudioHdr12RunFlexRulesEPKfPf' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN10CStudioHdr12RunFlexRulesEPKfPf"](...args);
 }
 
-__ZN10CStudioHdr12RunFlexRulesEPKfPf.stub = false;
-__ZN10CStudioHdr12RunFlexRulesEPKfPf.sig = 'v';
+__ZN10CStudioHdr12RunFlexRulesEPKfPf.stub = true;
 
 function __ZN10CStudioHdr14pPoseParameterEi(...args) {
   if (!wasmImports["_ZN10CStudioHdr14pPoseParameterEi"] || wasmImports["_ZN10CStudioHdr14pPoseParameterEi"].stub) abort("external symbol '_ZN10CStudioHdr14pPoseParameterEi' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN10CStudioHdr14pPoseParameterEi"](...args);
 }
 
-__ZN10CStudioHdr14pPoseParameterEi.stub = false;
-__ZN10CStudioHdr14pPoseParameterEi.sig = 'v';
+__ZN10CStudioHdr14pPoseParameterEi.stub = true;
 
 function __ZN10CStudioHdr4TermEv(...args) {
   if (!wasmImports["_ZN10CStudioHdr4TermEv"] || wasmImports["_ZN10CStudioHdr4TermEv"].stub) abort("external symbol '_ZN10CStudioHdr4TermEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN10CStudioHdr4TermEv"](...args);
 }
 
-__ZN10CStudioHdr4TermEv.stub = false;
-__ZN10CStudioHdr4TermEv.sig = 'v';
+__ZN10CStudioHdr4TermEv.stub = true;
 
 function __ZN10CStudioHdr8pSeqdescEi(...args) {
   if (!wasmImports["_ZN10CStudioHdr8pSeqdescEi"] || wasmImports["_ZN10CStudioHdr8pSeqdescEi"].stub) abort("external symbol '_ZN10CStudioHdr8pSeqdescEi' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN10CStudioHdr8pSeqdescEi"](...args);
 }
 
-__ZN10CStudioHdr8pSeqdescEi.stub = false;
-__ZN10CStudioHdr8pSeqdescEi.sig = 'v';
+__ZN10CStudioHdr8pSeqdescEi.stub = true;
 
 function __ZN10CStudioHdrC1EPK11studiohdr_tP9IMDLCache(...args) {
   if (!wasmImports["_ZN10CStudioHdrC1EPK11studiohdr_tP9IMDLCache"] || wasmImports["_ZN10CStudioHdrC1EPK11studiohdr_tP9IMDLCache"].stub) abort("external symbol '_ZN10CStudioHdrC1EPK11studiohdr_tP9IMDLCache' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN10CStudioHdrC1EPK11studiohdr_tP9IMDLCache"](...args);
 }
 
-__ZN10CStudioHdrC1EPK11studiohdr_tP9IMDLCache.stub = false;
-__ZN10CStudioHdrC1EPK11studiohdr_tP9IMDLCache.sig = 'v';
+__ZN10CStudioHdrC1EPK11studiohdr_tP9IMDLCache.stub = true;
 
 function __ZN10D3DXMATRIXclEii(...args) {
   if (!wasmImports["_ZN10D3DXMATRIXclEii"] || wasmImports["_ZN10D3DXMATRIXclEii"].stub) abort("external symbol '_ZN10D3DXMATRIXclEii' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN10D3DXMATRIXclEii"](...args);
 }
 
-__ZN10D3DXMATRIXclEii.stub = false;
-__ZN10D3DXMATRIXclEii.sig = 'v';
+__ZN10D3DXMATRIXclEii.stub = true;
 
 function __ZN10D3DXMATRIXcvPfEv(...args) {
   if (!wasmImports["_ZN10D3DXMATRIXcvPfEv"] || wasmImports["_ZN10D3DXMATRIXcvPfEv"].stub) abort("external symbol '_ZN10D3DXMATRIXcvPfEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN10D3DXMATRIXcvPfEv"](...args);
 }
 
-__ZN10D3DXMATRIXcvPfEv.stub = false;
-__ZN10D3DXMATRIXcvPfEv.sig = 'v';
+__ZN10D3DXMATRIXcvPfEv.stub = true;
 
 function __ZN10IBoneSetup14AccumulatePoseEP6VectorP10QuaternionifffP10CIKContext(...args) {
   if (!wasmImports["_ZN10IBoneSetup14AccumulatePoseEP6VectorP10QuaternionifffP10CIKContext"] || wasmImports["_ZN10IBoneSetup14AccumulatePoseEP6VectorP10QuaternionifffP10CIKContext"].stub) abort("external symbol '_ZN10IBoneSetup14AccumulatePoseEP6VectorP10QuaternionifffP10CIKContext' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN10IBoneSetup14AccumulatePoseEP6VectorP10QuaternionifffP10CIKContext"](...args);
 }
 
-__ZN10IBoneSetup14AccumulatePoseEP6VectorP10QuaternionifffP10CIKContext.stub = false;
-__ZN10IBoneSetup14AccumulatePoseEP6VectorP10QuaternionifffP10CIKContext.sig = 'v';
+__ZN10IBoneSetup14AccumulatePoseEP6VectorP10QuaternionifffP10CIKContext.stub = true;
 
 function __ZN10IBoneSetup8InitPoseEP6VectorP10Quaternion(...args) {
   if (!wasmImports["_ZN10IBoneSetup8InitPoseEP6VectorP10Quaternion"] || wasmImports["_ZN10IBoneSetup8InitPoseEP6VectorP10Quaternion"].stub) abort("external symbol '_ZN10IBoneSetup8InitPoseEP6VectorP10Quaternion' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN10IBoneSetup8InitPoseEP6VectorP10Quaternion"](...args);
 }
 
-__ZN10IBoneSetup8InitPoseEP6VectorP10Quaternion.stub = false;
-__ZN10IBoneSetup8InitPoseEP6VectorP10Quaternion.sig = 'v';
+__ZN10IBoneSetup8InitPoseEP6VectorP10Quaternion.stub = true;
 
 function __ZN10IBoneSetupC1EPK10CStudioHdriPKfP13IPoseDebugger(...args) {
   if (!wasmImports["_ZN10IBoneSetupC1EPK10CStudioHdriPKfP13IPoseDebugger"] || wasmImports["_ZN10IBoneSetupC1EPK10CStudioHdriPKfP13IPoseDebugger"].stub) abort("external symbol '_ZN10IBoneSetupC1EPK10CStudioHdriPKfP13IPoseDebugger' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN10IBoneSetupC1EPK10CStudioHdriPKfP13IPoseDebugger"](...args);
 }
 
-__ZN10IBoneSetupC1EPK10CStudioHdriPKfP13IPoseDebugger.stub = false;
-__ZN10IBoneSetupC1EPK10CStudioHdriPKfP13IPoseDebugger.sig = 'v';
+__ZN10IBoneSetupC1EPK10CStudioHdriPKfP13IPoseDebugger.stub = true;
 
 function __ZN10IBoneSetupD1Ev(...args) {
   if (!wasmImports["_ZN10IBoneSetupD1Ev"] || wasmImports["_ZN10IBoneSetupD1Ev"].stub) abort("external symbol '_ZN10IBoneSetupD1Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN10IBoneSetupD1Ev"](...args);
 }
 
-__ZN10IBoneSetupD1Ev.stub = false;
-__ZN10IBoneSetupD1Ev.sig = 'v';
+__ZN10IBoneSetupD1Ev.stub = true;
 
 function __ZN10IDirect3D912CreateDeviceEj11_D3DDEVTYPEPvjP23_D3DPRESENT_PARAMETERS_PP16IDirect3DDevice9(...args) {
   if (!wasmImports["_ZN10IDirect3D912CreateDeviceEj11_D3DDEVTYPEPvjP23_D3DPRESENT_PARAMETERS_PP16IDirect3DDevice9"] || wasmImports["_ZN10IDirect3D912CreateDeviceEj11_D3DDEVTYPEPvjP23_D3DPRESENT_PARAMETERS_PP16IDirect3DDevice9"].stub) abort("external symbol '_ZN10IDirect3D912CreateDeviceEj11_D3DDEVTYPEPvjP23_D3DPRESENT_PARAMETERS_PP16IDirect3DDevice9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN10IDirect3D912CreateDeviceEj11_D3DDEVTYPEPvjP23_D3DPRESENT_PARAMETERS_PP16IDirect3DDevice9"](...args);
 }
 
-__ZN10IDirect3D912CreateDeviceEj11_D3DDEVTYPEPvjP23_D3DPRESENT_PARAMETERS_PP16IDirect3DDevice9.stub = false;
-__ZN10IDirect3D912CreateDeviceEj11_D3DDEVTYPEPvjP23_D3DPRESENT_PARAMETERS_PP16IDirect3DDevice9.sig = 'v';
+__ZN10IDirect3D912CreateDeviceEj11_D3DDEVTYPEPvjP23_D3DPRESENT_PARAMETERS_PP16IDirect3DDevice9.stub = true;
 
 function __ZN10IDirect3D913GetDeviceCapsEj11_D3DDEVTYPEP9_D3DCAPS9(...args) {
   if (!wasmImports["_ZN10IDirect3D913GetDeviceCapsEj11_D3DDEVTYPEP9_D3DCAPS9"] || wasmImports["_ZN10IDirect3D913GetDeviceCapsEj11_D3DDEVTYPEP9_D3DCAPS9"].stub) abort("external symbol '_ZN10IDirect3D913GetDeviceCapsEj11_D3DDEVTYPEP9_D3DCAPS9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN10IDirect3D913GetDeviceCapsEj11_D3DDEVTYPEP9_D3DCAPS9"](...args);
 }
 
-__ZN10IDirect3D913GetDeviceCapsEj11_D3DDEVTYPEP9_D3DCAPS9.stub = false;
-__ZN10IDirect3D913GetDeviceCapsEj11_D3DDEVTYPEP9_D3DCAPS9.sig = 'v';
+__ZN10IDirect3D913GetDeviceCapsEj11_D3DDEVTYPEP9_D3DCAPS9.stub = true;
 
 function __ZN10IDirect3D915CheckDeviceTypeEj11_D3DDEVTYPE10_D3DFORMATS1_i(...args) {
   if (!wasmImports["_ZN10IDirect3D915CheckDeviceTypeEj11_D3DDEVTYPE10_D3DFORMATS1_i"] || wasmImports["_ZN10IDirect3D915CheckDeviceTypeEj11_D3DDEVTYPE10_D3DFORMATS1_i"].stub) abort("external symbol '_ZN10IDirect3D915CheckDeviceTypeEj11_D3DDEVTYPE10_D3DFORMATS1_i' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN10IDirect3D915CheckDeviceTypeEj11_D3DDEVTYPE10_D3DFORMATS1_i"](...args);
 }
 
-__ZN10IDirect3D915CheckDeviceTypeEj11_D3DDEVTYPE10_D3DFORMATS1_i.stub = false;
-__ZN10IDirect3D915CheckDeviceTypeEj11_D3DDEVTYPE10_D3DFORMATS1_i.sig = 'v';
+__ZN10IDirect3D915CheckDeviceTypeEj11_D3DDEVTYPE10_D3DFORMATS1_i.stub = true;
 
 function __ZN10IDirect3D915GetAdapterCountEv(...args) {
   if (!wasmImports["_ZN10IDirect3D915GetAdapterCountEv"] || wasmImports["_ZN10IDirect3D915GetAdapterCountEv"].stub) abort("external symbol '_ZN10IDirect3D915GetAdapterCountEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN10IDirect3D915GetAdapterCountEv"](...args);
 }
 
-__ZN10IDirect3D915GetAdapterCountEv.stub = false;
-__ZN10IDirect3D915GetAdapterCountEv.sig = 'v';
+__ZN10IDirect3D915GetAdapterCountEv.stub = true;
 
 function __ZN10IDirect3D916EnumAdapterModesEj10_D3DFORMATjP15_D3DDISPLAYMODE(...args) {
   if (!wasmImports["_ZN10IDirect3D916EnumAdapterModesEj10_D3DFORMATjP15_D3DDISPLAYMODE"] || wasmImports["_ZN10IDirect3D916EnumAdapterModesEj10_D3DFORMATjP15_D3DDISPLAYMODE"].stub) abort("external symbol '_ZN10IDirect3D916EnumAdapterModesEj10_D3DFORMATjP15_D3DDISPLAYMODE' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN10IDirect3D916EnumAdapterModesEj10_D3DFORMATjP15_D3DDISPLAYMODE"](...args);
 }
 
-__ZN10IDirect3D916EnumAdapterModesEj10_D3DFORMATjP15_D3DDISPLAYMODE.stub = false;
-__ZN10IDirect3D916EnumAdapterModesEj10_D3DFORMATjP15_D3DDISPLAYMODE.sig = 'v';
+__ZN10IDirect3D916EnumAdapterModesEj10_D3DFORMATjP15_D3DDISPLAYMODE.stub = true;
 
 function __ZN10IDirect3D917CheckDeviceFormatEj11_D3DDEVTYPE10_D3DFORMATj16_D3DRESOURCETYPES1_(...args) {
   if (!wasmImports["_ZN10IDirect3D917CheckDeviceFormatEj11_D3DDEVTYPE10_D3DFORMATj16_D3DRESOURCETYPES1_"] || wasmImports["_ZN10IDirect3D917CheckDeviceFormatEj11_D3DDEVTYPE10_D3DFORMATj16_D3DRESOURCETYPES1_"].stub) abort("external symbol '_ZN10IDirect3D917CheckDeviceFormatEj11_D3DDEVTYPE10_D3DFORMATj16_D3DRESOURCETYPES1_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN10IDirect3D917CheckDeviceFormatEj11_D3DDEVTYPE10_D3DFORMATj16_D3DRESOURCETYPES1_"](...args);
 }
 
-__ZN10IDirect3D917CheckDeviceFormatEj11_D3DDEVTYPE10_D3DFORMATj16_D3DRESOURCETYPES1_.stub = false;
-__ZN10IDirect3D917CheckDeviceFormatEj11_D3DDEVTYPE10_D3DFORMATj16_D3DRESOURCETYPES1_.sig = 'v';
+__ZN10IDirect3D917CheckDeviceFormatEj11_D3DDEVTYPE10_D3DFORMATj16_D3DRESOURCETYPES1_.stub = true;
 
 function __ZN10IDirect3D919GetAdapterModeCountEj10_D3DFORMAT(...args) {
   if (!wasmImports["_ZN10IDirect3D919GetAdapterModeCountEj10_D3DFORMAT"] || wasmImports["_ZN10IDirect3D919GetAdapterModeCountEj10_D3DFORMAT"].stub) abort("external symbol '_ZN10IDirect3D919GetAdapterModeCountEj10_D3DFORMAT' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN10IDirect3D919GetAdapterModeCountEj10_D3DFORMAT"](...args);
 }
 
-__ZN10IDirect3D919GetAdapterModeCountEj10_D3DFORMAT.stub = false;
-__ZN10IDirect3D919GetAdapterModeCountEj10_D3DFORMAT.sig = 'v';
+__ZN10IDirect3D919GetAdapterModeCountEj10_D3DFORMAT.stub = true;
 
 function __ZN10IDirect3D920GetAdapterIdentifierEjjP23_D3DADAPTER_IDENTIFIER9(...args) {
   if (!wasmImports["_ZN10IDirect3D920GetAdapterIdentifierEjjP23_D3DADAPTER_IDENTIFIER9"] || wasmImports["_ZN10IDirect3D920GetAdapterIdentifierEjjP23_D3DADAPTER_IDENTIFIER9"].stub) abort("external symbol '_ZN10IDirect3D920GetAdapterIdentifierEjjP23_D3DADAPTER_IDENTIFIER9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN10IDirect3D920GetAdapterIdentifierEjjP23_D3DADAPTER_IDENTIFIER9"](...args);
 }
 
-__ZN10IDirect3D920GetAdapterIdentifierEjjP23_D3DADAPTER_IDENTIFIER9.stub = false;
-__ZN10IDirect3D920GetAdapterIdentifierEjjP23_D3DADAPTER_IDENTIFIER9.sig = 'v';
+__ZN10IDirect3D920GetAdapterIdentifierEjjP23_D3DADAPTER_IDENTIFIER9.stub = true;
 
 function __ZN10IDirect3D921GetAdapterDisplayModeEjP15_D3DDISPLAYMODE(...args) {
   if (!wasmImports["_ZN10IDirect3D921GetAdapterDisplayModeEjP15_D3DDISPLAYMODE"] || wasmImports["_ZN10IDirect3D921GetAdapterDisplayModeEjP15_D3DDISPLAYMODE"].stub) abort("external symbol '_ZN10IDirect3D921GetAdapterDisplayModeEjP15_D3DDISPLAYMODE' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN10IDirect3D921GetAdapterDisplayModeEjP15_D3DDISPLAYMODE"](...args);
 }
 
-__ZN10IDirect3D921GetAdapterDisplayModeEjP15_D3DDISPLAYMODE.stub = false;
-__ZN10IDirect3D921GetAdapterDisplayModeEjP15_D3DDISPLAYMODE.sig = 'v';
+__ZN10IDirect3D921GetAdapterDisplayModeEjP15_D3DDISPLAYMODE.stub = true;
 
 function __ZN10IDirect3D922CheckDepthStencilMatchEj11_D3DDEVTYPE10_D3DFORMATS1_S1_(...args) {
   if (!wasmImports["_ZN10IDirect3D922CheckDepthStencilMatchEj11_D3DDEVTYPE10_D3DFORMATS1_S1_"] || wasmImports["_ZN10IDirect3D922CheckDepthStencilMatchEj11_D3DDEVTYPE10_D3DFORMATS1_S1_"].stub) abort("external symbol '_ZN10IDirect3D922CheckDepthStencilMatchEj11_D3DDEVTYPE10_D3DFORMATS1_S1_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN10IDirect3D922CheckDepthStencilMatchEj11_D3DDEVTYPE10_D3DFORMATS1_S1_"](...args);
 }
 
-__ZN10IDirect3D922CheckDepthStencilMatchEj11_D3DDEVTYPE10_D3DFORMATS1_S1_.stub = false;
-__ZN10IDirect3D922CheckDepthStencilMatchEj11_D3DDEVTYPE10_D3DFORMATS1_S1_.sig = 'v';
+__ZN10IDirect3D922CheckDepthStencilMatchEj11_D3DDEVTYPE10_D3DFORMATS1_S1_.stub = true;
 
 function __ZN10IDirect3D926CheckDeviceMultiSampleTypeEj11_D3DDEVTYPE10_D3DFORMATi20_D3DMULTISAMPLE_TYPEPj(...args) {
   if (!wasmImports["_ZN10IDirect3D926CheckDeviceMultiSampleTypeEj11_D3DDEVTYPE10_D3DFORMATi20_D3DMULTISAMPLE_TYPEPj"] || wasmImports["_ZN10IDirect3D926CheckDeviceMultiSampleTypeEj11_D3DDEVTYPE10_D3DFORMATi20_D3DMULTISAMPLE_TYPEPj"].stub) abort("external symbol '_ZN10IDirect3D926CheckDeviceMultiSampleTypeEj11_D3DDEVTYPE10_D3DFORMATi20_D3DMULTISAMPLE_TYPEPj' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN10IDirect3D926CheckDeviceMultiSampleTypeEj11_D3DDEVTYPE10_D3DFORMATi20_D3DMULTISAMPLE_TYPEPj"](...args);
 }
 
-__ZN10IDirect3D926CheckDeviceMultiSampleTypeEj11_D3DDEVTYPE10_D3DFORMATi20_D3DMULTISAMPLE_TYPEPj.stub = false;
-__ZN10IDirect3D926CheckDeviceMultiSampleTypeEj11_D3DDEVTYPE10_D3DFORMATi20_D3DMULTISAMPLE_TYPEPj.sig = 'v';
+__ZN10IDirect3D926CheckDeviceMultiSampleTypeEj11_D3DDEVTYPE10_D3DFORMATi20_D3DMULTISAMPLE_TYPEPj.stub = true;
 
 function __ZN10IDirect3D9D0Ev(...args) {
   if (!wasmImports["_ZN10IDirect3D9D0Ev"] || wasmImports["_ZN10IDirect3D9D0Ev"].stub) abort("external symbol '_ZN10IDirect3D9D0Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN10IDirect3D9D0Ev"](...args);
 }
 
-__ZN10IDirect3D9D0Ev.stub = false;
-__ZN10IDirect3D9D0Ev.sig = 'v';
+__ZN10IDirect3D9D0Ev.stub = true;
 
 function __ZN10IDirect3D9D1Ev(...args) {
   if (!wasmImports["_ZN10IDirect3D9D1Ev"] || wasmImports["_ZN10IDirect3D9D1Ev"].stub) abort("external symbol '_ZN10IDirect3D9D1Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN10IDirect3D9D1Ev"](...args);
 }
 
-__ZN10IDirect3D9D1Ev.stub = false;
-__ZN10IDirect3D9D1Ev.sig = 'v';
+__ZN10IDirect3D9D1Ev.stub = true;
 
 function __ZN11D3DXVECTOR2cvPfEv(...args) {
   if (!wasmImports["_ZN11D3DXVECTOR2cvPfEv"] || wasmImports["_ZN11D3DXVECTOR2cvPfEv"].stub) abort("external symbol '_ZN11D3DXVECTOR2cvPfEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN11D3DXVECTOR2cvPfEv"](...args);
 }
 
-__ZN11D3DXVECTOR2cvPfEv.stub = false;
-__ZN11D3DXVECTOR2cvPfEv.sig = 'v';
+__ZN11D3DXVECTOR2cvPfEv.stub = true;
 
 function __ZN11D3DXVECTOR3C1Efff(...args) {
   if (!wasmImports["_ZN11D3DXVECTOR3C1Efff"] || wasmImports["_ZN11D3DXVECTOR3C1Efff"].stub) abort("external symbol '_ZN11D3DXVECTOR3C1Efff' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN11D3DXVECTOR3C1Efff"](...args);
 }
 
-__ZN11D3DXVECTOR3C1Efff.stub = false;
-__ZN11D3DXVECTOR3C1Efff.sig = 'v';
+__ZN11D3DXVECTOR3C1Efff.stub = true;
 
 function __ZN11D3DXVECTOR3cvPfEv(...args) {
   if (!wasmImports["_ZN11D3DXVECTOR3cvPfEv"] || wasmImports["_ZN11D3DXVECTOR3cvPfEv"].stub) abort("external symbol '_ZN11D3DXVECTOR3cvPfEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN11D3DXVECTOR3cvPfEv"](...args);
 }
 
-__ZN11D3DXVECTOR3cvPfEv.stub = false;
-__ZN11D3DXVECTOR3cvPfEv.sig = 'v';
+__ZN11D3DXVECTOR3cvPfEv.stub = true;
 
 function __ZN11D3DXVECTOR4C1Effff(...args) {
   if (!wasmImports["_ZN11D3DXVECTOR4C1Effff"] || wasmImports["_ZN11D3DXVECTOR4C1Effff"].stub) abort("external symbol '_ZN11D3DXVECTOR4C1Effff' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN11D3DXVECTOR4C1Effff"](...args);
 }
 
-__ZN11D3DXVECTOR4C1Effff.stub = false;
-__ZN11D3DXVECTOR4C1Effff.sig = 'v';
+__ZN11D3DXVECTOR4C1Effff.stub = true;
 
 function __ZN11ID3DXBuffer13GetBufferSizeEv(...args) {
   if (!wasmImports["_ZN11ID3DXBuffer13GetBufferSizeEv"] || wasmImports["_ZN11ID3DXBuffer13GetBufferSizeEv"].stub) abort("external symbol '_ZN11ID3DXBuffer13GetBufferSizeEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN11ID3DXBuffer13GetBufferSizeEv"](...args);
 }
 
-__ZN11ID3DXBuffer13GetBufferSizeEv.stub = false;
-__ZN11ID3DXBuffer13GetBufferSizeEv.sig = 'v';
+__ZN11ID3DXBuffer13GetBufferSizeEv.stub = true;
 
 function __ZN11ID3DXBuffer16GetBufferPointerEv(...args) {
   if (!wasmImports["_ZN11ID3DXBuffer16GetBufferPointerEv"] || wasmImports["_ZN11ID3DXBuffer16GetBufferPointerEv"].stub) abort("external symbol '_ZN11ID3DXBuffer16GetBufferPointerEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN11ID3DXBuffer16GetBufferPointerEv"](...args);
 }
 
-__ZN11ID3DXBuffer16GetBufferPointerEv.stub = false;
-__ZN11ID3DXBuffer16GetBufferPointerEv.sig = 'v';
+__ZN11ID3DXBuffer16GetBufferPointerEv.stub = true;
 
-function __ZN11IVP_Mindist32try_to_generate_managed_frictionEPP19IVP_Friction_SystemP8IVP_BOOLP19IVP_Simulation_UnitS3_(...args) {
-  if (!wasmImports["_ZN11IVP_Mindist32try_to_generate_managed_frictionEPP19IVP_Friction_SystemP8IVP_BOOLP19IVP_Simulation_UnitS3_"] || wasmImports["_ZN11IVP_Mindist32try_to_generate_managed_frictionEPP19IVP_Friction_SystemP8IVP_BOOLP19IVP_Simulation_UnitS3_"].stub) abort("external symbol '_ZN11IVP_Mindist32try_to_generate_managed_frictionEPP19IVP_Friction_SystemP8IVP_BOOLP19IVP_Simulation_UnitS3_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN11IVP_Mindist32try_to_generate_managed_frictionEPP19IVP_Friction_SystemP8IVP_BOOLP19IVP_Simulation_UnitS3_"](...args);
-}
+function __ZN11IVP_Mindist32try_to_generate_managed_frictionEPP19IVP_Friction_SystemP8IVP_BOOLP19IVP_Simulation_UnitS3_(...args) { return 0; }
 
 __ZN11IVP_Mindist32try_to_generate_managed_frictionEPP19IVP_Friction_SystemP8IVP_BOOLP19IVP_Simulation_UnitS3_.stub = false;
 __ZN11IVP_Mindist32try_to_generate_managed_frictionEPP19IVP_Friction_SystemP8IVP_BOOLP19IVP_Simulation_UnitS3_.sig = 'v';
 
-function __ZN11IVP_Mindist9do_impactEv(...args) {
-  if (!wasmImports["_ZN11IVP_Mindist9do_impactEv"] || wasmImports["_ZN11IVP_Mindist9do_impactEv"].stub) abort("external symbol '_ZN11IVP_Mindist9do_impactEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN11IVP_Mindist9do_impactEv"](...args);
-}
+function __ZN11IVP_Mindist9do_impactEv(...args) { return 0; }
 
 __ZN11IVP_Mindist9do_impactEv.stub = false;
 __ZN11IVP_Mindist9do_impactEv.sig = 'v';
 
-function __ZN11IVP_U_Point12fast_normizeEv(...args) {
-  if (!wasmImports["_ZN11IVP_U_Point12fast_normizeEv"] || wasmImports["_ZN11IVP_U_Point12fast_normizeEv"].stub) abort("external symbol '_ZN11IVP_U_Point12fast_normizeEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN11IVP_U_Point12fast_normizeEv"](...args);
-}
+function __ZN11IVP_U_Point12fast_normizeEv(...args) { return 0; }
 
 __ZN11IVP_U_Point12fast_normizeEv.stub = false;
 __ZN11IVP_U_Point12fast_normizeEv.sig = 'v';
 
-function __ZN11IVP_U_Point15set_interpolateEPKS_S1_d(...args) {
-  if (!wasmImports["_ZN11IVP_U_Point15set_interpolateEPKS_S1_d"] || wasmImports["_ZN11IVP_U_Point15set_interpolateEPKS_S1_d"].stub) abort("external symbol '_ZN11IVP_U_Point15set_interpolateEPKS_S1_d' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN11IVP_U_Point15set_interpolateEPKS_S1_d"](...args);
-}
+function __ZN11IVP_U_Point15set_interpolateEPKS_S1_d(...args) { return 0; }
 
 __ZN11IVP_U_Point15set_interpolateEPKS_S1_d.stub = false;
 __ZN11IVP_U_Point15set_interpolateEPKS_S1_d.sig = 'v';
 
-function __ZN11IVP_U_Point18calc_cross_productEPKS_S1_(...args) {
-  if (!wasmImports["_ZN11IVP_U_Point18calc_cross_productEPKS_S1_"] || wasmImports["_ZN11IVP_U_Point18calc_cross_productEPKS_S1_"].stub) abort("external symbol '_ZN11IVP_U_Point18calc_cross_productEPKS_S1_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN11IVP_U_Point18calc_cross_productEPKS_S1_"](...args);
-}
+function __ZN11IVP_U_Point18calc_cross_productEPKS_S1_(...args) { return 0; }
 
 __ZN11IVP_U_Point18calc_cross_productEPKS_S1_.stub = false;
 __ZN11IVP_U_Point18calc_cross_productEPKS_S1_.sig = 'v';
 
-function __ZN11IVP_U_Point24real_length_plus_normizeEv(...args) {
-  if (!wasmImports["_ZN11IVP_U_Point24real_length_plus_normizeEv"] || wasmImports["_ZN11IVP_U_Point24real_length_plus_normizeEv"].stub) abort("external symbol '_ZN11IVP_U_Point24real_length_plus_normizeEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN11IVP_U_Point24real_length_plus_normizeEv"](...args);
-}
+function __ZN11IVP_U_Point24real_length_plus_normizeEv(...args) { return 0; }
 
 __ZN11IVP_U_Point24real_length_plus_normizeEv.stub = false;
 __ZN11IVP_U_Point24real_length_plus_normizeEv.sig = 'v';
 
-function __ZN11IVP_U_Point7normizeEv(...args) {
-  if (!wasmImports["_ZN11IVP_U_Point7normizeEv"] || wasmImports["_ZN11IVP_U_Point7normizeEv"].stub) abort("external symbol '_ZN11IVP_U_Point7normizeEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN11IVP_U_Point7normizeEv"](...args);
-}
+function __ZN11IVP_U_Point7normizeEv(...args) { return 0; }
 
 __ZN11IVP_U_Point7normizeEv.stub = false;
 __ZN11IVP_U_Point7normizeEv.sig = 'v';
@@ -4518,93 +4451,73 @@ function __ZN12CThreadEvent15WaitForMultipleEiPPS_bj(...args) {
   return wasmImports["_ZN12CThreadEvent15WaitForMultipleEiPPS_bj"](...args);
 }
 
-__ZN12CThreadEvent15WaitForMultipleEiPPS_bj.stub = false;
-__ZN12CThreadEvent15WaitForMultipleEiPPS_bj.sig = 'v';
+__ZN12CThreadEvent15WaitForMultipleEiPPS_bj.stub = true;
 
 function __ZN12CThreadEvent3SetEv(...args) {
   if (!wasmImports["_ZN12CThreadEvent3SetEv"] || wasmImports["_ZN12CThreadEvent3SetEv"].stub) abort("external symbol '_ZN12CThreadEvent3SetEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN12CThreadEvent3SetEv"](...args);
 }
 
-__ZN12CThreadEvent3SetEv.stub = false;
-__ZN12CThreadEvent3SetEv.sig = 'v';
+__ZN12CThreadEvent3SetEv.stub = true;
 
 function __ZN12CThreadEvent4WaitEj(...args) {
   if (!wasmImports["_ZN12CThreadEvent4WaitEj"] || wasmImports["_ZN12CThreadEvent4WaitEj"].stub) abort("external symbol '_ZN12CThreadEvent4WaitEj' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN12CThreadEvent4WaitEj"](...args);
 }
 
-__ZN12CThreadEvent4WaitEj.stub = false;
-__ZN12CThreadEvent4WaitEj.sig = 'v';
+__ZN12CThreadEvent4WaitEj.stub = true;
 
 function __ZN12CThreadEvent5CheckEv(...args) {
   if (!wasmImports["_ZN12CThreadEvent5CheckEv"] || wasmImports["_ZN12CThreadEvent5CheckEv"].stub) abort("external symbol '_ZN12CThreadEvent5CheckEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN12CThreadEvent5CheckEv"](...args);
 }
 
-__ZN12CThreadEvent5CheckEv.stub = false;
-__ZN12CThreadEvent5CheckEv.sig = 'v';
+__ZN12CThreadEvent5CheckEv.stub = true;
 
 function __ZN12CThreadEvent5ResetEv(...args) {
   if (!wasmImports["_ZN12CThreadEvent5ResetEv"] || wasmImports["_ZN12CThreadEvent5ResetEv"].stub) abort("external symbol '_ZN12CThreadEvent5ResetEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN12CThreadEvent5ResetEv"](...args);
 }
 
-__ZN12CThreadEvent5ResetEv.stub = false;
-__ZN12CThreadEvent5ResetEv.sig = 'v';
+__ZN12CThreadEvent5ResetEv.stub = true;
 
 function __ZN12CThreadEventC1Eb(...args) {
   if (!wasmImports["_ZN12CThreadEventC1Eb"] || wasmImports["_ZN12CThreadEventC1Eb"].stub) abort("external symbol '_ZN12CThreadEventC1Eb' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN12CThreadEventC1Eb"](...args);
 }
 
-__ZN12CThreadEventC1Eb.stub = false;
-__ZN12CThreadEventC1Eb.sig = 'v';
+__ZN12CThreadEventC1Eb.stub = true;
 
 function __ZN12CThreadEventC2Eb(...args) {
   if (!wasmImports["_ZN12CThreadEventC2Eb"] || wasmImports["_ZN12CThreadEventC2Eb"].stub) abort("external symbol '_ZN12CThreadEventC2Eb' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN12CThreadEventC2Eb"](...args);
 }
 
-__ZN12CThreadEventC2Eb.stub = false;
-__ZN12CThreadEventC2Eb.sig = 'v';
+__ZN12CThreadEventC2Eb.stub = true;
 
 function __ZN12CThreadMutex7TryLockEv(...args) {
   if (!wasmImports["_ZN12CThreadMutex7TryLockEv"] || wasmImports["_ZN12CThreadMutex7TryLockEv"].stub) abort("external symbol '_ZN12CThreadMutex7TryLockEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN12CThreadMutex7TryLockEv"](...args);
 }
 
-__ZN12CThreadMutex7TryLockEv.stub = false;
-__ZN12CThreadMutex7TryLockEv.sig = 'v';
+__ZN12CThreadMutex7TryLockEv.stub = true;
 
-function __ZN12IVP_KK_Input28calc_quad_distance_edge_edgeEv(...args) {
-  if (!wasmImports["_ZN12IVP_KK_Input28calc_quad_distance_edge_edgeEv"] || wasmImports["_ZN12IVP_KK_Input28calc_quad_distance_edge_edgeEv"].stub) abort("external symbol '_ZN12IVP_KK_Input28calc_quad_distance_edge_edgeEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN12IVP_KK_Input28calc_quad_distance_edge_edgeEv"](...args);
-}
+function __ZN12IVP_KK_Input28calc_quad_distance_edge_edgeEv(...args) { return 0; }
 
 __ZN12IVP_KK_Input28calc_quad_distance_edge_edgeEv.stub = false;
 __ZN12IVP_KK_Input28calc_quad_distance_edge_edgeEv.sig = 'v';
 
-function __ZN12IVP_KK_InputC1EPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_(...args) {
-  if (!wasmImports["_ZN12IVP_KK_InputC1EPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_"] || wasmImports["_ZN12IVP_KK_InputC1EPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_"].stub) abort("external symbol '_ZN12IVP_KK_InputC1EPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN12IVP_KK_InputC1EPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_"](...args);
-}
+function __ZN12IVP_KK_InputC1EPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_(...args) { return 0; }
 
 __ZN12IVP_KK_InputC1EPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_.stub = false;
 __ZN12IVP_KK_InputC1EPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_.sig = 'v';
 
-function __ZN12IVP_U_Memory14neuer_sp_blockEj(...args) {
-  if (!wasmImports["_ZN12IVP_U_Memory14neuer_sp_blockEj"] || wasmImports["_ZN12IVP_U_Memory14neuer_sp_blockEj"].stub) abort("external symbol '_ZN12IVP_U_Memory14neuer_sp_blockEj' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN12IVP_U_Memory14neuer_sp_blockEj"](...args);
-}
+function __ZN12IVP_U_Memory14neuer_sp_blockEj(...args) { return 0; }
 
 __ZN12IVP_U_Memory14neuer_sp_blockEj.stub = false;
 __ZN12IVP_U_Memory14neuer_sp_blockEj.sig = 'v';
 
-function __ZN12IVP_U_Memory20free_mem_transactionEv(...args) {
-  if (!wasmImports["_ZN12IVP_U_Memory20free_mem_transactionEv"] || wasmImports["_ZN12IVP_U_Memory20free_mem_transactionEv"].stub) abort("external symbol '_ZN12IVP_U_Memory20free_mem_transactionEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN12IVP_U_Memory20free_mem_transactionEv"](...args);
-}
+function __ZN12IVP_U_Memory20free_mem_transactionEv(...args) { return 0; }
 
 __ZN12IVP_U_Memory20free_mem_transactionEv.stub = false;
 __ZN12IVP_U_Memory20free_mem_transactionEv.sig = 'v';
@@ -4614,141 +4527,111 @@ function __ZN13CThreadRWLock11UnlockWriteEv(...args) {
   return wasmImports["_ZN13CThreadRWLock11UnlockWriteEv"](...args);
 }
 
-__ZN13CThreadRWLock11UnlockWriteEv.stub = false;
-__ZN13CThreadRWLock11UnlockWriteEv.sig = 'v';
+__ZN13CThreadRWLock11UnlockWriteEv.stub = true;
 
 function __ZN13CThreadRWLock11WaitForReadEv(...args) {
   if (!wasmImports["_ZN13CThreadRWLock11WaitForReadEv"] || wasmImports["_ZN13CThreadRWLock11WaitForReadEv"].stub) abort("external symbol '_ZN13CThreadRWLock11WaitForReadEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN13CThreadRWLock11WaitForReadEv"](...args);
 }
 
-__ZN13CThreadRWLock11WaitForReadEv.stub = false;
-__ZN13CThreadRWLock11WaitForReadEv.sig = 'v';
+__ZN13CThreadRWLock11WaitForReadEv.stub = true;
 
 function __ZN13CThreadRWLock12LockForWriteEv(...args) {
   if (!wasmImports["_ZN13CThreadRWLock12LockForWriteEv"] || wasmImports["_ZN13CThreadRWLock12LockForWriteEv"].stub) abort("external symbol '_ZN13CThreadRWLock12LockForWriteEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN13CThreadRWLock12LockForWriteEv"](...args);
 }
 
-__ZN13CThreadRWLock12LockForWriteEv.stub = false;
-__ZN13CThreadRWLock12LockForWriteEv.sig = 'v';
+__ZN13CThreadRWLock12LockForWriteEv.stub = true;
 
 function __ZN13CWorkerThread10CallWorkerEjjb(...args) {
   if (!wasmImports["_ZN13CWorkerThread10CallWorkerEjjb"] || wasmImports["_ZN13CWorkerThread10CallWorkerEjjb"].stub) abort("external symbol '_ZN13CWorkerThread10CallWorkerEjjb' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN13CWorkerThread10CallWorkerEjjb"](...args);
 }
 
-__ZN13CWorkerThread10CallWorkerEjjb.stub = false;
-__ZN13CWorkerThread10CallWorkerEjjb.sig = 'v';
+__ZN13CWorkerThread10CallWorkerEjjb.stub = true;
 
 function __ZN13CWorkerThread11WaitForCallEPj(...args) {
   if (!wasmImports["_ZN13CWorkerThread11WaitForCallEPj"] || wasmImports["_ZN13CWorkerThread11WaitForCallEPj"].stub) abort("external symbol '_ZN13CWorkerThread11WaitForCallEPj' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN13CWorkerThread11WaitForCallEPj"](...args);
 }
 
-__ZN13CWorkerThread11WaitForCallEPj.stub = false;
-__ZN13CWorkerThread11WaitForCallEPj.sig = 'v';
+__ZN13CWorkerThread11WaitForCallEPj.stub = true;
 
 function __ZN13CWorkerThread12WaitForReplyEj(...args) {
   if (!wasmImports["_ZN13CWorkerThread12WaitForReplyEj"] || wasmImports["_ZN13CWorkerThread12WaitForReplyEj"].stub) abort("external symbol '_ZN13CWorkerThread12WaitForReplyEj' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN13CWorkerThread12WaitForReplyEj"](...args);
 }
 
-__ZN13CWorkerThread12WaitForReplyEj.stub = false;
-__ZN13CWorkerThread12WaitForReplyEj.sig = 'v';
+__ZN13CWorkerThread12WaitForReplyEj.stub = true;
 
 function __ZN13CWorkerThread13GetCallHandleEv(...args) {
   if (!wasmImports["_ZN13CWorkerThread13GetCallHandleEv"] || wasmImports["_ZN13CWorkerThread13GetCallHandleEv"].stub) abort("external symbol '_ZN13CWorkerThread13GetCallHandleEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN13CWorkerThread13GetCallHandleEv"](...args);
 }
 
-__ZN13CWorkerThread13GetCallHandleEv.stub = false;
-__ZN13CWorkerThread13GetCallHandleEv.sig = 'v';
+__ZN13CWorkerThread13GetCallHandleEv.stub = true;
 
 function __ZN13CWorkerThread5ReplyEj(...args) {
   if (!wasmImports["_ZN13CWorkerThread5ReplyEj"] || wasmImports["_ZN13CWorkerThread5ReplyEj"].stub) abort("external symbol '_ZN13CWorkerThread5ReplyEj' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN13CWorkerThread5ReplyEj"](...args);
 }
 
-__ZN13CWorkerThread5ReplyEj.stub = false;
-__ZN13CWorkerThread5ReplyEj.sig = 'v';
+__ZN13CWorkerThread5ReplyEj.stub = true;
 
 function __ZN13CWorkerThread8PeekCallEPj(...args) {
   if (!wasmImports["_ZN13CWorkerThread8PeekCallEPj"] || wasmImports["_ZN13CWorkerThread8PeekCallEPj"].stub) abort("external symbol '_ZN13CWorkerThread8PeekCallEPj' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN13CWorkerThread8PeekCallEPj"](...args);
 }
 
-__ZN13CWorkerThread8PeekCallEPj.stub = false;
-__ZN13CWorkerThread8PeekCallEPj.sig = 'v';
+__ZN13CWorkerThread8PeekCallEPj.stub = true;
 
 function __ZN13CWorkerThreadC2Ev(...args) {
   if (!wasmImports["_ZN13CWorkerThreadC2Ev"] || wasmImports["_ZN13CWorkerThreadC2Ev"].stub) abort("external symbol '_ZN13CWorkerThreadC2Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN13CWorkerThreadC2Ev"](...args);
 }
 
-__ZN13CWorkerThreadC2Ev.stub = false;
-__ZN13CWorkerThreadC2Ev.sig = 'v';
+__ZN13CWorkerThreadC2Ev.stub = true;
 
 function __ZN13CWorkerThreadD0Ev(...args) {
   if (!wasmImports["_ZN13CWorkerThreadD0Ev"] || wasmImports["_ZN13CWorkerThreadD0Ev"].stub) abort("external symbol '_ZN13CWorkerThreadD0Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN13CWorkerThreadD0Ev"](...args);
 }
 
-__ZN13CWorkerThreadD0Ev.stub = false;
-__ZN13CWorkerThreadD0Ev.sig = 'v';
+__ZN13CWorkerThreadD0Ev.stub = true;
 
 function __ZN13CWorkerThreadD2Ev(...args) {
   if (!wasmImports["_ZN13CWorkerThreadD2Ev"] || wasmImports["_ZN13CWorkerThreadD2Ev"].stub) abort("external symbol '_ZN13CWorkerThreadD2Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN13CWorkerThreadD2Ev"](...args);
 }
 
-__ZN13CWorkerThreadD2Ev.stub = false;
-__ZN13CWorkerThreadD2Ev.sig = 'v';
+__ZN13CWorkerThreadD2Ev.stub = true;
 
-function __ZN13IVP_3D_Solver27find_first_t_for_value_collEdd8IVP_TimeS0_P18IVP_U_Matrix_CacheS2_PdPS0_(...args) {
-  if (!wasmImports["_ZN13IVP_3D_Solver27find_first_t_for_value_collEdd8IVP_TimeS0_P18IVP_U_Matrix_CacheS2_PdPS0_"] || wasmImports["_ZN13IVP_3D_Solver27find_first_t_for_value_collEdd8IVP_TimeS0_P18IVP_U_Matrix_CacheS2_PdPS0_"].stub) abort("external symbol '_ZN13IVP_3D_Solver27find_first_t_for_value_collEdd8IVP_TimeS0_P18IVP_U_Matrix_CacheS2_PdPS0_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN13IVP_3D_Solver27find_first_t_for_value_collEdd8IVP_TimeS0_P18IVP_U_Matrix_CacheS2_PdPS0_"](...args);
-}
+function __ZN13IVP_3D_Solver27find_first_t_for_value_collEdd8IVP_TimeS0_P18IVP_U_Matrix_CacheS2_PdPS0_(...args) { return 0; }
 
 __ZN13IVP_3D_Solver27find_first_t_for_value_collEdd8IVP_TimeS0_P18IVP_U_Matrix_CacheS2_PdPS0_.stub = false;
 __ZN13IVP_3D_Solver27find_first_t_for_value_collEdd8IVP_TimeS0_P18IVP_U_Matrix_CacheS2_PdPS0_.sig = 'v';
 
-function __ZN13IVP_3D_Solver30find_first_t_for_value_max_devEd8IVP_TimeS0_iP18IVP_U_Matrix_CacheS2_PdPS0_(...args) {
-  if (!wasmImports["_ZN13IVP_3D_Solver30find_first_t_for_value_max_devEd8IVP_TimeS0_iP18IVP_U_Matrix_CacheS2_PdPS0_"] || wasmImports["_ZN13IVP_3D_Solver30find_first_t_for_value_max_devEd8IVP_TimeS0_iP18IVP_U_Matrix_CacheS2_PdPS0_"].stub) abort("external symbol '_ZN13IVP_3D_Solver30find_first_t_for_value_max_devEd8IVP_TimeS0_iP18IVP_U_Matrix_CacheS2_PdPS0_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN13IVP_3D_Solver30find_first_t_for_value_max_devEd8IVP_TimeS0_iP18IVP_U_Matrix_CacheS2_PdPS0_"](...args);
-}
+function __ZN13IVP_3D_Solver30find_first_t_for_value_max_devEd8IVP_TimeS0_iP18IVP_U_Matrix_CacheS2_PdPS0_(...args) { return 0; }
 
 __ZN13IVP_3D_Solver30find_first_t_for_value_max_devEd8IVP_TimeS0_iP18IVP_U_Matrix_CacheS2_PdPS0_.stub = false;
 __ZN13IVP_3D_Solver30find_first_t_for_value_max_devEd8IVP_TimeS0_iP18IVP_U_Matrix_CacheS2_PdPS0_.sig = 'v';
 
-function __ZN14IVP_OV_Element19add_to_hull_managerEP16IVP_Hull_Managerd(...args) {
-  if (!wasmImports["_ZN14IVP_OV_Element19add_to_hull_managerEP16IVP_Hull_Managerd"] || wasmImports["_ZN14IVP_OV_Element19add_to_hull_managerEP16IVP_Hull_Managerd"].stub) abort("external symbol '_ZN14IVP_OV_Element19add_to_hull_managerEP16IVP_Hull_Managerd' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN14IVP_OV_Element19add_to_hull_managerEP16IVP_Hull_Managerd"](...args);
-}
+function __ZN14IVP_OV_Element19add_to_hull_managerEP16IVP_Hull_Managerd(...args) { return 0; }
 
 __ZN14IVP_OV_Element19add_to_hull_managerEP16IVP_Hull_Managerd.stub = false;
 __ZN14IVP_OV_Element19add_to_hull_managerEP16IVP_Hull_Managerd.sig = 'v';
 
-function __ZN14IVP_OV_ElementC1EP15IVP_Real_Object(...args) {
-  if (!wasmImports["_ZN14IVP_OV_ElementC1EP15IVP_Real_Object"] || wasmImports["_ZN14IVP_OV_ElementC1EP15IVP_Real_Object"].stub) abort("external symbol '_ZN14IVP_OV_ElementC1EP15IVP_Real_Object' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN14IVP_OV_ElementC1EP15IVP_Real_Object"](...args);
-}
+function __ZN14IVP_OV_ElementC1EP15IVP_Real_Object(...args) { return 0; }
 
 __ZN14IVP_OV_ElementC1EP15IVP_Real_Object.stub = false;
 __ZN14IVP_OV_ElementC1EP15IVP_Real_Object.sig = 'v';
 
-function __ZN14IVP_U_Min_List19remove_minlist_elemEj(...args) {
-  if (!wasmImports["_ZN14IVP_U_Min_List19remove_minlist_elemEj"] || wasmImports["_ZN14IVP_U_Min_List19remove_minlist_elemEj"].stub) abort("external symbol '_ZN14IVP_U_Min_List19remove_minlist_elemEj' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN14IVP_U_Min_List19remove_minlist_elemEj"](...args);
-}
+function __ZN14IVP_U_Min_List19remove_minlist_elemEj(...args) { return 0; }
 
 __ZN14IVP_U_Min_List19remove_minlist_elemEj.stub = false;
 __ZN14IVP_U_Min_List19remove_minlist_elemEj.sig = 'v';
 
-function __ZN14IVP_U_Min_List3addEPvf(...args) {
-  if (!wasmImports["_ZN14IVP_U_Min_List3addEPvf"] || wasmImports["_ZN14IVP_U_Min_List3addEPvf"].stub) abort("external symbol '_ZN14IVP_U_Min_List3addEPvf' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN14IVP_U_Min_List3addEPvf"](...args);
-}
+function __ZN14IVP_U_Min_List3addEPvf(...args) { return 0; }
 
 __ZN14IVP_U_Min_List3addEPvf.stub = false;
 __ZN14IVP_U_Min_List3addEPvf.sig = 'v';
@@ -4758,53 +4641,42 @@ function __ZN15CClockSpeedInit4InitEv(...args) {
   return wasmImports["_ZN15CClockSpeedInit4InitEv"](...args);
 }
 
-__ZN15CClockSpeedInit4InitEv.stub = false;
-__ZN15CClockSpeedInit4InitEv.sig = 'v';
+__ZN15CClockSpeedInit4InitEv.stub = true;
 
 function __ZN15IDirect3DQuery95IssueEj(...args) {
   if (!wasmImports["_ZN15IDirect3DQuery95IssueEj"] || wasmImports["_ZN15IDirect3DQuery95IssueEj"].stub) abort("external symbol '_ZN15IDirect3DQuery95IssueEj' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN15IDirect3DQuery95IssueEj"](...args);
 }
 
-__ZN15IDirect3DQuery95IssueEj.stub = false;
-__ZN15IDirect3DQuery95IssueEj.sig = 'v';
+__ZN15IDirect3DQuery95IssueEj.stub = true;
 
 function __ZN15IDirect3DQuery97GetDataEPvjj(...args) {
   if (!wasmImports["_ZN15IDirect3DQuery97GetDataEPvjj"] || wasmImports["_ZN15IDirect3DQuery97GetDataEPvjj"].stub) abort("external symbol '_ZN15IDirect3DQuery97GetDataEPvjj' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN15IDirect3DQuery97GetDataEPvjj"](...args);
 }
 
-__ZN15IDirect3DQuery97GetDataEPvjj.stub = false;
-__ZN15IDirect3DQuery97GetDataEPvjj.sig = 'v';
+__ZN15IDirect3DQuery97GetDataEPvjj.stub = true;
 
 function __ZN15IDirect3DQuery9D0Ev(...args) {
   if (!wasmImports["_ZN15IDirect3DQuery9D0Ev"] || wasmImports["_ZN15IDirect3DQuery9D0Ev"].stub) abort("external symbol '_ZN15IDirect3DQuery9D0Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN15IDirect3DQuery9D0Ev"](...args);
 }
 
-__ZN15IDirect3DQuery9D0Ev.stub = false;
-__ZN15IDirect3DQuery9D0Ev.sig = 'v';
+__ZN15IDirect3DQuery9D0Ev.stub = true;
 
 function __ZN15IDirect3DQuery9D1Ev(...args) {
   if (!wasmImports["_ZN15IDirect3DQuery9D1Ev"] || wasmImports["_ZN15IDirect3DQuery9D1Ev"].stub) abort("external symbol '_ZN15IDirect3DQuery9D1Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN15IDirect3DQuery9D1Ev"](...args);
 }
 
-__ZN15IDirect3DQuery9D1Ev.stub = false;
-__ZN15IDirect3DQuery9D1Ev.sig = 'v';
+__ZN15IDirect3DQuery9D1Ev.stub = true;
 
-function __ZN15IVP_Inline_Math11isqrt_floatEf(...args) {
-  if (!wasmImports["_ZN15IVP_Inline_Math11isqrt_floatEf"] || wasmImports["_ZN15IVP_Inline_Math11isqrt_floatEf"].stub) abort("external symbol '_ZN15IVP_Inline_Math11isqrt_floatEf' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN15IVP_Inline_Math11isqrt_floatEf"](...args);
-}
+function __ZN15IVP_Inline_Math11isqrt_floatEf(...args) { return 0; }
 
 __ZN15IVP_Inline_Math11isqrt_floatEf.stub = false;
 __ZN15IVP_Inline_Math11isqrt_floatEf.sig = 'v';
 
-function __ZN15IVP_Inline_Math12isqrt_doubleEd(...args) {
-  if (!wasmImports["_ZN15IVP_Inline_Math12isqrt_doubleEd"] || wasmImports["_ZN15IVP_Inline_Math12isqrt_doubleEd"].stub) abort("external symbol '_ZN15IVP_Inline_Math12isqrt_doubleEd' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN15IVP_Inline_Math12isqrt_doubleEd"](...args);
-}
+function __ZN15IVP_Inline_Math12isqrt_doubleEd(...args) { return 0; }
 
 __ZN15IVP_Inline_Math12isqrt_doubleEd.stub = false;
 __ZN15IVP_Inline_Math12isqrt_doubleEd.sig = 'v';
@@ -4814,493 +4686,423 @@ function __ZN16ID3DXMatrixStack10LoadMatrixEPK10D3DXMATRIX(...args) {
   return wasmImports["_ZN16ID3DXMatrixStack10LoadMatrixEPK10D3DXMATRIX"](...args);
 }
 
-__ZN16ID3DXMatrixStack10LoadMatrixEPK10D3DXMATRIX.stub = false;
-__ZN16ID3DXMatrixStack10LoadMatrixEPK10D3DXMATRIX.sig = 'v';
+__ZN16ID3DXMatrixStack10LoadMatrixEPK10D3DXMATRIX.stub = true;
 
 function __ZN16ID3DXMatrixStack10MultMatrixEPK10D3DXMATRIX(...args) {
   if (!wasmImports["_ZN16ID3DXMatrixStack10MultMatrixEPK10D3DXMATRIX"] || wasmImports["_ZN16ID3DXMatrixStack10MultMatrixEPK10D3DXMATRIX"].stub) abort("external symbol '_ZN16ID3DXMatrixStack10MultMatrixEPK10D3DXMATRIX' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16ID3DXMatrixStack10MultMatrixEPK10D3DXMATRIX"](...args);
 }
 
-__ZN16ID3DXMatrixStack10MultMatrixEPK10D3DXMATRIX.stub = false;
-__ZN16ID3DXMatrixStack10MultMatrixEPK10D3DXMATRIX.sig = 'v';
+__ZN16ID3DXMatrixStack10MultMatrixEPK10D3DXMATRIX.stub = true;
 
 function __ZN16ID3DXMatrixStack10ScaleLocalEfff(...args) {
   if (!wasmImports["_ZN16ID3DXMatrixStack10ScaleLocalEfff"] || wasmImports["_ZN16ID3DXMatrixStack10ScaleLocalEfff"].stub) abort("external symbol '_ZN16ID3DXMatrixStack10ScaleLocalEfff' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16ID3DXMatrixStack10ScaleLocalEfff"](...args);
 }
 
-__ZN16ID3DXMatrixStack10ScaleLocalEfff.stub = false;
-__ZN16ID3DXMatrixStack10ScaleLocalEfff.sig = 'v';
+__ZN16ID3DXMatrixStack10ScaleLocalEfff.stub = true;
 
 function __ZN16ID3DXMatrixStack12LoadIdentityEv(...args) {
   if (!wasmImports["_ZN16ID3DXMatrixStack12LoadIdentityEv"] || wasmImports["_ZN16ID3DXMatrixStack12LoadIdentityEv"].stub) abort("external symbol '_ZN16ID3DXMatrixStack12LoadIdentityEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16ID3DXMatrixStack12LoadIdentityEv"](...args);
 }
 
-__ZN16ID3DXMatrixStack12LoadIdentityEv.stub = false;
-__ZN16ID3DXMatrixStack12LoadIdentityEv.sig = 'v';
+__ZN16ID3DXMatrixStack12LoadIdentityEv.stub = true;
 
 function __ZN16ID3DXMatrixStack14TranslateLocalEfff(...args) {
   if (!wasmImports["_ZN16ID3DXMatrixStack14TranslateLocalEfff"] || wasmImports["_ZN16ID3DXMatrixStack14TranslateLocalEfff"].stub) abort("external symbol '_ZN16ID3DXMatrixStack14TranslateLocalEfff' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16ID3DXMatrixStack14TranslateLocalEfff"](...args);
 }
 
-__ZN16ID3DXMatrixStack14TranslateLocalEfff.stub = false;
-__ZN16ID3DXMatrixStack14TranslateLocalEfff.sig = 'v';
+__ZN16ID3DXMatrixStack14TranslateLocalEfff.stub = true;
 
 function __ZN16ID3DXMatrixStack15MultMatrixLocalEPK10D3DXMATRIX(...args) {
   if (!wasmImports["_ZN16ID3DXMatrixStack15MultMatrixLocalEPK10D3DXMATRIX"] || wasmImports["_ZN16ID3DXMatrixStack15MultMatrixLocalEPK10D3DXMATRIX"].stub) abort("external symbol '_ZN16ID3DXMatrixStack15MultMatrixLocalEPK10D3DXMATRIX' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16ID3DXMatrixStack15MultMatrixLocalEPK10D3DXMATRIX"](...args);
 }
 
-__ZN16ID3DXMatrixStack15MultMatrixLocalEPK10D3DXMATRIX.stub = false;
-__ZN16ID3DXMatrixStack15MultMatrixLocalEPK10D3DXMATRIX.sig = 'v';
+__ZN16ID3DXMatrixStack15MultMatrixLocalEPK10D3DXMATRIX.stub = true;
 
 function __ZN16ID3DXMatrixStack15RotateAxisLocalEPK11D3DXVECTOR3f(...args) {
   if (!wasmImports["_ZN16ID3DXMatrixStack15RotateAxisLocalEPK11D3DXVECTOR3f"] || wasmImports["_ZN16ID3DXMatrixStack15RotateAxisLocalEPK11D3DXVECTOR3f"].stub) abort("external symbol '_ZN16ID3DXMatrixStack15RotateAxisLocalEPK11D3DXVECTOR3f' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16ID3DXMatrixStack15RotateAxisLocalEPK11D3DXVECTOR3f"](...args);
 }
 
-__ZN16ID3DXMatrixStack15RotateAxisLocalEPK11D3DXVECTOR3f.stub = false;
-__ZN16ID3DXMatrixStack15RotateAxisLocalEPK11D3DXVECTOR3f.sig = 'v';
+__ZN16ID3DXMatrixStack15RotateAxisLocalEPK11D3DXVECTOR3f.stub = true;
 
 function __ZN16ID3DXMatrixStack3PopEv(...args) {
   if (!wasmImports["_ZN16ID3DXMatrixStack3PopEv"] || wasmImports["_ZN16ID3DXMatrixStack3PopEv"].stub) abort("external symbol '_ZN16ID3DXMatrixStack3PopEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16ID3DXMatrixStack3PopEv"](...args);
 }
 
-__ZN16ID3DXMatrixStack3PopEv.stub = false;
-__ZN16ID3DXMatrixStack3PopEv.sig = 'v';
+__ZN16ID3DXMatrixStack3PopEv.stub = true;
 
 function __ZN16ID3DXMatrixStack4PushEv(...args) {
   if (!wasmImports["_ZN16ID3DXMatrixStack4PushEv"] || wasmImports["_ZN16ID3DXMatrixStack4PushEv"].stub) abort("external symbol '_ZN16ID3DXMatrixStack4PushEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16ID3DXMatrixStack4PushEv"](...args);
 }
 
-__ZN16ID3DXMatrixStack4PushEv.stub = false;
-__ZN16ID3DXMatrixStack4PushEv.sig = 'v';
+__ZN16ID3DXMatrixStack4PushEv.stub = true;
 
 function __ZN16ID3DXMatrixStack6GetTopEv(...args) {
   if (!wasmImports["_ZN16ID3DXMatrixStack6GetTopEv"] || wasmImports["_ZN16ID3DXMatrixStack6GetTopEv"].stub) abort("external symbol '_ZN16ID3DXMatrixStack6GetTopEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16ID3DXMatrixStack6GetTopEv"](...args);
 }
 
-__ZN16ID3DXMatrixStack6GetTopEv.stub = false;
-__ZN16ID3DXMatrixStack6GetTopEv.sig = 'v';
+__ZN16ID3DXMatrixStack6GetTopEv.stub = true;
 
 function __ZN16ID3DXMatrixStack7ReleaseEiPc(...args) {
   if (!wasmImports["_ZN16ID3DXMatrixStack7ReleaseEiPc"] || wasmImports["_ZN16ID3DXMatrixStack7ReleaseEiPc"].stub) abort("external symbol '_ZN16ID3DXMatrixStack7ReleaseEiPc' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16ID3DXMatrixStack7ReleaseEiPc"](...args);
 }
 
-__ZN16ID3DXMatrixStack7ReleaseEiPc.stub = false;
-__ZN16ID3DXMatrixStack7ReleaseEiPc.sig = 'v';
+__ZN16ID3DXMatrixStack7ReleaseEiPc.stub = true;
 
 function __ZN16IDirect3DDevice910BeginSceneEv(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice910BeginSceneEv"] || wasmImports["_ZN16IDirect3DDevice910BeginSceneEv"].stub) abort("external symbol '_ZN16IDirect3DDevice910BeginSceneEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice910BeginSceneEv"](...args);
 }
 
-__ZN16IDirect3DDevice910BeginSceneEv.stub = false;
-__ZN16IDirect3DDevice910BeginSceneEv.sig = 'v';
+__ZN16IDirect3DDevice910BeginSceneEv.stub = true;
 
 function __ZN16IDirect3DDevice910ShowCursorEi(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice910ShowCursorEi"] || wasmImports["_ZN16IDirect3DDevice910ShowCursorEi"].stub) abort("external symbol '_ZN16IDirect3DDevice910ShowCursorEi' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice910ShowCursorEi"](...args);
 }
 
-__ZN16IDirect3DDevice910ShowCursorEi.stub = false;
-__ZN16IDirect3DDevice910ShowCursorEi.sig = 'v';
+__ZN16IDirect3DDevice910ShowCursorEi.stub = true;
 
 function __ZN16IDirect3DDevice911CreateQueryE13_D3DQUERYTYPEPP15IDirect3DQuery9(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice911CreateQueryE13_D3DQUERYTYPEPP15IDirect3DQuery9"] || wasmImports["_ZN16IDirect3DDevice911CreateQueryE13_D3DQUERYTYPEPP15IDirect3DQuery9"].stub) abort("external symbol '_ZN16IDirect3DDevice911CreateQueryE13_D3DQUERYTYPEPP15IDirect3DQuery9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice911CreateQueryE13_D3DQUERYTYPEPP15IDirect3DQuery9"](...args);
 }
 
-__ZN16IDirect3DDevice911CreateQueryE13_D3DQUERYTYPEPP15IDirect3DQuery9.stub = false;
-__ZN16IDirect3DDevice911CreateQueryE13_D3DQUERYTYPEPP15IDirect3DQuery9.sig = 'v';
+__ZN16IDirect3DDevice911CreateQueryE13_D3DQUERYTYPEPP15IDirect3DQuery9.stub = true;
 
 function __ZN16IDirect3DDevice911LightEnableEji(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice911LightEnableEji"] || wasmImports["_ZN16IDirect3DDevice911LightEnableEji"].stub) abort("external symbol '_ZN16IDirect3DDevice911LightEnableEji' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice911LightEnableEji"](...args);
 }
 
-__ZN16IDirect3DDevice911LightEnableEji.stub = false;
-__ZN16IDirect3DDevice911LightEnableEji.sig = 'v';
+__ZN16IDirect3DDevice911LightEnableEji.stub = true;
 
 function __ZN16IDirect3DDevice911SetMaterialEPK13_D3DMATERIAL9(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice911SetMaterialEPK13_D3DMATERIAL9"] || wasmImports["_ZN16IDirect3DDevice911SetMaterialEPK13_D3DMATERIAL9"].stub) abort("external symbol '_ZN16IDirect3DDevice911SetMaterialEPK13_D3DMATERIAL9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice911SetMaterialEPK13_D3DMATERIAL9"](...args);
 }
 
-__ZN16IDirect3DDevice911SetMaterialEPK13_D3DMATERIAL9.stub = false;
-__ZN16IDirect3DDevice911SetMaterialEPK13_D3DMATERIAL9.sig = 'v';
+__ZN16IDirect3DDevice911SetMaterialEPK13_D3DMATERIAL9.stub = true;
 
 function __ZN16IDirect3DDevice911SetViewportEPK13_D3DVIEWPORT9(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice911SetViewportEPK13_D3DVIEWPORT9"] || wasmImports["_ZN16IDirect3DDevice911SetViewportEPK13_D3DVIEWPORT9"].stub) abort("external symbol '_ZN16IDirect3DDevice911SetViewportEPK13_D3DVIEWPORT9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice911SetViewportEPK13_D3DVIEWPORT9"](...args);
 }
 
-__ZN16IDirect3DDevice911SetViewportEPK13_D3DVIEWPORT9.stub = false;
-__ZN16IDirect3DDevice911SetViewportEPK13_D3DVIEWPORT9.sig = 'v';
+__ZN16IDirect3DDevice911SetViewportEPK13_D3DVIEWPORT9.stub = true;
 
 function __ZN16IDirect3DDevice911StretchRectEP17IDirect3DSurface9PK5_RECTS1_S4_21_D3DTEXTUREFILTERTYPE(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice911StretchRectEP17IDirect3DSurface9PK5_RECTS1_S4_21_D3DTEXTUREFILTERTYPE"] || wasmImports["_ZN16IDirect3DDevice911StretchRectEP17IDirect3DSurface9PK5_RECTS1_S4_21_D3DTEXTUREFILTERTYPE"].stub) abort("external symbol '_ZN16IDirect3DDevice911StretchRectEP17IDirect3DSurface9PK5_RECTS1_S4_21_D3DTEXTUREFILTERTYPE' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice911StretchRectEP17IDirect3DSurface9PK5_RECTS1_S4_21_D3DTEXTUREFILTERTYPE"](...args);
 }
 
-__ZN16IDirect3DDevice911StretchRectEP17IDirect3DSurface9PK5_RECTS1_S4_21_D3DTEXTUREFILTERTYPE.stub = false;
-__ZN16IDirect3DDevice911StretchRectEP17IDirect3DSurface9PK5_RECTS1_S4_21_D3DTEXTUREFILTERTYPE.sig = 'v';
+__ZN16IDirect3DDevice911StretchRectEP17IDirect3DSurface9PK5_RECTS1_S4_21_D3DTEXTUREFILTERTYPE.stub = true;
 
 function __ZN16IDirect3DDevice912SetClipPlaneEjPKf(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice912SetClipPlaneEjPKf"] || wasmImports["_ZN16IDirect3DDevice912SetClipPlaneEjPKf"].stub) abort("external symbol '_ZN16IDirect3DDevice912SetClipPlaneEjPKf' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice912SetClipPlaneEjPKf"](...args);
 }
 
-__ZN16IDirect3DDevice912SetClipPlaneEjPKf.stub = false;
-__ZN16IDirect3DDevice912SetClipPlaneEjPKf.sig = 'v';
+__ZN16IDirect3DDevice912SetClipPlaneEjPKf.stub = true;
 
 function __ZN16IDirect3DDevice912SetGammaRampEjjPK13_D3DGAMMARAMP(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice912SetGammaRampEjjPK13_D3DGAMMARAMP"] || wasmImports["_ZN16IDirect3DDevice912SetGammaRampEjjPK13_D3DGAMMARAMP"].stub) abort("external symbol '_ZN16IDirect3DDevice912SetGammaRampEjjPK13_D3DGAMMARAMP' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice912SetGammaRampEjjPK13_D3DGAMMARAMP"](...args);
 }
 
-__ZN16IDirect3DDevice912SetGammaRampEjjPK13_D3DGAMMARAMP.stub = false;
-__ZN16IDirect3DDevice912SetGammaRampEjjPK13_D3DGAMMARAMP.sig = 'v';
+__ZN16IDirect3DDevice912SetGammaRampEjjPK13_D3DGAMMARAMP.stub = true;
 
 function __ZN16IDirect3DDevice912SetTransformE22_D3DTRANSFORMSTATETYPEPK9D3DMATRIX(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice912SetTransformE22_D3DTRANSFORMSTATETYPEPK9D3DMATRIX"] || wasmImports["_ZN16IDirect3DDevice912SetTransformE22_D3DTRANSFORMSTATETYPEPK9D3DMATRIX"].stub) abort("external symbol '_ZN16IDirect3DDevice912SetTransformE22_D3DTRANSFORMSTATETYPEPK9D3DMATRIX' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice912SetTransformE22_D3DTRANSFORMSTATETYPEPK9D3DMATRIX"](...args);
 }
 
-__ZN16IDirect3DDevice912SetTransformE22_D3DTRANSFORMSTATETYPEPK9D3DMATRIX.stub = false;
-__ZN16IDirect3DDevice912SetTransformE22_D3DTRANSFORMSTATETYPEPK9D3DMATRIX.sig = 'v';
+__ZN16IDirect3DDevice912SetTransformE22_D3DTRANSFORMSTATETYPEPK9D3DMATRIX.stub = true;
 
 function __ZN16IDirect3DDevice913CreateTextureEjjjj10_D3DFORMAT8_D3DPOOLPP17IDirect3DTexture9PPvPc(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice913CreateTextureEjjjj10_D3DFORMAT8_D3DPOOLPP17IDirect3DTexture9PPvPc"] || wasmImports["_ZN16IDirect3DDevice913CreateTextureEjjjj10_D3DFORMAT8_D3DPOOLPP17IDirect3DTexture9PPvPc"].stub) abort("external symbol '_ZN16IDirect3DDevice913CreateTextureEjjjj10_D3DFORMAT8_D3DPOOLPP17IDirect3DTexture9PPvPc' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice913CreateTextureEjjjj10_D3DFORMAT8_D3DPOOLPP17IDirect3DTexture9PPvPc"](...args);
 }
 
-__ZN16IDirect3DDevice913CreateTextureEjjjj10_D3DFORMAT8_D3DPOOLPP17IDirect3DTexture9PPvPc.stub = false;
-__ZN16IDirect3DDevice913CreateTextureEjjjj10_D3DFORMAT8_D3DPOOLPP17IDirect3DTexture9PPvPc.sig = 'v';
+__ZN16IDirect3DDevice913CreateTextureEjjjj10_D3DFORMAT8_D3DPOOLPP17IDirect3DTexture9PPvPc.stub = true;
 
 function __ZN16IDirect3DDevice913DrawPrimitiveE17_D3DPRIMITIVETYPEjj(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice913DrawPrimitiveE17_D3DPRIMITIVETYPEjj"] || wasmImports["_ZN16IDirect3DDevice913DrawPrimitiveE17_D3DPRIMITIVETYPEjj"].stub) abort("external symbol '_ZN16IDirect3DDevice913DrawPrimitiveE17_D3DPRIMITIVETYPEjj' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice913DrawPrimitiveE17_D3DPRIMITIVETYPEjj"](...args);
 }
 
-__ZN16IDirect3DDevice913DrawPrimitiveE17_D3DPRIMITIVETYPEjj.stub = false;
-__ZN16IDirect3DDevice913DrawPrimitiveE17_D3DPRIMITIVETYPEjj.sig = 'v';
+__ZN16IDirect3DDevice913DrawPrimitiveE17_D3DPRIMITIVETYPEjj.stub = true;
 
 function __ZN16IDirect3DDevice913GetDeviceCapsEP9_D3DCAPS9(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice913GetDeviceCapsEP9_D3DCAPS9"] || wasmImports["_ZN16IDirect3DDevice913GetDeviceCapsEP9_D3DCAPS9"].stub) abort("external symbol '_ZN16IDirect3DDevice913GetDeviceCapsEP9_D3DCAPS9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice913GetDeviceCapsEP9_D3DCAPS9"](...args);
 }
 
-__ZN16IDirect3DDevice913GetDeviceCapsEP9_D3DCAPS9.stub = false;
-__ZN16IDirect3DDevice913GetDeviceCapsEP9_D3DCAPS9.sig = 'v';
+__ZN16IDirect3DDevice913GetDeviceCapsEP9_D3DCAPS9.stub = true;
 
 function __ZN16IDirect3DDevice914LinkShaderPairEP22IDirect3DVertexShader9P21IDirect3DPixelShader9(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice914LinkShaderPairEP22IDirect3DVertexShader9P21IDirect3DPixelShader9"] || wasmImports["_ZN16IDirect3DDevice914LinkShaderPairEP22IDirect3DVertexShader9P21IDirect3DPixelShader9"].stub) abort("external symbol '_ZN16IDirect3DDevice914LinkShaderPairEP22IDirect3DVertexShader9P21IDirect3DPixelShader9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice914LinkShaderPairEP22IDirect3DVertexShader9P21IDirect3DPixelShader9"](...args);
 }
 
-__ZN16IDirect3DDevice914LinkShaderPairEP22IDirect3DVertexShader9P21IDirect3DPixelShader9.stub = false;
-__ZN16IDirect3DDevice914LinkShaderPairEP22IDirect3DVertexShader9P21IDirect3DPixelShader9.sig = 'v';
+__ZN16IDirect3DDevice914LinkShaderPairEP22IDirect3DVertexShader9P21IDirect3DPixelShader9.stub = true;
 
 function __ZN16IDirect3DDevice914SetRenderStateE19_D3DRENDERSTATETYPEj(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice914SetRenderStateE19_D3DRENDERSTATETYPEj"] || wasmImports["_ZN16IDirect3DDevice914SetRenderStateE19_D3DRENDERSTATETYPEj"].stub) abort("external symbol '_ZN16IDirect3DDevice914SetRenderStateE19_D3DRENDERSTATETYPEj' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice914SetRenderStateE19_D3DRENDERSTATETYPEj"](...args);
 }
 
-__ZN16IDirect3DDevice914SetRenderStateE19_D3DRENDERSTATETYPEj.stub = false;
-__ZN16IDirect3DDevice914SetRenderStateE19_D3DRENDERSTATETYPEj.sig = 'v';
+__ZN16IDirect3DDevice914SetRenderStateE19_D3DRENDERSTATETYPEj.stub = true;
 
 function __ZN16IDirect3DDevice914SetScissorRectEPK5_RECT(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice914SetScissorRectEPK5_RECT"] || wasmImports["_ZN16IDirect3DDevice914SetScissorRectEPK5_RECT"].stub) abort("external symbol '_ZN16IDirect3DDevice914SetScissorRectEPK5_RECT' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice914SetScissorRectEPK5_RECT"](...args);
 }
 
-__ZN16IDirect3DDevice914SetScissorRectEPK5_RECT.stub = false;
-__ZN16IDirect3DDevice914SetScissorRectEPK5_RECT.sig = 'v';
+__ZN16IDirect3DDevice914SetScissorRectEPK5_RECT.stub = true;
 
 function __ZN16IDirect3DDevice915GetRenderTargetEjPP17IDirect3DSurface9(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice915GetRenderTargetEjPP17IDirect3DSurface9"] || wasmImports["_ZN16IDirect3DDevice915GetRenderTargetEjPP17IDirect3DSurface9"].stub) abort("external symbol '_ZN16IDirect3DDevice915GetRenderTargetEjPP17IDirect3DSurface9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice915GetRenderTargetEjPP17IDirect3DSurface9"](...args);
 }
 
-__ZN16IDirect3DDevice915GetRenderTargetEjPP17IDirect3DSurface9.stub = false;
-__ZN16IDirect3DDevice915GetRenderTargetEjPP17IDirect3DSurface9.sig = 'v';
+__ZN16IDirect3DDevice915GetRenderTargetEjPP17IDirect3DSurface9.stub = true;
 
 function __ZN16IDirect3DDevice915QueryShaderPairEiP17GLMShaderPairInfo(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice915QueryShaderPairEiP17GLMShaderPairInfo"] || wasmImports["_ZN16IDirect3DDevice915QueryShaderPairEiP17GLMShaderPairInfo"].stub) abort("external symbol '_ZN16IDirect3DDevice915QueryShaderPairEiP17GLMShaderPairInfo' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice915QueryShaderPairEiP17GLMShaderPairInfo"](...args);
 }
 
-__ZN16IDirect3DDevice915QueryShaderPairEiP17GLMShaderPairInfo.stub = false;
-__ZN16IDirect3DDevice915QueryShaderPairEiP17GLMShaderPairInfo.sig = 'v';
+__ZN16IDirect3DDevice915QueryShaderPairEiP17GLMShaderPairInfo.stub = true;
 
 function __ZN16IDirect3DDevice915SetRenderTargetEjP17IDirect3DSurface9(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice915SetRenderTargetEjP17IDirect3DSurface9"] || wasmImports["_ZN16IDirect3DDevice915SetRenderTargetEjP17IDirect3DSurface9"].stub) abort("external symbol '_ZN16IDirect3DDevice915SetRenderTargetEjP17IDirect3DSurface9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice915SetRenderTargetEjP17IDirect3DSurface9"](...args);
 }
 
-__ZN16IDirect3DDevice915SetRenderTargetEjP17IDirect3DSurface9.stub = false;
-__ZN16IDirect3DDevice915SetRenderTargetEjP17IDirect3DSurface9.sig = 'v';
+__ZN16IDirect3DDevice915SetRenderTargetEjP17IDirect3DSurface9.stub = true;
 
 function __ZN16IDirect3DDevice917CreateCubeTextureEjjj10_D3DFORMAT8_D3DPOOLPP21IDirect3DCubeTexture9PPvPc(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice917CreateCubeTextureEjjj10_D3DFORMAT8_D3DPOOLPP21IDirect3DCubeTexture9PPvPc"] || wasmImports["_ZN16IDirect3DDevice917CreateCubeTextureEjjj10_D3DFORMAT8_D3DPOOLPP21IDirect3DCubeTexture9PPvPc"].stub) abort("external symbol '_ZN16IDirect3DDevice917CreateCubeTextureEjjj10_D3DFORMAT8_D3DPOOLPP21IDirect3DCubeTexture9PPvPc' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice917CreateCubeTextureEjjj10_D3DFORMAT8_D3DPOOLPP21IDirect3DCubeTexture9PPvPc"](...args);
 }
 
-__ZN16IDirect3DDevice917CreateCubeTextureEjjj10_D3DFORMAT8_D3DPOOLPP21IDirect3DCubeTexture9PPvPc.stub = false;
-__ZN16IDirect3DDevice917CreateCubeTextureEjjj10_D3DFORMAT8_D3DPOOLPP21IDirect3DCubeTexture9PPvPc.sig = 'v';
+__ZN16IDirect3DDevice917CreateCubeTextureEjjj10_D3DFORMAT8_D3DPOOLPP21IDirect3DCubeTexture9PPvPc.stub = true;
 
 function __ZN16IDirect3DDevice917CreateIndexBufferEjj10_D3DFORMAT8_D3DPOOLPP21IDirect3DIndexBuffer9PPv(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice917CreateIndexBufferEjj10_D3DFORMAT8_D3DPOOLPP21IDirect3DIndexBuffer9PPv"] || wasmImports["_ZN16IDirect3DDevice917CreateIndexBufferEjj10_D3DFORMAT8_D3DPOOLPP21IDirect3DIndexBuffer9PPv"].stub) abort("external symbol '_ZN16IDirect3DDevice917CreateIndexBufferEjj10_D3DFORMAT8_D3DPOOLPP21IDirect3DIndexBuffer9PPv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice917CreateIndexBufferEjj10_D3DFORMAT8_D3DPOOLPP21IDirect3DIndexBuffer9PPv"](...args);
 }
 
-__ZN16IDirect3DDevice917CreateIndexBufferEjj10_D3DFORMAT8_D3DPOOLPP21IDirect3DIndexBuffer9PPv.stub = false;
-__ZN16IDirect3DDevice917CreateIndexBufferEjj10_D3DFORMAT8_D3DPOOLPP21IDirect3DIndexBuffer9PPv.sig = 'v';
+__ZN16IDirect3DDevice917CreateIndexBufferEjj10_D3DFORMAT8_D3DPOOLPP21IDirect3DIndexBuffer9PPv.stub = true;
 
 function __ZN16IDirect3DDevice917CreatePixelShaderEPKjPP21IDirect3DPixelShader9PKcPcS1_(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice917CreatePixelShaderEPKjPP21IDirect3DPixelShader9PKcPcS1_"] || wasmImports["_ZN16IDirect3DDevice917CreatePixelShaderEPKjPP21IDirect3DPixelShader9PKcPcS1_"].stub) abort("external symbol '_ZN16IDirect3DDevice917CreatePixelShaderEPKjPP21IDirect3DPixelShader9PKcPcS1_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice917CreatePixelShaderEPKjPP21IDirect3DPixelShader9PKcPcS1_"](...args);
 }
 
-__ZN16IDirect3DDevice917CreatePixelShaderEPKjPP21IDirect3DPixelShader9PKcPcS1_.stub = false;
-__ZN16IDirect3DDevice917CreatePixelShaderEPKjPP21IDirect3DPixelShader9PKcPcS1_.sig = 'v';
+__ZN16IDirect3DDevice917CreatePixelShaderEPKjPP21IDirect3DPixelShader9PKcPcS1_.stub = true;
 
 function __ZN16IDirect3DDevice918CreateRenderTargetEjj10_D3DFORMAT20_D3DMULTISAMPLE_TYPEjiPP17IDirect3DSurface9PPvPc(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice918CreateRenderTargetEjj10_D3DFORMAT20_D3DMULTISAMPLE_TYPEjiPP17IDirect3DSurface9PPvPc"] || wasmImports["_ZN16IDirect3DDevice918CreateRenderTargetEjj10_D3DFORMAT20_D3DMULTISAMPLE_TYPEjiPP17IDirect3DSurface9PPvPc"].stub) abort("external symbol '_ZN16IDirect3DDevice918CreateRenderTargetEjj10_D3DFORMAT20_D3DMULTISAMPLE_TYPEjiPP17IDirect3DSurface9PPvPc' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice918CreateRenderTargetEjj10_D3DFORMAT20_D3DMULTISAMPLE_TYPEjiPP17IDirect3DSurface9PPvPc"](...args);
 }
 
-__ZN16IDirect3DDevice918CreateRenderTargetEjj10_D3DFORMAT20_D3DMULTISAMPLE_TYPEjiPP17IDirect3DSurface9PPvPc.stub = false;
-__ZN16IDirect3DDevice918CreateRenderTargetEjj10_D3DFORMAT20_D3DMULTISAMPLE_TYPEjiPP17IDirect3DSurface9PPvPc.sig = 'v';
+__ZN16IDirect3DDevice918CreateRenderTargetEjj10_D3DFORMAT20_D3DMULTISAMPLE_TYPEjiPP17IDirect3DSurface9PPvPc.stub = true;
 
 function __ZN16IDirect3DDevice918CreateVertexBufferEjjj8_D3DPOOLPP22IDirect3DVertexBuffer9PPv(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice918CreateVertexBufferEjjj8_D3DPOOLPP22IDirect3DVertexBuffer9PPv"] || wasmImports["_ZN16IDirect3DDevice918CreateVertexBufferEjjj8_D3DPOOLPP22IDirect3DVertexBuffer9PPv"].stub) abort("external symbol '_ZN16IDirect3DDevice918CreateVertexBufferEjjj8_D3DPOOLPP22IDirect3DVertexBuffer9PPv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice918CreateVertexBufferEjjj8_D3DPOOLPP22IDirect3DVertexBuffer9PPv"](...args);
 }
 
-__ZN16IDirect3DDevice918CreateVertexBufferEjjj8_D3DPOOLPP22IDirect3DVertexBuffer9PPv.stub = false;
-__ZN16IDirect3DDevice918CreateVertexBufferEjjj8_D3DPOOLPP22IDirect3DVertexBuffer9PPv.sig = 'v';
+__ZN16IDirect3DDevice918CreateVertexBufferEjjj8_D3DPOOLPP22IDirect3DVertexBuffer9PPv.stub = true;
 
 function __ZN16IDirect3DDevice918CreateVertexShaderEPKjPP22IDirect3DVertexShader9PKcPc(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice918CreateVertexShaderEPKjPP22IDirect3DVertexShader9PKcPc"] || wasmImports["_ZN16IDirect3DDevice918CreateVertexShaderEPKjPP22IDirect3DVertexShader9PKcPc"].stub) abort("external symbol '_ZN16IDirect3DDevice918CreateVertexShaderEPKjPP22IDirect3DVertexShader9PKcPc' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice918CreateVertexShaderEPKjPP22IDirect3DVertexShader9PKcPc"](...args);
 }
 
-__ZN16IDirect3DDevice918CreateVertexShaderEPKjPP22IDirect3DVertexShader9PKcPc.stub = false;
-__ZN16IDirect3DDevice918CreateVertexShaderEPKjPP22IDirect3DVertexShader9PKcPc.sig = 'v';
+__ZN16IDirect3DDevice918CreateVertexShaderEPKjPP22IDirect3DVertexShader9PKcPc.stub = true;
 
 function __ZN16IDirect3DDevice919CreateVolumeTextureEjjjjj10_D3DFORMAT8_D3DPOOLPP23IDirect3DVolumeTexture9PPvPc(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice919CreateVolumeTextureEjjjjj10_D3DFORMAT8_D3DPOOLPP23IDirect3DVolumeTexture9PPvPc"] || wasmImports["_ZN16IDirect3DDevice919CreateVolumeTextureEjjjjj10_D3DFORMAT8_D3DPOOLPP23IDirect3DVolumeTexture9PPvPc"].stub) abort("external symbol '_ZN16IDirect3DDevice919CreateVolumeTextureEjjjjj10_D3DFORMAT8_D3DPOOLPP23IDirect3DVolumeTexture9PPvPc' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice919CreateVolumeTextureEjjjjj10_D3DFORMAT8_D3DPOOLPP23IDirect3DVolumeTexture9PPvPc"](...args);
 }
 
-__ZN16IDirect3DDevice919CreateVolumeTextureEjjjjj10_D3DFORMAT8_D3DPOOLPP23IDirect3DVolumeTexture9PPvPc.stub = false;
-__ZN16IDirect3DDevice919CreateVolumeTextureEjjjjj10_D3DFORMAT8_D3DPOOLPP23IDirect3DVolumeTexture9PPvPc.sig = 'v';
+__ZN16IDirect3DDevice919CreateVolumeTextureEjjjjj10_D3DFORMAT8_D3DPOOLPP23IDirect3DVolumeTexture9PPvPc.stub = true;
 
 function __ZN16IDirect3DDevice919GetRenderTargetDataEP17IDirect3DSurface9S1_(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice919GetRenderTargetDataEP17IDirect3DSurface9S1_"] || wasmImports["_ZN16IDirect3DDevice919GetRenderTargetDataEP17IDirect3DSurface9S1_"].stub) abort("external symbol '_ZN16IDirect3DDevice919GetRenderTargetDataEP17IDirect3DSurface9S1_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice919GetRenderTargetDataEP17IDirect3DSurface9S1_"](...args);
 }
 
-__ZN16IDirect3DDevice919GetRenderTargetDataEP17IDirect3DSurface9S1_.stub = false;
-__ZN16IDirect3DDevice919GetRenderTargetDataEP17IDirect3DSurface9S1_.sig = 'v';
+__ZN16IDirect3DDevice919GetRenderTargetDataEP17IDirect3DSurface9S1_.stub = true;
 
 function __ZN16IDirect3DDevice920DrawIndexedPrimitiveE17_D3DPRIMITIVETYPEijjjj(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice920DrawIndexedPrimitiveE17_D3DPRIMITIVETYPEijjjj"] || wasmImports["_ZN16IDirect3DDevice920DrawIndexedPrimitiveE17_D3DPRIMITIVETYPEijjjj"].stub) abort("external symbol '_ZN16IDirect3DDevice920DrawIndexedPrimitiveE17_D3DPRIMITIVETYPEijjjj' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice920DrawIndexedPrimitiveE17_D3DPRIMITIVETYPEijjjj"](...args);
 }
 
-__ZN16IDirect3DDevice920DrawIndexedPrimitiveE17_D3DPRIMITIVETYPEijjjj.stub = false;
-__ZN16IDirect3DDevice920DrawIndexedPrimitiveE17_D3DPRIMITIVETYPEijjjj.sig = 'v';
+__ZN16IDirect3DDevice920DrawIndexedPrimitiveE17_D3DPRIMITIVETYPEijjjj.stub = true;
 
 function __ZN16IDirect3DDevice920SetTextureStageStateEj25_D3DTEXTURESTAGESTATETYPEj(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice920SetTextureStageStateEj25_D3DTEXTURESTAGESTATETYPEj"] || wasmImports["_ZN16IDirect3DDevice920SetTextureStageStateEj25_D3DTEXTURESTAGESTATETYPEj"].stub) abort("external symbol '_ZN16IDirect3DDevice920SetTextureStageStateEj25_D3DTEXTURESTAGESTATETYPEj' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice920SetTextureStageStateEj25_D3DTEXTURESTAGESTATETYPEj"](...args);
 }
 
-__ZN16IDirect3DDevice920SetTextureStageStateEj25_D3DTEXTURESTAGESTATETYPEj.stub = false;
-__ZN16IDirect3DDevice920SetTextureStageStateEj25_D3DTEXTURESTAGESTATETYPEj.sig = 'v';
+__ZN16IDirect3DDevice920SetTextureStageStateEj25_D3DTEXTURESTAGESTATETYPEj.stub = true;
 
 function __ZN16IDirect3DDevice920TestCooperativeLevelEv(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice920TestCooperativeLevelEv"] || wasmImports["_ZN16IDirect3DDevice920TestCooperativeLevelEv"].stub) abort("external symbol '_ZN16IDirect3DDevice920TestCooperativeLevelEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice920TestCooperativeLevelEv"](...args);
 }
 
-__ZN16IDirect3DDevice920TestCooperativeLevelEv.stub = false;
-__ZN16IDirect3DDevice920TestCooperativeLevelEv.sig = 'v';
+__ZN16IDirect3DDevice920TestCooperativeLevelEv.stub = true;
 
 function __ZN16IDirect3DDevice921EvictManagedResourcesEv(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice921EvictManagedResourcesEv"] || wasmImports["_ZN16IDirect3DDevice921EvictManagedResourcesEv"].stub) abort("external symbol '_ZN16IDirect3DDevice921EvictManagedResourcesEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice921EvictManagedResourcesEv"](...args);
 }
 
-__ZN16IDirect3DDevice921EvictManagedResourcesEv.stub = false;
-__ZN16IDirect3DDevice921EvictManagedResourcesEv.sig = 'v';
+__ZN16IDirect3DDevice921EvictManagedResourcesEv.stub = true;
 
 function __ZN16IDirect3DDevice922AcquireThreadOwnershipEv(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice922AcquireThreadOwnershipEv"] || wasmImports["_ZN16IDirect3DDevice922AcquireThreadOwnershipEv"].stub) abort("external symbol '_ZN16IDirect3DDevice922AcquireThreadOwnershipEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice922AcquireThreadOwnershipEv"](...args);
 }
 
-__ZN16IDirect3DDevice922AcquireThreadOwnershipEv.stub = false;
-__ZN16IDirect3DDevice922AcquireThreadOwnershipEv.sig = 'v';
+__ZN16IDirect3DDevice922AcquireThreadOwnershipEv.stub = true;
 
 function __ZN16IDirect3DDevice922GetDepthStencilSurfaceEPP17IDirect3DSurface9(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice922GetDepthStencilSurfaceEPP17IDirect3DSurface9"] || wasmImports["_ZN16IDirect3DDevice922GetDepthStencilSurfaceEPP17IDirect3DSurface9"].stub) abort("external symbol '_ZN16IDirect3DDevice922GetDepthStencilSurfaceEPP17IDirect3DSurface9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice922GetDepthStencilSurfaceEPP17IDirect3DSurface9"](...args);
 }
 
-__ZN16IDirect3DDevice922GetDepthStencilSurfaceEPP17IDirect3DSurface9.stub = false;
-__ZN16IDirect3DDevice922GetDepthStencilSurfaceEPP17IDirect3DSurface9.sig = 'v';
+__ZN16IDirect3DDevice922GetDepthStencilSurfaceEPP17IDirect3DSurface9.stub = true;
 
 function __ZN16IDirect3DDevice922ReleaseThreadOwnershipEv(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice922ReleaseThreadOwnershipEv"] || wasmImports["_ZN16IDirect3DDevice922ReleaseThreadOwnershipEv"].stub) abort("external symbol '_ZN16IDirect3DDevice922ReleaseThreadOwnershipEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice922ReleaseThreadOwnershipEv"](...args);
 }
 
-__ZN16IDirect3DDevice922ReleaseThreadOwnershipEv.stub = false;
-__ZN16IDirect3DDevice922ReleaseThreadOwnershipEv.sig = 'v';
+__ZN16IDirect3DDevice922ReleaseThreadOwnershipEv.stub = true;
 
 function __ZN16IDirect3DDevice922SetDepthStencilSurfaceEP17IDirect3DSurface9(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice922SetDepthStencilSurfaceEP17IDirect3DSurface9"] || wasmImports["_ZN16IDirect3DDevice922SetDepthStencilSurfaceEP17IDirect3DSurface9"].stub) abort("external symbol '_ZN16IDirect3DDevice922SetDepthStencilSurfaceEP17IDirect3DSurface9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice922SetDepthStencilSurfaceEP17IDirect3DSurface9"](...args);
 }
 
-__ZN16IDirect3DDevice922SetDepthStencilSurfaceEP17IDirect3DSurface9.stub = false;
-__ZN16IDirect3DDevice922SetDepthStencilSurfaceEP17IDirect3DSurface9.sig = 'v';
+__ZN16IDirect3DDevice922SetDepthStencilSurfaceEP17IDirect3DSurface9.stub = true;
 
 function __ZN16IDirect3DDevice923CreateVertexDeclarationEPK18_D3DVERTEXELEMENT9PP27IDirect3DVertexDeclaration9(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice923CreateVertexDeclarationEPK18_D3DVERTEXELEMENT9PP27IDirect3DVertexDeclaration9"] || wasmImports["_ZN16IDirect3DDevice923CreateVertexDeclarationEPK18_D3DVERTEXELEMENT9PP27IDirect3DVertexDeclaration9"].stub) abort("external symbol '_ZN16IDirect3DDevice923CreateVertexDeclarationEPK18_D3DVERTEXELEMENT9PP27IDirect3DVertexDeclaration9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice923CreateVertexDeclarationEPK18_D3DVERTEXELEMENT9PP27IDirect3DVertexDeclaration9"](...args);
 }
 
-__ZN16IDirect3DDevice923CreateVertexDeclarationEPK18_D3DVERTEXELEMENT9PP27IDirect3DVertexDeclaration9.stub = false;
-__ZN16IDirect3DDevice923CreateVertexDeclarationEPK18_D3DVERTEXELEMENT9PP27IDirect3DVertexDeclaration9.sig = 'v';
+__ZN16IDirect3DDevice923CreateVertexDeclarationEPK18_D3DVERTEXELEMENT9PP27IDirect3DVertexDeclaration9.stub = true;
 
 function __ZN16IDirect3DDevice923SetPixelShaderConstantBEjPKij(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice923SetPixelShaderConstantBEjPKij"] || wasmImports["_ZN16IDirect3DDevice923SetPixelShaderConstantBEjPKij"].stub) abort("external symbol '_ZN16IDirect3DDevice923SetPixelShaderConstantBEjPKij' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice923SetPixelShaderConstantBEjPKij"](...args);
 }
 
-__ZN16IDirect3DDevice923SetPixelShaderConstantBEjPKij.stub = false;
-__ZN16IDirect3DDevice923SetPixelShaderConstantBEjPKij.sig = 'v';
+__ZN16IDirect3DDevice923SetPixelShaderConstantBEjPKij.stub = true;
 
 function __ZN16IDirect3DDevice923SetPixelShaderConstantIEjPKij(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice923SetPixelShaderConstantIEjPKij"] || wasmImports["_ZN16IDirect3DDevice923SetPixelShaderConstantIEjPKij"].stub) abort("external symbol '_ZN16IDirect3DDevice923SetPixelShaderConstantIEjPKij' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice923SetPixelShaderConstantIEjPKij"](...args);
 }
 
-__ZN16IDirect3DDevice923SetPixelShaderConstantIEjPKij.stub = false;
-__ZN16IDirect3DDevice923SetPixelShaderConstantIEjPKij.sig = 'v';
+__ZN16IDirect3DDevice923SetPixelShaderConstantIEjPKij.stub = true;
 
 function __ZN16IDirect3DDevice925CreateDepthStencilSurfaceEjj10_D3DFORMAT20_D3DMULTISAMPLE_TYPEjiPP17IDirect3DSurface9PPv(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice925CreateDepthStencilSurfaceEjj10_D3DFORMAT20_D3DMULTISAMPLE_TYPEjiPP17IDirect3DSurface9PPv"] || wasmImports["_ZN16IDirect3DDevice925CreateDepthStencilSurfaceEjj10_D3DFORMAT20_D3DMULTISAMPLE_TYPEjiPP17IDirect3DSurface9PPv"].stub) abort("external symbol '_ZN16IDirect3DDevice925CreateDepthStencilSurfaceEjj10_D3DFORMAT20_D3DMULTISAMPLE_TYPEjiPP17IDirect3DSurface9PPv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice925CreateDepthStencilSurfaceEjj10_D3DFORMAT20_D3DMULTISAMPLE_TYPEjiPP17IDirect3DSurface9PPv"](...args);
 }
 
-__ZN16IDirect3DDevice925CreateDepthStencilSurfaceEjj10_D3DFORMAT20_D3DMULTISAMPLE_TYPEjiPP17IDirect3DSurface9PPv.stub = false;
-__ZN16IDirect3DDevice925CreateDepthStencilSurfaceEjj10_D3DFORMAT20_D3DMULTISAMPLE_TYPEjiPP17IDirect3DSurface9PPv.sig = 'v';
+__ZN16IDirect3DDevice925CreateDepthStencilSurfaceEjj10_D3DFORMAT20_D3DMULTISAMPLE_TYPEjiPP17IDirect3DSurface9PPv.stub = true;
 
 function __ZN16IDirect3DDevice927CreateOffscreenPlainSurfaceEjj10_D3DFORMAT8_D3DPOOLPP17IDirect3DSurface9PPv(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice927CreateOffscreenPlainSurfaceEjj10_D3DFORMAT8_D3DPOOLPP17IDirect3DSurface9PPv"] || wasmImports["_ZN16IDirect3DDevice927CreateOffscreenPlainSurfaceEjj10_D3DFORMAT8_D3DPOOLPP17IDirect3DSurface9PPv"].stub) abort("external symbol '_ZN16IDirect3DDevice927CreateOffscreenPlainSurfaceEjj10_D3DFORMAT8_D3DPOOLPP17IDirect3DSurface9PPv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice927CreateOffscreenPlainSurfaceEjj10_D3DFORMAT8_D3DPOOLPP17IDirect3DSurface9PPv"](...args);
 }
 
-__ZN16IDirect3DDevice927CreateOffscreenPlainSurfaceEjj10_D3DFORMAT8_D3DPOOLPP17IDirect3DSurface9PPv.stub = false;
-__ZN16IDirect3DDevice927CreateOffscreenPlainSurfaceEjj10_D3DFORMAT8_D3DPOOLPP17IDirect3DSurface9PPv.sig = 'v';
+__ZN16IDirect3DDevice927CreateOffscreenPlainSurfaceEjj10_D3DFORMAT8_D3DPOOLPP17IDirect3DSurface9PPv.stub = true;
 
 function __ZN16IDirect3DDevice95ClearEjPK8_D3DRECTjjfj(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice95ClearEjPK8_D3DRECTjjfj"] || wasmImports["_ZN16IDirect3DDevice95ClearEjPK8_D3DRECTjjfj"].stub) abort("external symbol '_ZN16IDirect3DDevice95ClearEjPK8_D3DRECTjjfj' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice95ClearEjPK8_D3DRECTjjfj"](...args);
 }
 
-__ZN16IDirect3DDevice95ClearEjPK8_D3DRECTjjfj.stub = false;
-__ZN16IDirect3DDevice95ClearEjPK8_D3DRECTjjfj.sig = 'v';
+__ZN16IDirect3DDevice95ClearEjPK8_D3DRECTjjfj.stub = true;
 
 function __ZN16IDirect3DDevice95ResetEP23_D3DPRESENT_PARAMETERS_(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice95ResetEP23_D3DPRESENT_PARAMETERS_"] || wasmImports["_ZN16IDirect3DDevice95ResetEP23_D3DPRESENT_PARAMETERS_"].stub) abort("external symbol '_ZN16IDirect3DDevice95ResetEP23_D3DPRESENT_PARAMETERS_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice95ResetEP23_D3DPRESENT_PARAMETERS_"](...args);
 }
 
-__ZN16IDirect3DDevice95ResetEP23_D3DPRESENT_PARAMETERS_.stub = false;
-__ZN16IDirect3DDevice95ResetEP23_D3DPRESENT_PARAMETERS_.sig = 'v';
+__ZN16IDirect3DDevice95ResetEP23_D3DPRESENT_PARAMETERS_.stub = true;
 
 function __ZN16IDirect3DDevice97PresentEPK5_RECTS2_PvPK7RGNDATA(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice97PresentEPK5_RECTS2_PvPK7RGNDATA"] || wasmImports["_ZN16IDirect3DDevice97PresentEPK5_RECTS2_PvPK7RGNDATA"].stub) abort("external symbol '_ZN16IDirect3DDevice97PresentEPK5_RECTS2_PvPK7RGNDATA' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice97PresentEPK5_RECTS2_PvPK7RGNDATA"](...args);
 }
 
-__ZN16IDirect3DDevice97PresentEPK5_RECTS2_PvPK7RGNDATA.stub = false;
-__ZN16IDirect3DDevice97PresentEPK5_RECTS2_PvPK7RGNDATA.sig = 'v';
+__ZN16IDirect3DDevice97PresentEPK5_RECTS2_PvPK7RGNDATA.stub = true;
 
 function __ZN16IDirect3DDevice98EndSceneEv(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice98EndSceneEv"] || wasmImports["_ZN16IDirect3DDevice98EndSceneEv"].stub) abort("external symbol '_ZN16IDirect3DDevice98EndSceneEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice98EndSceneEv"](...args);
 }
 
-__ZN16IDirect3DDevice98EndSceneEv.stub = false;
-__ZN16IDirect3DDevice98EndSceneEv.sig = 'v';
+__ZN16IDirect3DDevice98EndSceneEv.stub = true;
 
 function __ZN16IDirect3DDevice98SetLightEjPK10_D3DLIGHT9(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice98SetLightEjPK10_D3DLIGHT9"] || wasmImports["_ZN16IDirect3DDevice98SetLightEjPK10_D3DLIGHT9"].stub) abort("external symbol '_ZN16IDirect3DDevice98SetLightEjPK10_D3DLIGHT9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice98SetLightEjPK10_D3DLIGHT9"](...args);
 }
 
-__ZN16IDirect3DDevice98SetLightEjPK10_D3DLIGHT9.stub = false;
-__ZN16IDirect3DDevice98SetLightEjPK10_D3DLIGHT9.sig = 'v';
+__ZN16IDirect3DDevice98SetLightEjPK10_D3DLIGHT9.stub = true;
 
 function __ZN16IDirect3DDevice9D0Ev(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice9D0Ev"] || wasmImports["_ZN16IDirect3DDevice9D0Ev"].stub) abort("external symbol '_ZN16IDirect3DDevice9D0Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice9D0Ev"](...args);
 }
 
-__ZN16IDirect3DDevice9D0Ev.stub = false;
-__ZN16IDirect3DDevice9D0Ev.sig = 'v';
+__ZN16IDirect3DDevice9D0Ev.stub = true;
 
 function __ZN16IDirect3DDevice9D1Ev(...args) {
   if (!wasmImports["_ZN16IDirect3DDevice9D1Ev"] || wasmImports["_ZN16IDirect3DDevice9D1Ev"].stub) abort("external symbol '_ZN16IDirect3DDevice9D1Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN16IDirect3DDevice9D1Ev"](...args);
 }
 
-__ZN16IDirect3DDevice9D1Ev.stub = false;
-__ZN16IDirect3DDevice9D1Ev.sig = 'v';
+__ZN16IDirect3DDevice9D1Ev.stub = true;
 
-function __ZN16IVP_Cache_Object19update_cache_objectEv(...args) {
-  if (!wasmImports["_ZN16IVP_Cache_Object19update_cache_objectEv"] || wasmImports["_ZN16IVP_Cache_Object19update_cache_objectEv"].stub) abort("external symbol '_ZN16IVP_Cache_Object19update_cache_objectEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN16IVP_Cache_Object19update_cache_objectEv"](...args);
-}
+function __ZN16IVP_Cache_Object19update_cache_objectEv(...args) { return 0; }
 
 __ZN16IVP_Cache_Object19update_cache_objectEv.stub = false;
 __ZN16IVP_Cache_Object19update_cache_objectEv.sig = 'v';
 
-function __ZN16IVP_Compact_Edge10next_tableE(...args) {
-  // STUB: IVP_Compact_Edge::next_table — data symbol, returns 0
-  return 0;
-}
+function __ZN16IVP_Compact_Edge10next_tableE(...args) { return 0; }
 
 __ZN16IVP_Compact_Edge10next_tableE.stub = false;
-__ZN16IVP_Compact_Edge10next_tableE.sig = 'v'; // void return, no args
+__ZN16IVP_Compact_Edge10next_tableE.sig = 'v';
 
-function __ZN16IVP_Compact_Edge10prev_tableE(...args) {
-  if (!wasmImports["_ZN16IVP_Compact_Edge10prev_tableE"] || wasmImports["_ZN16IVP_Compact_Edge10prev_tableE"].stub) abort("external symbol '_ZN16IVP_Compact_Edge10prev_tableE' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN16IVP_Compact_Edge10prev_tableE"](...args);
-}
+function __ZN16IVP_Compact_Edge10prev_tableE(...args) { return 0; }
 
 __ZN16IVP_Compact_Edge10prev_tableE.stub = false;
 __ZN16IVP_Compact_Edge10prev_tableE.sig = 'v';
 
-function __ZN16IVP_Time_Manager12remove_eventEP14IVP_Time_Event(...args) {
-  if (!wasmImports["_ZN16IVP_Time_Manager12remove_eventEP14IVP_Time_Event"] || wasmImports["_ZN16IVP_Time_Manager12remove_eventEP14IVP_Time_Event"].stub) abort("external symbol '_ZN16IVP_Time_Manager12remove_eventEP14IVP_Time_Event' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN16IVP_Time_Manager12remove_eventEP14IVP_Time_Event"](...args);
-}
+function __ZN16IVP_Time_Manager12remove_eventEP14IVP_Time_Event(...args) { return 0; }
 
 __ZN16IVP_Time_Manager12remove_eventEP14IVP_Time_Event.stub = false;
 __ZN16IVP_Time_Manager12remove_eventEP14IVP_Time_Event.sig = 'v';
@@ -5310,117 +5112,94 @@ function __ZN17CThreadSpinRWLock15SpinLockForReadEv(...args) {
   return wasmImports["_ZN17CThreadSpinRWLock15SpinLockForReadEv"](...args);
 }
 
-__ZN17CThreadSpinRWLock15SpinLockForReadEv.stub = false;
-__ZN17CThreadSpinRWLock15SpinLockForReadEv.sig = 'v';
+__ZN17CThreadSpinRWLock15SpinLockForReadEv.stub = true;
 
 function __ZN17CThreadSpinRWLock16SpinLockForWriteEv(...args) {
   if (!wasmImports["_ZN17CThreadSpinRWLock16SpinLockForWriteEv"] || wasmImports["_ZN17CThreadSpinRWLock16SpinLockForWriteEv"].stub) abort("external symbol '_ZN17CThreadSpinRWLock16SpinLockForWriteEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN17CThreadSpinRWLock16SpinLockForWriteEv"](...args);
 }
 
-__ZN17CThreadSpinRWLock16SpinLockForWriteEv.stub = false;
-__ZN17CThreadSpinRWLock16SpinLockForWriteEv.sig = 'v';
+__ZN17CThreadSpinRWLock16SpinLockForWriteEv.stub = true;
 
 function __ZN17CThreadSyncObjectD2Ev(...args) {
   if (!wasmImports["_ZN17CThreadSyncObjectD2Ev"] || wasmImports["_ZN17CThreadSyncObjectD2Ev"].stub) abort("external symbol '_ZN17CThreadSyncObjectD2Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN17CThreadSyncObjectD2Ev"](...args);
 }
 
-__ZN17CThreadSyncObjectD2Ev.stub = false;
-__ZN17CThreadSyncObjectD2Ev.sig = 'v';
+__ZN17CThreadSyncObjectD2Ev.stub = true;
 
 function __ZN17IDirect3DSurface910UnlockRectEv(...args) {
   if (!wasmImports["_ZN17IDirect3DSurface910UnlockRectEv"] || wasmImports["_ZN17IDirect3DSurface910UnlockRectEv"].stub) abort("external symbol '_ZN17IDirect3DSurface910UnlockRectEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN17IDirect3DSurface910UnlockRectEv"](...args);
 }
 
-__ZN17IDirect3DSurface910UnlockRectEv.stub = false;
-__ZN17IDirect3DSurface910UnlockRectEv.sig = 'v';
+__ZN17IDirect3DSurface910UnlockRectEv.stub = true;
 
 function __ZN17IDirect3DSurface97GetDescEP16_D3DSURFACE_DESC(...args) {
   if (!wasmImports["_ZN17IDirect3DSurface97GetDescEP16_D3DSURFACE_DESC"] || wasmImports["_ZN17IDirect3DSurface97GetDescEP16_D3DSURFACE_DESC"].stub) abort("external symbol '_ZN17IDirect3DSurface97GetDescEP16_D3DSURFACE_DESC' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN17IDirect3DSurface97GetDescEP16_D3DSURFACE_DESC"](...args);
 }
 
-__ZN17IDirect3DSurface97GetDescEP16_D3DSURFACE_DESC.stub = false;
-__ZN17IDirect3DSurface97GetDescEP16_D3DSURFACE_DESC.sig = 'v';
+__ZN17IDirect3DSurface97GetDescEP16_D3DSURFACE_DESC.stub = true;
 
 function __ZN17IDirect3DSurface98LockRectEP15_D3DLOCKED_RECTPK5_RECTj(...args) {
   if (!wasmImports["_ZN17IDirect3DSurface98LockRectEP15_D3DLOCKED_RECTPK5_RECTj"] || wasmImports["_ZN17IDirect3DSurface98LockRectEP15_D3DLOCKED_RECTPK5_RECTj"].stub) abort("external symbol '_ZN17IDirect3DSurface98LockRectEP15_D3DLOCKED_RECTPK5_RECTj' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN17IDirect3DSurface98LockRectEP15_D3DLOCKED_RECTPK5_RECTj"](...args);
 }
 
-__ZN17IDirect3DSurface98LockRectEP15_D3DLOCKED_RECTPK5_RECTj.stub = false;
-__ZN17IDirect3DSurface98LockRectEP15_D3DLOCKED_RECTPK5_RECTj.sig = 'v';
+__ZN17IDirect3DSurface98LockRectEP15_D3DLOCKED_RECTPK5_RECTj.stub = true;
 
 function __ZN17IDirect3DSurface9D0Ev(...args) {
   if (!wasmImports["_ZN17IDirect3DSurface9D0Ev"] || wasmImports["_ZN17IDirect3DSurface9D0Ev"].stub) abort("external symbol '_ZN17IDirect3DSurface9D0Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN17IDirect3DSurface9D0Ev"](...args);
 }
 
-__ZN17IDirect3DSurface9D0Ev.stub = false;
-__ZN17IDirect3DSurface9D0Ev.sig = 'v';
+__ZN17IDirect3DSurface9D0Ev.stub = true;
 
 function __ZN17IDirect3DSurface9D1Ev(...args) {
   if (!wasmImports["_ZN17IDirect3DSurface9D1Ev"] || wasmImports["_ZN17IDirect3DSurface9D1Ev"].stub) abort("external symbol '_ZN17IDirect3DSurface9D1Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN17IDirect3DSurface9D1Ev"](...args);
 }
 
-__ZN17IDirect3DSurface9D1Ev.stub = false;
-__ZN17IDirect3DSurface9D1Ev.sig = 'v';
+__ZN17IDirect3DSurface9D1Ev.stub = true;
 
 function __ZN17IDirect3DTexture915GetSurfaceLevelEjPP17IDirect3DSurface9(...args) {
   if (!wasmImports["_ZN17IDirect3DTexture915GetSurfaceLevelEjPP17IDirect3DSurface9"] || wasmImports["_ZN17IDirect3DTexture915GetSurfaceLevelEjPP17IDirect3DSurface9"].stub) abort("external symbol '_ZN17IDirect3DTexture915GetSurfaceLevelEjPP17IDirect3DSurface9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN17IDirect3DTexture915GetSurfaceLevelEjPP17IDirect3DSurface9"](...args);
 }
 
-__ZN17IDirect3DTexture915GetSurfaceLevelEjPP17IDirect3DSurface9.stub = false;
-__ZN17IDirect3DTexture915GetSurfaceLevelEjPP17IDirect3DSurface9.sig = 'v';
+__ZN17IDirect3DTexture915GetSurfaceLevelEjPP17IDirect3DSurface9.stub = true;
 
 function __ZN17IDirect3DTexture9D0Ev(...args) {
   if (!wasmImports["_ZN17IDirect3DTexture9D0Ev"] || wasmImports["_ZN17IDirect3DTexture9D0Ev"].stub) abort("external symbol '_ZN17IDirect3DTexture9D0Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN17IDirect3DTexture9D0Ev"](...args);
 }
 
-__ZN17IDirect3DTexture9D0Ev.stub = false;
-__ZN17IDirect3DTexture9D0Ev.sig = 'v';
+__ZN17IDirect3DTexture9D0Ev.stub = true;
 
 function __ZN17IDirect3DTexture9D1Ev(...args) {
   if (!wasmImports["_ZN17IDirect3DTexture9D1Ev"] || wasmImports["_ZN17IDirect3DTexture9D1Ev"].stub) abort("external symbol '_ZN17IDirect3DTexture9D1Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN17IDirect3DTexture9D1Ev"](...args);
 }
 
-__ZN17IDirect3DTexture9D1Ev.stub = false;
-__ZN17IDirect3DTexture9D1Ev.sig = 'v';
+__ZN17IDirect3DTexture9D1Ev.stub = true;
 
-function __ZN17IVP_Contact_PointC1EP11IVP_Mindist(...args) {
-  if (!wasmImports["_ZN17IVP_Contact_PointC1EP11IVP_Mindist"] || wasmImports["_ZN17IVP_Contact_PointC1EP11IVP_Mindist"].stub) abort("external symbol '_ZN17IVP_Contact_PointC1EP11IVP_Mindist' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN17IVP_Contact_PointC1EP11IVP_Mindist"](...args);
-}
+function __ZN17IVP_Contact_PointC1EP11IVP_Mindist(...args) { return 0; }
 
 __ZN17IVP_Contact_PointC1EP11IVP_Mindist.stub = false;
 __ZN17IVP_Contact_PointC1EP11IVP_Mindist.sig = 'v';
 
-function __ZN17IVP_Contact_PointD1Ev(...args) {
-  if (!wasmImports["_ZN17IVP_Contact_PointD1Ev"] || wasmImports["_ZN17IVP_Contact_PointD1Ev"].stub) abort("external symbol '_ZN17IVP_Contact_PointD1Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN17IVP_Contact_PointD1Ev"](...args);
-}
+function __ZN17IVP_Contact_PointD1Ev(...args) { return 0; }
 
 __ZN17IVP_Contact_PointD1Ev.stub = false;
 __ZN17IVP_Contact_PointD1Ev.sig = 'v';
 
-function __ZN17IVP_U_Float_Point7normizeEv(...args) {
-  if (!wasmImports["_ZN17IVP_U_Float_Point7normizeEv"] || wasmImports["_ZN17IVP_U_Float_Point7normizeEv"].stub) abort("external symbol '_ZN17IVP_U_Float_Point7normizeEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN17IVP_U_Float_Point7normizeEv"](...args);
-}
+function __ZN17IVP_U_Float_Point7normizeEv(...args) { return 0; }
 
 __ZN17IVP_U_Float_Point7normizeEv.stub = false;
 __ZN17IVP_U_Float_Point7normizeEv.sig = 'v';
 
-function __ZN17IVP_U_Vector_Base13increment_memEv(...args) {
-  if (!wasmImports["_ZN17IVP_U_Vector_Base13increment_memEv"] || wasmImports["_ZN17IVP_U_Vector_Base13increment_memEv"].stub) abort("external symbol '_ZN17IVP_U_Vector_Base13increment_memEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN17IVP_U_Vector_Base13increment_memEv"](...args);
-}
+function __ZN17IVP_U_Vector_Base13increment_memEv(...args) { return 0; }
 
 __ZN17IVP_U_Vector_Base13increment_memEv.stub = false;
 __ZN17IVP_U_Vector_Base13increment_memEv.sig = 'v';
@@ -5430,45 +5209,35 @@ function __ZN18IDirect3DResource911SetPriorityEj(...args) {
   return wasmImports["_ZN18IDirect3DResource911SetPriorityEj"](...args);
 }
 
-__ZN18IDirect3DResource911SetPriorityEj.stub = false;
-__ZN18IDirect3DResource911SetPriorityEj.sig = 'v';
+__ZN18IDirect3DResource911SetPriorityEj.stub = true;
 
 function __ZN19GenericThreadLocals16CThreadLocalBase3SetEPv(...args) {
   if (!wasmImports["_ZN19GenericThreadLocals16CThreadLocalBase3SetEPv"] || wasmImports["_ZN19GenericThreadLocals16CThreadLocalBase3SetEPv"].stub) abort("external symbol '_ZN19GenericThreadLocals16CThreadLocalBase3SetEPv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN19GenericThreadLocals16CThreadLocalBase3SetEPv"](...args);
 }
 
-__ZN19GenericThreadLocals16CThreadLocalBase3SetEPv.stub = false;
-__ZN19GenericThreadLocals16CThreadLocalBase3SetEPv.sig = 'v';
+__ZN19GenericThreadLocals16CThreadLocalBase3SetEPv.stub = true;
 
 function __ZN19GenericThreadLocals16CThreadLocalBaseC2Ev(...args) {
   if (!wasmImports["_ZN19GenericThreadLocals16CThreadLocalBaseC2Ev"] || wasmImports["_ZN19GenericThreadLocals16CThreadLocalBaseC2Ev"].stub) abort("external symbol '_ZN19GenericThreadLocals16CThreadLocalBaseC2Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN19GenericThreadLocals16CThreadLocalBaseC2Ev"](...args);
 }
 
-__ZN19GenericThreadLocals16CThreadLocalBaseC2Ev.stub = false;
-__ZN19GenericThreadLocals16CThreadLocalBaseC2Ev.sig = 'v';
+__ZN19GenericThreadLocals16CThreadLocalBaseC2Ev.stub = true;
 
 function __ZN19GenericThreadLocals16CThreadLocalBaseD2Ev(...args) {
   if (!wasmImports["_ZN19GenericThreadLocals16CThreadLocalBaseD2Ev"] || wasmImports["_ZN19GenericThreadLocals16CThreadLocalBaseD2Ev"].stub) abort("external symbol '_ZN19GenericThreadLocals16CThreadLocalBaseD2Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN19GenericThreadLocals16CThreadLocalBaseD2Ev"](...args);
 }
 
-__ZN19GenericThreadLocals16CThreadLocalBaseD2Ev.stub = false;
-__ZN19GenericThreadLocals16CThreadLocalBaseD2Ev.sig = 'v';
+__ZN19GenericThreadLocals16CThreadLocalBaseD2Ev.stub = true;
 
-function __ZN19IVP_OV_Tree_Manager17insert_ov_elementEP14IVP_OV_ElementddP12IVP_U_VectorIS0_E(...args) {
-  if (!wasmImports["_ZN19IVP_OV_Tree_Manager17insert_ov_elementEP14IVP_OV_ElementddP12IVP_U_VectorIS0_E"] || wasmImports["_ZN19IVP_OV_Tree_Manager17insert_ov_elementEP14IVP_OV_ElementddP12IVP_U_VectorIS0_E"].stub) abort("external symbol '_ZN19IVP_OV_Tree_Manager17insert_ov_elementEP14IVP_OV_ElementddP12IVP_U_VectorIS0_E' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN19IVP_OV_Tree_Manager17insert_ov_elementEP14IVP_OV_ElementddP12IVP_U_VectorIS0_E"](...args);
-}
+function __ZN19IVP_OV_Tree_Manager17insert_ov_elementEP14IVP_OV_ElementddP12IVP_U_VectorIS0_E(...args) { return 0; }
 
 __ZN19IVP_OV_Tree_Manager17insert_ov_elementEP14IVP_OV_ElementddP12IVP_U_VectorIS0_E.stub = false;
 __ZN19IVP_OV_Tree_Manager17insert_ov_elementEP14IVP_OV_ElementddP12IVP_U_VectorIS0_E.sig = 'v';
 
-function __ZN19IVP_OV_Tree_Manager17remove_ov_elementEP14IVP_OV_Element(...args) {
-  if (!wasmImports["_ZN19IVP_OV_Tree_Manager17remove_ov_elementEP14IVP_OV_Element"] || wasmImports["_ZN19IVP_OV_Tree_Manager17remove_ov_elementEP14IVP_OV_Element"].stub) abort("external symbol '_ZN19IVP_OV_Tree_Manager17remove_ov_elementEP14IVP_OV_Element' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN19IVP_OV_Tree_Manager17remove_ov_elementEP14IVP_OV_Element"](...args);
-}
+function __ZN19IVP_OV_Tree_Manager17remove_ov_elementEP14IVP_OV_Element(...args) { return 0; }
 
 __ZN19IVP_OV_Tree_Manager17remove_ov_elementEP14IVP_OV_Element.stub = false;
 __ZN19IVP_OV_Tree_Manager17remove_ov_elementEP14IVP_OV_Element.sig = 'v';
@@ -5478,45 +5247,37 @@ function __ZN20CUniformRandomStream11RandomFloatEff(...args) {
   return wasmImports["_ZN20CUniformRandomStream11RandomFloatEff"](...args);
 }
 
-__ZN20CUniformRandomStream11RandomFloatEff.stub = false;
-__ZN20CUniformRandomStream11RandomFloatEff.sig = 'v';
+__ZN20CUniformRandomStream11RandomFloatEff.stub = true;
 
 function __ZN20CUniformRandomStream14RandomFloatExpEfff(...args) {
   if (!wasmImports["_ZN20CUniformRandomStream14RandomFloatExpEfff"] || wasmImports["_ZN20CUniformRandomStream14RandomFloatExpEfff"].stub) abort("external symbol '_ZN20CUniformRandomStream14RandomFloatExpEfff' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN20CUniformRandomStream14RandomFloatExpEfff"](...args);
 }
 
-__ZN20CUniformRandomStream14RandomFloatExpEfff.stub = false;
-__ZN20CUniformRandomStream14RandomFloatExpEfff.sig = 'v';
+__ZN20CUniformRandomStream14RandomFloatExpEfff.stub = true;
 
 function __ZN20CUniformRandomStream7SetSeedEi(...args) {
   if (!wasmImports["_ZN20CUniformRandomStream7SetSeedEi"] || wasmImports["_ZN20CUniformRandomStream7SetSeedEi"].stub) abort("external symbol '_ZN20CUniformRandomStream7SetSeedEi' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN20CUniformRandomStream7SetSeedEi"](...args);
 }
 
-__ZN20CUniformRandomStream7SetSeedEi.stub = false;
-__ZN20CUniformRandomStream7SetSeedEi.sig = 'v';
+__ZN20CUniformRandomStream7SetSeedEi.stub = true;
 
 function __ZN20CUniformRandomStream9RandomIntEii(...args) {
   if (!wasmImports["_ZN20CUniformRandomStream9RandomIntEii"] || wasmImports["_ZN20CUniformRandomStream9RandomIntEii"].stub) abort("external symbol '_ZN20CUniformRandomStream9RandomIntEii' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN20CUniformRandomStream9RandomIntEii"](...args);
 }
 
-__ZN20CUniformRandomStream9RandomIntEii.stub = false;
-__ZN20CUniformRandomStream9RandomIntEii.sig = 'v';
+__ZN20CUniformRandomStream9RandomIntEii.stub = true;
 
 function __ZN20CUniformRandomStreamC1Ev(...args) {
   if (!wasmImports["_ZN20CUniformRandomStreamC1Ev"] || wasmImports["_ZN20CUniformRandomStreamC1Ev"].stub) abort("external symbol '_ZN20CUniformRandomStreamC1Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN20CUniformRandomStreamC1Ev"](...args);
 }
 
-__ZN20CUniformRandomStreamC1Ev.stub = false;
-__ZN20CUniformRandomStreamC1Ev.sig = 'v';
+__ZN20CUniformRandomStreamC1Ev.stub = true;
 
-function __ZN20IVP_U_BigVector_Base13increment_memEv(...args) {
-  if (!wasmImports["_ZN20IVP_U_BigVector_Base13increment_memEv"] || wasmImports["_ZN20IVP_U_BigVector_Base13increment_memEv"].stub) abort("external symbol '_ZN20IVP_U_BigVector_Base13increment_memEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN20IVP_U_BigVector_Base13increment_memEv"](...args);
-}
+function __ZN20IVP_U_BigVector_Base13increment_memEv(...args) { return 0; }
 
 __ZN20IVP_U_BigVector_Base13increment_memEv.stub = false;
 __ZN20IVP_U_BigVector_Base13increment_memEv.sig = 'v';
@@ -5526,221 +5287,189 @@ function __ZN21CGaussianRandomStream11RandomFloatEff(...args) {
   return wasmImports["_ZN21CGaussianRandomStream11RandomFloatEff"](...args);
 }
 
-__ZN21CGaussianRandomStream11RandomFloatEff.stub = false;
-__ZN21CGaussianRandomStream11RandomFloatEff.sig = 'v';
+__ZN21CGaussianRandomStream11RandomFloatEff.stub = true;
 
 function __ZN21CGaussianRandomStream14AttachToStreamEP20IUniformRandomStream(...args) {
   if (!wasmImports["_ZN21CGaussianRandomStream14AttachToStreamEP20IUniformRandomStream"] || wasmImports["_ZN21CGaussianRandomStream14AttachToStreamEP20IUniformRandomStream"].stub) abort("external symbol '_ZN21CGaussianRandomStream14AttachToStreamEP20IUniformRandomStream' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN21CGaussianRandomStream14AttachToStreamEP20IUniformRandomStream"](...args);
 }
 
-__ZN21CGaussianRandomStream14AttachToStreamEP20IUniformRandomStream.stub = false;
-__ZN21CGaussianRandomStream14AttachToStreamEP20IUniformRandomStream.sig = 'v';
+__ZN21CGaussianRandomStream14AttachToStreamEP20IUniformRandomStream.stub = true;
 
 function __ZN21CGaussianRandomStreamC1EP20IUniformRandomStream(...args) {
   if (!wasmImports["_ZN21CGaussianRandomStreamC1EP20IUniformRandomStream"] || wasmImports["_ZN21CGaussianRandomStreamC1EP20IUniformRandomStream"].stub) abort("external symbol '_ZN21CGaussianRandomStreamC1EP20IUniformRandomStream' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN21CGaussianRandomStreamC1EP20IUniformRandomStream"](...args);
 }
 
-__ZN21CGaussianRandomStreamC1EP20IUniformRandomStream.stub = false;
-__ZN21CGaussianRandomStreamC1EP20IUniformRandomStream.sig = 'v';
+__ZN21CGaussianRandomStreamC1EP20IUniformRandomStream.stub = true;
 
 function __ZN21IDirect3DBaseTexture912GetLevelDescEjP16_D3DSURFACE_DESC(...args) {
   if (!wasmImports["_ZN21IDirect3DBaseTexture912GetLevelDescEjP16_D3DSURFACE_DESC"] || wasmImports["_ZN21IDirect3DBaseTexture912GetLevelDescEjP16_D3DSURFACE_DESC"].stub) abort("external symbol '_ZN21IDirect3DBaseTexture912GetLevelDescEjP16_D3DSURFACE_DESC' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN21IDirect3DBaseTexture912GetLevelDescEjP16_D3DSURFACE_DESC"](...args);
 }
 
-__ZN21IDirect3DBaseTexture912GetLevelDescEjP16_D3DSURFACE_DESC.stub = false;
-__ZN21IDirect3DBaseTexture912GetLevelDescEjP16_D3DSURFACE_DESC.sig = 'v';
+__ZN21IDirect3DBaseTexture912GetLevelDescEjP16_D3DSURFACE_DESC.stub = true;
 
 function __ZN21IDirect3DBaseTexture913GetLevelCountEv(...args) {
   if (!wasmImports["_ZN21IDirect3DBaseTexture913GetLevelCountEv"] || wasmImports["_ZN21IDirect3DBaseTexture913GetLevelCountEv"].stub) abort("external symbol '_ZN21IDirect3DBaseTexture913GetLevelCountEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN21IDirect3DBaseTexture913GetLevelCountEv"](...args);
 }
 
-__ZN21IDirect3DBaseTexture913GetLevelCountEv.stub = false;
-__ZN21IDirect3DBaseTexture913GetLevelCountEv.sig = 'v';
+__ZN21IDirect3DBaseTexture913GetLevelCountEv.stub = true;
 
 function __ZN21IDirect3DBaseTexture97GetTypeEv(...args) {
   if (!wasmImports["_ZN21IDirect3DBaseTexture97GetTypeEv"] || wasmImports["_ZN21IDirect3DBaseTexture97GetTypeEv"].stub) abort("external symbol '_ZN21IDirect3DBaseTexture97GetTypeEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN21IDirect3DBaseTexture97GetTypeEv"](...args);
 }
 
-__ZN21IDirect3DBaseTexture97GetTypeEv.stub = false;
-__ZN21IDirect3DBaseTexture97GetTypeEv.sig = 'v';
+__ZN21IDirect3DBaseTexture97GetTypeEv.stub = true;
 
 function __ZN21IDirect3DBaseTexture9D0Ev(...args) {
   if (!wasmImports["_ZN21IDirect3DBaseTexture9D0Ev"] || wasmImports["_ZN21IDirect3DBaseTexture9D0Ev"].stub) abort("external symbol '_ZN21IDirect3DBaseTexture9D0Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN21IDirect3DBaseTexture9D0Ev"](...args);
 }
 
-__ZN21IDirect3DBaseTexture9D0Ev.stub = false;
-__ZN21IDirect3DBaseTexture9D0Ev.sig = 'v';
+__ZN21IDirect3DBaseTexture9D0Ev.stub = true;
 
 function __ZN21IDirect3DBaseTexture9D1Ev(...args) {
   if (!wasmImports["_ZN21IDirect3DBaseTexture9D1Ev"] || wasmImports["_ZN21IDirect3DBaseTexture9D1Ev"].stub) abort("external symbol '_ZN21IDirect3DBaseTexture9D1Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN21IDirect3DBaseTexture9D1Ev"](...args);
 }
 
-__ZN21IDirect3DBaseTexture9D1Ev.stub = false;
-__ZN21IDirect3DBaseTexture9D1Ev.sig = 'v';
+__ZN21IDirect3DBaseTexture9D1Ev.stub = true;
 
 function __ZN21IDirect3DCubeTexture912GetLevelDescEjP16_D3DSURFACE_DESC(...args) {
   if (!wasmImports["_ZN21IDirect3DCubeTexture912GetLevelDescEjP16_D3DSURFACE_DESC"] || wasmImports["_ZN21IDirect3DCubeTexture912GetLevelDescEjP16_D3DSURFACE_DESC"].stub) abort("external symbol '_ZN21IDirect3DCubeTexture912GetLevelDescEjP16_D3DSURFACE_DESC' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN21IDirect3DCubeTexture912GetLevelDescEjP16_D3DSURFACE_DESC"](...args);
 }
 
-__ZN21IDirect3DCubeTexture912GetLevelDescEjP16_D3DSURFACE_DESC.stub = false;
-__ZN21IDirect3DCubeTexture912GetLevelDescEjP16_D3DSURFACE_DESC.sig = 'v';
+__ZN21IDirect3DCubeTexture912GetLevelDescEjP16_D3DSURFACE_DESC.stub = true;
 
 function __ZN21IDirect3DCubeTexture917GetCubeMapSurfaceE17_D3DCUBEMAP_FACESjPP17IDirect3DSurface9(...args) {
   if (!wasmImports["_ZN21IDirect3DCubeTexture917GetCubeMapSurfaceE17_D3DCUBEMAP_FACESjPP17IDirect3DSurface9"] || wasmImports["_ZN21IDirect3DCubeTexture917GetCubeMapSurfaceE17_D3DCUBEMAP_FACESjPP17IDirect3DSurface9"].stub) abort("external symbol '_ZN21IDirect3DCubeTexture917GetCubeMapSurfaceE17_D3DCUBEMAP_FACESjPP17IDirect3DSurface9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN21IDirect3DCubeTexture917GetCubeMapSurfaceE17_D3DCUBEMAP_FACESjPP17IDirect3DSurface9"](...args);
 }
 
-__ZN21IDirect3DCubeTexture917GetCubeMapSurfaceE17_D3DCUBEMAP_FACESjPP17IDirect3DSurface9.stub = false;
-__ZN21IDirect3DCubeTexture917GetCubeMapSurfaceE17_D3DCUBEMAP_FACESjPP17IDirect3DSurface9.sig = 'v';
+__ZN21IDirect3DCubeTexture917GetCubeMapSurfaceE17_D3DCUBEMAP_FACESjPP17IDirect3DSurface9.stub = true;
 
 function __ZN21IDirect3DCubeTexture9D0Ev(...args) {
   if (!wasmImports["_ZN21IDirect3DCubeTexture9D0Ev"] || wasmImports["_ZN21IDirect3DCubeTexture9D0Ev"].stub) abort("external symbol '_ZN21IDirect3DCubeTexture9D0Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN21IDirect3DCubeTexture9D0Ev"](...args);
 }
 
-__ZN21IDirect3DCubeTexture9D0Ev.stub = false;
-__ZN21IDirect3DCubeTexture9D0Ev.sig = 'v';
+__ZN21IDirect3DCubeTexture9D0Ev.stub = true;
 
 function __ZN21IDirect3DCubeTexture9D1Ev(...args) {
   if (!wasmImports["_ZN21IDirect3DCubeTexture9D1Ev"] || wasmImports["_ZN21IDirect3DCubeTexture9D1Ev"].stub) abort("external symbol '_ZN21IDirect3DCubeTexture9D1Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN21IDirect3DCubeTexture9D1Ev"](...args);
 }
 
-__ZN21IDirect3DCubeTexture9D1Ev.stub = false;
-__ZN21IDirect3DCubeTexture9D1Ev.sig = 'v';
+__ZN21IDirect3DCubeTexture9D1Ev.stub = true;
 
 function __ZN21IDirect3DIndexBuffer916UnlockActualSizeEjPKv(...args) {
   if (!wasmImports["_ZN21IDirect3DIndexBuffer916UnlockActualSizeEjPKv"] || wasmImports["_ZN21IDirect3DIndexBuffer916UnlockActualSizeEjPKv"].stub) abort("external symbol '_ZN21IDirect3DIndexBuffer916UnlockActualSizeEjPKv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN21IDirect3DIndexBuffer916UnlockActualSizeEjPKv"](...args);
 }
 
-__ZN21IDirect3DIndexBuffer916UnlockActualSizeEjPKv.stub = false;
-__ZN21IDirect3DIndexBuffer916UnlockActualSizeEjPKv.sig = 'v';
+__ZN21IDirect3DIndexBuffer916UnlockActualSizeEjPKv.stub = true;
 
 function __ZN21IDirect3DIndexBuffer94LockEjjPPvj(...args) {
   if (!wasmImports["_ZN21IDirect3DIndexBuffer94LockEjjPPvj"] || wasmImports["_ZN21IDirect3DIndexBuffer94LockEjjPPvj"].stub) abort("external symbol '_ZN21IDirect3DIndexBuffer94LockEjjPPvj' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN21IDirect3DIndexBuffer94LockEjjPPvj"](...args);
 }
 
-__ZN21IDirect3DIndexBuffer94LockEjjPPvj.stub = false;
-__ZN21IDirect3DIndexBuffer94LockEjjPPvj.sig = 'v';
+__ZN21IDirect3DIndexBuffer94LockEjjPPvj.stub = true;
 
 function __ZN21IDirect3DIndexBuffer96UnlockEv(...args) {
   if (!wasmImports["_ZN21IDirect3DIndexBuffer96UnlockEv"] || wasmImports["_ZN21IDirect3DIndexBuffer96UnlockEv"].stub) abort("external symbol '_ZN21IDirect3DIndexBuffer96UnlockEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN21IDirect3DIndexBuffer96UnlockEv"](...args);
 }
 
-__ZN21IDirect3DIndexBuffer96UnlockEv.stub = false;
-__ZN21IDirect3DIndexBuffer96UnlockEv.sig = 'v';
+__ZN21IDirect3DIndexBuffer96UnlockEv.stub = true;
 
 function __ZN21IDirect3DIndexBuffer9D0Ev(...args) {
   if (!wasmImports["_ZN21IDirect3DIndexBuffer9D0Ev"] || wasmImports["_ZN21IDirect3DIndexBuffer9D0Ev"].stub) abort("external symbol '_ZN21IDirect3DIndexBuffer9D0Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN21IDirect3DIndexBuffer9D0Ev"](...args);
 }
 
-__ZN21IDirect3DIndexBuffer9D0Ev.stub = false;
-__ZN21IDirect3DIndexBuffer9D0Ev.sig = 'v';
+__ZN21IDirect3DIndexBuffer9D0Ev.stub = true;
 
 function __ZN21IDirect3DIndexBuffer9D1Ev(...args) {
   if (!wasmImports["_ZN21IDirect3DIndexBuffer9D1Ev"] || wasmImports["_ZN21IDirect3DIndexBuffer9D1Ev"].stub) abort("external symbol '_ZN21IDirect3DIndexBuffer9D1Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN21IDirect3DIndexBuffer9D1Ev"](...args);
 }
 
-__ZN21IDirect3DIndexBuffer9D1Ev.stub = false;
-__ZN21IDirect3DIndexBuffer9D1Ev.sig = 'v';
+__ZN21IDirect3DIndexBuffer9D1Ev.stub = true;
 
 function __ZN21IDirect3DPixelShader9D0Ev(...args) {
   if (!wasmImports["_ZN21IDirect3DPixelShader9D0Ev"] || wasmImports["_ZN21IDirect3DPixelShader9D0Ev"].stub) abort("external symbol '_ZN21IDirect3DPixelShader9D0Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN21IDirect3DPixelShader9D0Ev"](...args);
 }
 
-__ZN21IDirect3DPixelShader9D0Ev.stub = false;
-__ZN21IDirect3DPixelShader9D0Ev.sig = 'v';
+__ZN21IDirect3DPixelShader9D0Ev.stub = true;
 
 function __ZN21IDirect3DPixelShader9D1Ev(...args) {
   if (!wasmImports["_ZN21IDirect3DPixelShader9D1Ev"] || wasmImports["_ZN21IDirect3DPixelShader9D1Ev"].stub) abort("external symbol '_ZN21IDirect3DPixelShader9D1Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN21IDirect3DPixelShader9D1Ev"](...args);
 }
 
-__ZN21IDirect3DPixelShader9D1Ev.stub = false;
-__ZN21IDirect3DPixelShader9D1Ev.sig = 'v';
+__ZN21IDirect3DPixelShader9D1Ev.stub = true;
 
 function __ZN22IDirect3DVertexBuffer916UnlockActualSizeEjPKv(...args) {
   if (!wasmImports["_ZN22IDirect3DVertexBuffer916UnlockActualSizeEjPKv"] || wasmImports["_ZN22IDirect3DVertexBuffer916UnlockActualSizeEjPKv"].stub) abort("external symbol '_ZN22IDirect3DVertexBuffer916UnlockActualSizeEjPKv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN22IDirect3DVertexBuffer916UnlockActualSizeEjPKv"](...args);
 }
 
-__ZN22IDirect3DVertexBuffer916UnlockActualSizeEjPKv.stub = false;
-__ZN22IDirect3DVertexBuffer916UnlockActualSizeEjPKv.sig = 'v';
+__ZN22IDirect3DVertexBuffer916UnlockActualSizeEjPKv.stub = true;
 
 function __ZN22IDirect3DVertexBuffer94LockEjjPPvj(...args) {
   if (!wasmImports["_ZN22IDirect3DVertexBuffer94LockEjjPPvj"] || wasmImports["_ZN22IDirect3DVertexBuffer94LockEjjPPvj"].stub) abort("external symbol '_ZN22IDirect3DVertexBuffer94LockEjjPPvj' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN22IDirect3DVertexBuffer94LockEjjPPvj"](...args);
 }
 
-__ZN22IDirect3DVertexBuffer94LockEjjPPvj.stub = false;
-__ZN22IDirect3DVertexBuffer94LockEjjPPvj.sig = 'v';
+__ZN22IDirect3DVertexBuffer94LockEjjPPvj.stub = true;
 
 function __ZN22IDirect3DVertexBuffer96UnlockEv(...args) {
   if (!wasmImports["_ZN22IDirect3DVertexBuffer96UnlockEv"] || wasmImports["_ZN22IDirect3DVertexBuffer96UnlockEv"].stub) abort("external symbol '_ZN22IDirect3DVertexBuffer96UnlockEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN22IDirect3DVertexBuffer96UnlockEv"](...args);
 }
 
-__ZN22IDirect3DVertexBuffer96UnlockEv.stub = false;
-__ZN22IDirect3DVertexBuffer96UnlockEv.sig = 'v';
+__ZN22IDirect3DVertexBuffer96UnlockEv.stub = true;
 
 function __ZN22IDirect3DVertexBuffer9D0Ev(...args) {
   if (!wasmImports["_ZN22IDirect3DVertexBuffer9D0Ev"] || wasmImports["_ZN22IDirect3DVertexBuffer9D0Ev"].stub) abort("external symbol '_ZN22IDirect3DVertexBuffer9D0Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN22IDirect3DVertexBuffer9D0Ev"](...args);
 }
 
-__ZN22IDirect3DVertexBuffer9D0Ev.stub = false;
-__ZN22IDirect3DVertexBuffer9D0Ev.sig = 'v';
+__ZN22IDirect3DVertexBuffer9D0Ev.stub = true;
 
 function __ZN22IDirect3DVertexBuffer9D1Ev(...args) {
   if (!wasmImports["_ZN22IDirect3DVertexBuffer9D1Ev"] || wasmImports["_ZN22IDirect3DVertexBuffer9D1Ev"].stub) abort("external symbol '_ZN22IDirect3DVertexBuffer9D1Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN22IDirect3DVertexBuffer9D1Ev"](...args);
 }
 
-__ZN22IDirect3DVertexBuffer9D1Ev.stub = false;
-__ZN22IDirect3DVertexBuffer9D1Ev.sig = 'v';
+__ZN22IDirect3DVertexBuffer9D1Ev.stub = true;
 
 function __ZN22IDirect3DVertexShader9D0Ev(...args) {
   if (!wasmImports["_ZN22IDirect3DVertexShader9D0Ev"] || wasmImports["_ZN22IDirect3DVertexShader9D0Ev"].stub) abort("external symbol '_ZN22IDirect3DVertexShader9D0Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN22IDirect3DVertexShader9D0Ev"](...args);
 }
 
-__ZN22IDirect3DVertexShader9D0Ev.stub = false;
-__ZN22IDirect3DVertexShader9D0Ev.sig = 'v';
+__ZN22IDirect3DVertexShader9D0Ev.stub = true;
 
 function __ZN22IDirect3DVertexShader9D1Ev(...args) {
   if (!wasmImports["_ZN22IDirect3DVertexShader9D1Ev"] || wasmImports["_ZN22IDirect3DVertexShader9D1Ev"].stub) abort("external symbol '_ZN22IDirect3DVertexShader9D1Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN22IDirect3DVertexShader9D1Ev"](...args);
 }
 
-__ZN22IDirect3DVertexShader9D1Ev.stub = false;
-__ZN22IDirect3DVertexShader9D1Ev.sig = 'v';
+__ZN22IDirect3DVertexShader9D1Ev.stub = true;
 
-function __ZN22IVP_Controller_Phantom19mindist_left_volumeEP11IVP_Mindist(...args) {
-  if (!wasmImports["_ZN22IVP_Controller_Phantom19mindist_left_volumeEP11IVP_Mindist"] || wasmImports["_ZN22IVP_Controller_Phantom19mindist_left_volumeEP11IVP_Mindist"].stub) abort("external symbol '_ZN22IVP_Controller_Phantom19mindist_left_volumeEP11IVP_Mindist' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN22IVP_Controller_Phantom19mindist_left_volumeEP11IVP_Mindist"](...args);
-}
+function __ZN22IVP_Controller_Phantom19mindist_left_volumeEP11IVP_Mindist(...args) { return 0; }
 
 __ZN22IVP_Controller_Phantom19mindist_left_volumeEP11IVP_Mindist.stub = false;
 __ZN22IVP_Controller_Phantom19mindist_left_volumeEP11IVP_Mindist.sig = 'v';
 
-function __ZN22IVP_Controller_Phantom22mindist_entered_volumeEP11IVP_Mindist(...args) {
-  if (!wasmImports["_ZN22IVP_Controller_Phantom22mindist_entered_volumeEP11IVP_Mindist"] || wasmImports["_ZN22IVP_Controller_Phantom22mindist_entered_volumeEP11IVP_Mindist"].stub) abort("external symbol '_ZN22IVP_Controller_Phantom22mindist_entered_volumeEP11IVP_Mindist' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN22IVP_Controller_Phantom22mindist_entered_volumeEP11IVP_Mindist"](...args);
-}
+function __ZN22IVP_Controller_Phantom22mindist_entered_volumeEP11IVP_Mindist(...args) { return 0; }
 
 __ZN22IVP_Controller_Phantom22mindist_entered_volumeEP11IVP_Mindist.stub = false;
 __ZN22IVP_Controller_Phantom22mindist_entered_volumeEP11IVP_Mindist.sig = 'v';
@@ -5750,109 +5479,77 @@ function __ZN23IDirect3DVolumeTexture912GetLevelDescEjP15_D3DVOLUME_DESC(...args
   return wasmImports["_ZN23IDirect3DVolumeTexture912GetLevelDescEjP15_D3DVOLUME_DESC"](...args);
 }
 
-__ZN23IDirect3DVolumeTexture912GetLevelDescEjP15_D3DVOLUME_DESC.stub = false;
-__ZN23IDirect3DVolumeTexture912GetLevelDescEjP15_D3DVOLUME_DESC.sig = 'v';
+__ZN23IDirect3DVolumeTexture912GetLevelDescEjP15_D3DVOLUME_DESC.stub = true;
 
 function __ZN23IDirect3DVolumeTexture97LockBoxEjP14_D3DLOCKED_BOXPK7_D3DBOXj(...args) {
   if (!wasmImports["_ZN23IDirect3DVolumeTexture97LockBoxEjP14_D3DLOCKED_BOXPK7_D3DBOXj"] || wasmImports["_ZN23IDirect3DVolumeTexture97LockBoxEjP14_D3DLOCKED_BOXPK7_D3DBOXj"].stub) abort("external symbol '_ZN23IDirect3DVolumeTexture97LockBoxEjP14_D3DLOCKED_BOXPK7_D3DBOXj' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN23IDirect3DVolumeTexture97LockBoxEjP14_D3DLOCKED_BOXPK7_D3DBOXj"](...args);
 }
 
-__ZN23IDirect3DVolumeTexture97LockBoxEjP14_D3DLOCKED_BOXPK7_D3DBOXj.stub = false;
-__ZN23IDirect3DVolumeTexture97LockBoxEjP14_D3DLOCKED_BOXPK7_D3DBOXj.sig = 'v';
+__ZN23IDirect3DVolumeTexture97LockBoxEjP14_D3DLOCKED_BOXPK7_D3DBOXj.stub = true;
 
 function __ZN23IDirect3DVolumeTexture99UnlockBoxEj(...args) {
   if (!wasmImports["_ZN23IDirect3DVolumeTexture99UnlockBoxEj"] || wasmImports["_ZN23IDirect3DVolumeTexture99UnlockBoxEj"].stub) abort("external symbol '_ZN23IDirect3DVolumeTexture99UnlockBoxEj' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN23IDirect3DVolumeTexture99UnlockBoxEj"](...args);
 }
 
-__ZN23IDirect3DVolumeTexture99UnlockBoxEj.stub = false;
-__ZN23IDirect3DVolumeTexture99UnlockBoxEj.sig = 'v';
+__ZN23IDirect3DVolumeTexture99UnlockBoxEj.stub = true;
 
 function __ZN23IDirect3DVolumeTexture9D0Ev(...args) {
   if (!wasmImports["_ZN23IDirect3DVolumeTexture9D0Ev"] || wasmImports["_ZN23IDirect3DVolumeTexture9D0Ev"].stub) abort("external symbol '_ZN23IDirect3DVolumeTexture9D0Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN23IDirect3DVolumeTexture9D0Ev"](...args);
 }
 
-__ZN23IDirect3DVolumeTexture9D0Ev.stub = false;
-__ZN23IDirect3DVolumeTexture9D0Ev.sig = 'v';
+__ZN23IDirect3DVolumeTexture9D0Ev.stub = true;
 
 function __ZN23IDirect3DVolumeTexture9D1Ev(...args) {
   if (!wasmImports["_ZN23IDirect3DVolumeTexture9D1Ev"] || wasmImports["_ZN23IDirect3DVolumeTexture9D1Ev"].stub) abort("external symbol '_ZN23IDirect3DVolumeTexture9D1Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN23IDirect3DVolumeTexture9D1Ev"](...args);
 }
 
-__ZN23IDirect3DVolumeTexture9D1Ev.stub = false;
-__ZN23IDirect3DVolumeTexture9D1Ev.sig = 'v';
+__ZN23IDirect3DVolumeTexture9D1Ev.stub = true;
 
-function __ZN24IVP_Cache_Object_Manager16get_cache_objectEP15IVP_Real_Object(...args) {
-  if (!wasmImports["_ZN24IVP_Cache_Object_Manager16get_cache_objectEP15IVP_Real_Object"] || wasmImports["_ZN24IVP_Cache_Object_Manager16get_cache_objectEP15IVP_Real_Object"].stub) abort("external symbol '_ZN24IVP_Cache_Object_Manager16get_cache_objectEP15IVP_Real_Object' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN24IVP_Cache_Object_Manager16get_cache_objectEP15IVP_Real_Object"](...args);
-}
+function __ZN24IVP_Cache_Object_Manager16get_cache_objectEP15IVP_Real_Object(...args) { return 0; }
 
 __ZN24IVP_Cache_Object_Manager16get_cache_objectEP15IVP_Real_Object.stub = false;
 __ZN24IVP_Cache_Object_Manager16get_cache_objectEP15IVP_Real_Object.sig = 'v';
 
-function __ZN24IVP_Compact_Ledge_Solver17calc_hesse_objectEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Hesse(...args) {
-  if (!wasmImports["_ZN24IVP_Compact_Ledge_Solver17calc_hesse_objectEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Hesse"] || wasmImports["_ZN24IVP_Compact_Ledge_Solver17calc_hesse_objectEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Hesse"].stub) abort("external symbol '_ZN24IVP_Compact_Ledge_Solver17calc_hesse_objectEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Hesse' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN24IVP_Compact_Ledge_Solver17calc_hesse_objectEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Hesse"](...args);
-}
+function __ZN24IVP_Compact_Ledge_Solver17calc_hesse_objectEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Hesse(...args) { return 0; }
 
 __ZN24IVP_Compact_Ledge_Solver17calc_hesse_objectEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Hesse.stub = false;
 __ZN24IVP_Compact_Ledge_Solver17calc_hesse_objectEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Hesse.sig = 'v';
 
-function __ZN24IVP_Compact_Ledge_Solver20calc_pos_other_spaceEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointS4_P11IVP_U_Point(...args) {
-  if (!wasmImports["_ZN24IVP_Compact_Ledge_Solver20calc_pos_other_spaceEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointS4_P11IVP_U_Point"] || wasmImports["_ZN24IVP_Compact_Ledge_Solver20calc_pos_other_spaceEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointS4_P11IVP_U_Point"].stub) abort("external symbol '_ZN24IVP_Compact_Ledge_Solver20calc_pos_other_spaceEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointS4_P11IVP_U_Point' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN24IVP_Compact_Ledge_Solver20calc_pos_other_spaceEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointS4_P11IVP_U_Point"](...args);
-}
+function __ZN24IVP_Compact_Ledge_Solver20calc_pos_other_spaceEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointS4_P11IVP_U_Point(...args) { return 0; }
 
 __ZN24IVP_Compact_Ledge_Solver20calc_pos_other_spaceEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointS4_P11IVP_U_Point.stub = false;
 __ZN24IVP_Compact_Ledge_Solver20calc_pos_other_spaceEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointS4_P11IVP_U_Point.sig = 'v';
 
-function __ZN24IVP_Compact_Ledge_Solver20give_world_coords_ATEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointP11IVP_U_Point(...args) {
-  if (!wasmImports["_ZN24IVP_Compact_Ledge_Solver20give_world_coords_ATEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointP11IVP_U_Point"] || wasmImports["_ZN24IVP_Compact_Ledge_Solver20give_world_coords_ATEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointP11IVP_U_Point"].stub) abort("external symbol '_ZN24IVP_Compact_Ledge_Solver20give_world_coords_ATEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointP11IVP_U_Point' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN24IVP_Compact_Ledge_Solver20give_world_coords_ATEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointP11IVP_U_Point"](...args);
-}
+function __ZN24IVP_Compact_Ledge_Solver20give_world_coords_ATEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointP11IVP_U_Point(...args) { return 0; }
 
 __ZN24IVP_Compact_Ledge_Solver20give_world_coords_ATEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointP11IVP_U_Point.stub = false;
 __ZN24IVP_Compact_Ledge_Solver20give_world_coords_ATEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointP11IVP_U_Point.sig = 'v';
 
-function __ZN24IVP_Compact_Ledge_Solver21calc_unscaled_KK_valsERK12IVP_KK_InputP22IVP_Unscaled_KK_Result(...args) {
-  if (!wasmImports["_ZN24IVP_Compact_Ledge_Solver21calc_unscaled_KK_valsERK12IVP_KK_InputP22IVP_Unscaled_KK_Result"] || wasmImports["_ZN24IVP_Compact_Ledge_Solver21calc_unscaled_KK_valsERK12IVP_KK_InputP22IVP_Unscaled_KK_Result"].stub) abort("external symbol '_ZN24IVP_Compact_Ledge_Solver21calc_unscaled_KK_valsERK12IVP_KK_InputP22IVP_Unscaled_KK_Result' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN24IVP_Compact_Ledge_Solver21calc_unscaled_KK_valsERK12IVP_KK_InputP22IVP_Unscaled_KK_Result"](...args);
-}
+function __ZN24IVP_Compact_Ledge_Solver21calc_unscaled_KK_valsERK12IVP_KK_InputP22IVP_Unscaled_KK_Result(...args) { return 0; }
 
 __ZN24IVP_Compact_Ledge_Solver21calc_unscaled_KK_valsERK12IVP_KK_InputP22IVP_Unscaled_KK_Result.stub = false;
 __ZN24IVP_Compact_Ledge_Solver21calc_unscaled_KK_valsERK12IVP_KK_InputP22IVP_Unscaled_KK_Result.sig = 'v';
 
-function __ZN24IVP_Compact_Ledge_Solver27calc_unscaled_s_val_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP21IVP_Unscaled_S_Result(...args) {
-  if (!wasmImports["_ZN24IVP_Compact_Ledge_Solver27calc_unscaled_s_val_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP21IVP_Unscaled_S_Result"] || wasmImports["_ZN24IVP_Compact_Ledge_Solver27calc_unscaled_s_val_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP21IVP_Unscaled_S_Result"].stub) abort("external symbol '_ZN24IVP_Compact_Ledge_Solver27calc_unscaled_s_val_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP21IVP_Unscaled_S_Result' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN24IVP_Compact_Ledge_Solver27calc_unscaled_s_val_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP21IVP_Unscaled_S_Result"](...args);
-}
+function __ZN24IVP_Compact_Ledge_Solver27calc_unscaled_s_val_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP21IVP_Unscaled_S_Result(...args) { return 0; }
 
 __ZN24IVP_Compact_Ledge_Solver27calc_unscaled_s_val_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP21IVP_Unscaled_S_Result.stub = false;
 __ZN24IVP_Compact_Ledge_Solver27calc_unscaled_s_val_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP21IVP_Unscaled_S_Result.sig = 'v';
 
-function __ZN24IVP_Compact_Ledge_Solver29calc_unscaled_qr_vals_F_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP22IVP_Unscaled_QR_Result(...args) {
-  if (!wasmImports["_ZN24IVP_Compact_Ledge_Solver29calc_unscaled_qr_vals_F_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP22IVP_Unscaled_QR_Result"] || wasmImports["_ZN24IVP_Compact_Ledge_Solver29calc_unscaled_qr_vals_F_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP22IVP_Unscaled_QR_Result"].stub) abort("external symbol '_ZN24IVP_Compact_Ledge_Solver29calc_unscaled_qr_vals_F_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP22IVP_Unscaled_QR_Result' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN24IVP_Compact_Ledge_Solver29calc_unscaled_qr_vals_F_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP22IVP_Unscaled_QR_Result"](...args);
-}
+function __ZN24IVP_Compact_Ledge_Solver29calc_unscaled_qr_vals_F_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP22IVP_Unscaled_QR_Result(...args) { return 0; }
 
 __ZN24IVP_Compact_Ledge_Solver29calc_unscaled_qr_vals_F_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP22IVP_Unscaled_QR_Result.stub = false;
 __ZN24IVP_Compact_Ledge_Solver29calc_unscaled_qr_vals_F_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP22IVP_Unscaled_QR_Result.sig = 'v';
 
-function __ZN24IVP_Compact_Ledge_Solver31quad_dist_edge_to_point_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_Point(...args) {
-  if (!wasmImports["_ZN24IVP_Compact_Ledge_Solver31quad_dist_edge_to_point_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_Point"] || wasmImports["_ZN24IVP_Compact_Ledge_Solver31quad_dist_edge_to_point_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_Point"].stub) abort("external symbol '_ZN24IVP_Compact_Ledge_Solver31quad_dist_edge_to_point_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_Point' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN24IVP_Compact_Ledge_Solver31quad_dist_edge_to_point_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_Point"](...args);
-}
+function __ZN24IVP_Compact_Ledge_Solver31quad_dist_edge_to_point_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_Point(...args) { return 0; }
 
 __ZN24IVP_Compact_Ledge_Solver31quad_dist_edge_to_point_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_Point.stub = false;
 __ZN24IVP_Compact_Ledge_Solver31quad_dist_edge_to_point_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_Point.sig = 'v';
 
-function __ZN24IVP_Compact_Ledge_Solver34calc_hesse_vec_object_not_normizedEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Point(...args) {
-  if (!wasmImports["_ZN24IVP_Compact_Ledge_Solver34calc_hesse_vec_object_not_normizedEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Point"] || wasmImports["_ZN24IVP_Compact_Ledge_Solver34calc_hesse_vec_object_not_normizedEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Point"].stub) abort("external symbol '_ZN24IVP_Compact_Ledge_Solver34calc_hesse_vec_object_not_normizedEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Point' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN24IVP_Compact_Ledge_Solver34calc_hesse_vec_object_not_normizedEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Point"](...args);
-}
+function __ZN24IVP_Compact_Ledge_Solver34calc_hesse_vec_object_not_normizedEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Point(...args) { return 0; }
 
 __ZN24IVP_Compact_Ledge_Solver34calc_hesse_vec_object_not_normizedEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Point.stub = false;
 __ZN24IVP_Compact_Ledge_Solver34calc_hesse_vec_object_not_normizedEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Point.sig = 'v';
@@ -5862,69 +5559,46 @@ function __ZN27IDirect3DVertexDeclaration9D0Ev(...args) {
   return wasmImports["_ZN27IDirect3DVertexDeclaration9D0Ev"](...args);
 }
 
-__ZN27IDirect3DVertexDeclaration9D0Ev.stub = false;
-__ZN27IDirect3DVertexDeclaration9D0Ev.sig = 'v';
+__ZN27IDirect3DVertexDeclaration9D0Ev.stub = true;
 
 function __ZN27IDirect3DVertexDeclaration9D1Ev(...args) {
   if (!wasmImports["_ZN27IDirect3DVertexDeclaration9D1Ev"] || wasmImports["_ZN27IDirect3DVertexDeclaration9D1Ev"].stub) abort("external symbol '_ZN27IDirect3DVertexDeclaration9D1Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN27IDirect3DVertexDeclaration9D1Ev"](...args);
 }
 
-__ZN27IDirect3DVertexDeclaration9D1Ev.stub = false;
-__ZN27IDirect3DVertexDeclaration9D1Ev.sig = 'v';
+__ZN27IDirect3DVertexDeclaration9D1Ev.stub = true;
 
-function __ZN27IVP_Mindist_Minimize_Solver13p_minimize_BFEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point(...args) {
-  if (!wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_BFEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point"] || wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_BFEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point"].stub) abort("external symbol '_ZN27IVP_Mindist_Minimize_Solver13p_minimize_BFEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_BFEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point"](...args);
-}
+function __ZN27IVP_Mindist_Minimize_Solver13p_minimize_BFEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point(...args) { return 0; }
 
 __ZN27IVP_Mindist_Minimize_Solver13p_minimize_BFEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point.stub = false;
 __ZN27IVP_Mindist_Minimize_Solver13p_minimize_BFEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point.sig = 'v';
 
-function __ZN27IVP_Mindist_Minimize_Solver13p_minimize_BKEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point(...args) {
-  if (!wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_BKEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point"] || wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_BKEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point"].stub) abort("external symbol '_ZN27IVP_Mindist_Minimize_Solver13p_minimize_BKEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_BKEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point"](...args);
-}
+function __ZN27IVP_Mindist_Minimize_Solver13p_minimize_BKEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point(...args) { return 0; }
 
 __ZN27IVP_Mindist_Minimize_Solver13p_minimize_BKEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point.stub = false;
 __ZN27IVP_Mindist_Minimize_Solver13p_minimize_BKEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point.sig = 'v';
 
-function __ZN27IVP_Mindist_Minimize_Solver13p_minimize_BPEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point(...args) {
-  if (!wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_BPEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point"] || wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_BPEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point"].stub) abort("external symbol '_ZN27IVP_Mindist_Minimize_Solver13p_minimize_BPEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_BPEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point"](...args);
-}
+function __ZN27IVP_Mindist_Minimize_Solver13p_minimize_BPEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point(...args) { return 0; }
 
 __ZN27IVP_Mindist_Minimize_Solver13p_minimize_BPEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point.stub = false;
 __ZN27IVP_Mindist_Minimize_Solver13p_minimize_BPEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point.sig = 'v';
 
-function __ZN27IVP_Mindist_Minimize_Solver13p_minimize_KKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_(...args) {
-  if (!wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_KKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_"] || wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_KKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_"].stub) abort("external symbol '_ZN27IVP_Mindist_Minimize_Solver13p_minimize_KKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_KKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_"](...args);
-}
+function __ZN27IVP_Mindist_Minimize_Solver13p_minimize_KKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_(...args) { return 0; }
 
 __ZN27IVP_Mindist_Minimize_Solver13p_minimize_KKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_.stub = false;
 __ZN27IVP_Mindist_Minimize_Solver13p_minimize_KKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_.sig = 'v';
 
-function __ZN27IVP_Mindist_Minimize_Solver13p_minimize_PFEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_(...args) {
-  if (!wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_PFEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_"] || wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_PFEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_"].stub) abort("external symbol '_ZN27IVP_Mindist_Minimize_Solver13p_minimize_PFEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_PFEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_"](...args);
-}
+function __ZN27IVP_Mindist_Minimize_Solver13p_minimize_PFEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_(...args) { return 0; }
 
 __ZN27IVP_Mindist_Minimize_Solver13p_minimize_PFEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_.stub = false;
 __ZN27IVP_Mindist_Minimize_Solver13p_minimize_PFEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_.sig = 'v';
 
-function __ZN27IVP_Mindist_Minimize_Solver13p_minimize_PKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_(...args) {
-  if (!wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_PKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_"] || wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_PKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_"].stub) abort("external symbol '_ZN27IVP_Mindist_Minimize_Solver13p_minimize_PKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_PKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_"](...args);
-}
+function __ZN27IVP_Mindist_Minimize_Solver13p_minimize_PKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_(...args) { return 0; }
 
 __ZN27IVP_Mindist_Minimize_Solver13p_minimize_PKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_.stub = false;
 __ZN27IVP_Mindist_Minimize_Solver13p_minimize_PKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_.sig = 'v';
 
-function __ZN27IVP_Mindist_Minimize_Solver13p_minimize_PPEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_(...args) {
-  if (!wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_PPEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_"] || wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_PPEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_"].stub) abort("external symbol '_ZN27IVP_Mindist_Minimize_Solver13p_minimize_PPEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_PPEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_"](...args);
-}
+function __ZN27IVP_Mindist_Minimize_Solver13p_minimize_PPEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_(...args) { return 0; }
 
 __ZN27IVP_Mindist_Minimize_Solver13p_minimize_PPEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_.stub = false;
 __ZN27IVP_Mindist_Minimize_Solver13p_minimize_PPEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_.sig = 'v';
@@ -5934,149 +5608,124 @@ function __ZN7CThread10ThreadProcEPv(...args) {
   return wasmImports["_ZN7CThread10ThreadProcEPv"](...args);
 }
 
-__ZN7CThread10ThreadProcEPv.stub = false;
-__ZN7CThread10ThreadProcEPv.sig = 'v';
+__ZN7CThread10ThreadProcEPv.stub = true;
 
 function __ZN7CThread13GetThreadProcEv(...args) {
   if (!wasmImports["_ZN7CThread13GetThreadProcEv"] || wasmImports["_ZN7CThread13GetThreadProcEv"].stub) abort("external symbol '_ZN7CThread13GetThreadProcEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN7CThread13GetThreadProcEv"](...args);
 }
 
-__ZN7CThread13GetThreadProcEv.stub = false;
-__ZN7CThread13GetThreadProcEv.sig = 'v';
+__ZN7CThread13GetThreadProcEv.stub = true;
 
 function __ZN7CThread15IsThreadRunningEv(...args) {
   if (!wasmImports["_ZN7CThread15IsThreadRunningEv"] || wasmImports["_ZN7CThread15IsThreadRunningEv"].stub) abort("external symbol '_ZN7CThread15IsThreadRunningEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN7CThread15IsThreadRunningEv"](...args);
 }
 
-__ZN7CThread15IsThreadRunningEv.stub = false;
-__ZN7CThread15IsThreadRunningEv.sig = 'v';
+__ZN7CThread15IsThreadRunningEv.stub = true;
 
 function __ZN7CThread21WaitForCreateCompleteEP12CThreadEvent(...args) {
   if (!wasmImports["_ZN7CThread21WaitForCreateCompleteEP12CThreadEvent"] || wasmImports["_ZN7CThread21WaitForCreateCompleteEP12CThreadEvent"].stub) abort("external symbol '_ZN7CThread21WaitForCreateCompleteEP12CThreadEvent' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN7CThread21WaitForCreateCompleteEP12CThreadEvent"](...args);
 }
 
-__ZN7CThread21WaitForCreateCompleteEP12CThreadEvent.stub = false;
-__ZN7CThread21WaitForCreateCompleteEP12CThreadEvent.sig = 'v';
+__ZN7CThread21WaitForCreateCompleteEP12CThreadEvent.stub = true;
 
 function __ZN7CThread4InitEv(...args) {
   if (!wasmImports["_ZN7CThread4InitEv"] || wasmImports["_ZN7CThread4InitEv"].stub) abort("external symbol '_ZN7CThread4InitEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN7CThread4InitEv"](...args);
 }
 
-__ZN7CThread4InitEv.stub = false;
-__ZN7CThread4InitEv.sig = 'v';
+__ZN7CThread4InitEv.stub = true;
 
 function __ZN7CThread4JoinEj(...args) {
   if (!wasmImports["_ZN7CThread4JoinEj"] || wasmImports["_ZN7CThread4JoinEj"].stub) abort("external symbol '_ZN7CThread4JoinEj' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN7CThread4JoinEj"](...args);
 }
 
-__ZN7CThread4JoinEj.stub = false;
-__ZN7CThread4JoinEj.sig = 'v';
+__ZN7CThread4JoinEj.stub = true;
 
 function __ZN7CThread5StartEj20ThreadPriorityEnum_t(...args) {
   if (!wasmImports["_ZN7CThread5StartEj20ThreadPriorityEnum_t"] || wasmImports["_ZN7CThread5StartEj20ThreadPriorityEnum_t"].stub) abort("external symbol '_ZN7CThread5StartEj20ThreadPriorityEnum_t' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN7CThread5StartEj20ThreadPriorityEnum_t"](...args);
 }
 
-__ZN7CThread5StartEj20ThreadPriorityEnum_t.stub = false;
-__ZN7CThread5StartEj20ThreadPriorityEnum_t.sig = 'v';
+__ZN7CThread5StartEj20ThreadPriorityEnum_t.stub = true;
 
 function __ZN7CThread6OnExitEv(...args) {
   if (!wasmImports["_ZN7CThread6OnExitEv"] || wasmImports["_ZN7CThread6OnExitEv"].stub) abort("external symbol '_ZN7CThread6OnExitEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN7CThread6OnExitEv"](...args);
 }
 
-__ZN7CThread6OnExitEv.stub = false;
-__ZN7CThread6OnExitEv.sig = 'v';
+__ZN7CThread6OnExitEv.stub = true;
 
 function __ZN7CThread6ResumeEv(...args) {
   if (!wasmImports["_ZN7CThread6ResumeEv"] || wasmImports["_ZN7CThread6ResumeEv"].stub) abort("external symbol '_ZN7CThread6ResumeEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN7CThread6ResumeEv"](...args);
 }
 
-__ZN7CThread6ResumeEv.stub = false;
-__ZN7CThread6ResumeEv.sig = 'v';
+__ZN7CThread6ResumeEv.stub = true;
 
 function __ZN7CThread7IsAliveEv(...args) {
   if (!wasmImports["_ZN7CThread7IsAliveEv"] || wasmImports["_ZN7CThread7IsAliveEv"].stub) abort("external symbol '_ZN7CThread7IsAliveEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN7CThread7IsAliveEv"](...args);
 }
 
-__ZN7CThread7IsAliveEv.stub = false;
-__ZN7CThread7IsAliveEv.sig = 'v';
+__ZN7CThread7IsAliveEv.stub = true;
 
 function __ZN7CThread7SetNameEPKc(...args) {
   if (!wasmImports["_ZN7CThread7SetNameEPKc"] || wasmImports["_ZN7CThread7SetNameEPKc"].stub) abort("external symbol '_ZN7CThread7SetNameEPKc' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN7CThread7SetNameEPKc"](...args);
 }
 
-__ZN7CThread7SetNameEPKc.stub = false;
-__ZN7CThread7SetNameEPKc.sig = 'v';
+__ZN7CThread7SetNameEPKc.stub = true;
 
 function __ZN7CThread7SuspendEv(...args) {
   if (!wasmImports["_ZN7CThread7SuspendEv"] || wasmImports["_ZN7CThread7SuspendEv"].stub) abort("external symbol '_ZN7CThread7SuspendEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN7CThread7SuspendEv"](...args);
 }
 
-__ZN7CThread7SuspendEv.stub = false;
-__ZN7CThread7SuspendEv.sig = 'v';
+__ZN7CThread7SuspendEv.stub = true;
 
 function __ZN7CThreadC2Ev(...args) {
   if (!wasmImports["_ZN7CThreadC2Ev"] || wasmImports["_ZN7CThreadC2Ev"].stub) abort("external symbol '_ZN7CThreadC2Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN7CThreadC2Ev"](...args);
 }
 
-__ZN7CThreadC2Ev.stub = false;
-__ZN7CThreadC2Ev.sig = 'v';
+__ZN7CThreadC2Ev.stub = true;
 
 function __ZN7CThreadD0Ev(...args) {
   if (!wasmImports["_ZN7CThreadD0Ev"] || wasmImports["_ZN7CThreadD0Ev"].stub) abort("external symbol '_ZN7CThreadD0Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN7CThreadD0Ev"](...args);
 }
 
-__ZN7CThreadD0Ev.stub = false;
-__ZN7CThreadD0Ev.sig = 'v';
+__ZN7CThreadD0Ev.stub = true;
 
 function __ZN7CThreadD1Ev(...args) {
   if (!wasmImports["_ZN7CThreadD1Ev"] || wasmImports["_ZN7CThreadD1Ev"].stub) abort("external symbol '_ZN7CThreadD1Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN7CThreadD1Ev"](...args);
 }
 
-__ZN7CThreadD1Ev.stub = false;
-__ZN7CThreadD1Ev.sig = 'v';
+__ZN7CThreadD1Ev.stub = true;
 
 function __ZN7CThreadD2Ev(...args) {
   if (!wasmImports["_ZN7CThreadD2Ev"] || wasmImports["_ZN7CThreadD2Ev"].stub) abort("external symbol '_ZN7CThreadD2Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN7CThreadD2Ev"](...args);
 }
 
-__ZN7CThreadD2Ev.stub = false;
-__ZN7CThreadD2Ev.sig = 'v';
+__ZN7CThreadD2Ev.stub = true;
 
-function __ZN8IVP_Hash3addEPKcPv(...args) {
-  if (!wasmImports["_ZN8IVP_Hash3addEPKcPv"] || wasmImports["_ZN8IVP_Hash3addEPKcPv"].stub) abort("external symbol '_ZN8IVP_Hash3addEPKcPv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN8IVP_Hash3addEPKcPv"](...args);
-}
+function __ZN8IVP_Hash3addEPKcPv(...args) { return 0; }
 
 __ZN8IVP_Hash3addEPKcPv.stub = false;
 __ZN8IVP_Hash3addEPKcPv.sig = 'v';
 
-function __ZN8IVP_HashC1EiiPv(...args) {
-  if (!wasmImports["_ZN8IVP_HashC1EiiPv"] || wasmImports["_ZN8IVP_HashC1EiiPv"].stub) abort("external symbol '_ZN8IVP_HashC1EiiPv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN8IVP_HashC1EiiPv"](...args);
-}
+function __ZN8IVP_HashC1EiiPv(...args) { return 0; }
 
 __ZN8IVP_HashC1EiiPv.stub = false;
 __ZN8IVP_HashC1EiiPv.sig = 'v';
 
-function __ZN8IVP_HashD1Ev(...args) {
-  if (!wasmImports["_ZN8IVP_HashD1Ev"] || wasmImports["_ZN8IVP_HashD1Ev"].stub) abort("external symbol '_ZN8IVP_HashD1Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN8IVP_HashD1Ev"](...args);
-}
+function __ZN8IVP_HashD1Ev(...args) { return 0; }
 
 __ZN8IVP_HashD1Ev.stub = false;
 __ZN8IVP_HashD1Ev.sig = 'v';
@@ -6086,61 +5735,51 @@ function __ZN9D3DXPLANEcvPfEv(...args) {
   return wasmImports["_ZN9D3DXPLANEcvPfEv"](...args);
 }
 
-__ZN9D3DXPLANEcvPfEv.stub = false;
-__ZN9D3DXPLANEcvPfEv.sig = 'v';
+__ZN9D3DXPLANEcvPfEv.stub = true;
 
 function __ZN9D3DXPLANEixEi(...args) {
   if (!wasmImports["_ZN9D3DXPLANEixEi"] || wasmImports["_ZN9D3DXPLANEixEi"].stub) abort("external symbol '_ZN9D3DXPLANEixEi' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN9D3DXPLANEixEi"](...args);
 }
 
-__ZN9D3DXPLANEixEi.stub = false;
-__ZN9D3DXPLANEixEi.sig = 'v';
+__ZN9D3DXPLANEixEi.stub = true;
 
 function __ZN9D3DXPLANEneERKS_(...args) {
   if (!wasmImports["_ZN9D3DXPLANEneERKS_"] || wasmImports["_ZN9D3DXPLANEneERKS_"].stub) abort("external symbol '_ZN9D3DXPLANEneERKS_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZN9D3DXPLANEneERKS_"](...args);
 }
 
-__ZN9D3DXPLANEneERKS_.stub = false;
-__ZN9D3DXPLANEneERKS_.sig = 'v';
+__ZN9D3DXPLANEneERKS_.stub = true;
 
 function __ZNK10CStudioHdr20GetNumPoseParametersEv(...args) {
   if (!wasmImports["_ZNK10CStudioHdr20GetNumPoseParametersEv"] || wasmImports["_ZNK10CStudioHdr20GetNumPoseParametersEv"].stub) abort("external symbol '_ZNK10CStudioHdr20GetNumPoseParametersEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZNK10CStudioHdr20GetNumPoseParametersEv"](...args);
 }
 
-__ZNK10CStudioHdr20GetNumPoseParametersEv.stub = false;
-__ZNK10CStudioHdr20GetNumPoseParametersEv.sig = 'v';
+__ZNK10CStudioHdr20GetNumPoseParametersEv.stub = true;
 
 function __ZNK10CStudioHdr9GetNumSeqEv(...args) {
   if (!wasmImports["_ZNK10CStudioHdr9GetNumSeqEv"] || wasmImports["_ZNK10CStudioHdr9GetNumSeqEv"].stub) abort("external symbol '_ZNK10CStudioHdr9GetNumSeqEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZNK10CStudioHdr9GetNumSeqEv"](...args);
 }
 
-__ZNK10CStudioHdr9GetNumSeqEv.stub = false;
-__ZNK10CStudioHdr9GetNumSeqEv.sig = 'v';
+__ZNK10CStudioHdr9GetNumSeqEv.stub = true;
 
 function __ZNK10D3DXMATRIXmlERKS_(...args) {
   if (!wasmImports["_ZNK10D3DXMATRIXmlERKS_"] || wasmImports["_ZNK10D3DXMATRIXmlERKS_"].stub) abort("external symbol '_ZNK10D3DXMATRIXmlERKS_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZNK10D3DXMATRIXmlERKS_"](...args);
 }
 
-__ZNK10D3DXMATRIXmlERKS_.stub = false;
-__ZNK10D3DXMATRIXmlERKS_.sig = 'v';
+__ZNK10D3DXMATRIXmlERKS_.stub = true;
 
 function __ZNK10D3DXMATRIXneERKS_(...args) {
   if (!wasmImports["_ZNK10D3DXMATRIXneERKS_"] || wasmImports["_ZNK10D3DXMATRIXneERKS_"].stub) abort("external symbol '_ZNK10D3DXMATRIXneERKS_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZNK10D3DXMATRIXneERKS_"](...args);
 }
 
-__ZNK10D3DXMATRIXneERKS_.stub = false;
-__ZNK10D3DXMATRIXneERKS_.sig = 'v';
+__ZNK10D3DXMATRIXneERKS_.stub = true;
 
-function __ZNK11IVP_U_Point11real_lengthEv(...args) {
-  if (!wasmImports["_ZNK11IVP_U_Point11real_lengthEv"] || wasmImports["_ZNK11IVP_U_Point11real_lengthEv"].stub) abort("external symbol '_ZNK11IVP_U_Point11real_lengthEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZNK11IVP_U_Point11real_lengthEv"](...args);
-}
+function __ZNK11IVP_U_Point11real_lengthEv(...args) { return 0; }
 
 __ZNK11IVP_U_Point11real_lengthEv.stub = false;
 __ZNK11IVP_U_Point11real_lengthEv.sig = 'v';
@@ -6150,45 +5789,33 @@ function __ZNK11studiohdr_t8pSeqdescEi(...args) {
   return wasmImports["_ZNK11studiohdr_t8pSeqdescEi"](...args);
 }
 
-__ZNK11studiohdr_t8pSeqdescEi.stub = false;
-__ZNK11studiohdr_t8pSeqdescEi.sig = 'v';
+__ZNK11studiohdr_t8pSeqdescEi.stub = true;
 
 function __ZNK12CDmAttribute11CopyDataOutI17DmElementHandle_tEEvRT_(...args) {
   if (!wasmImports["_ZNK12CDmAttribute11CopyDataOutI17DmElementHandle_tEEvRT_"] || wasmImports["_ZNK12CDmAttribute11CopyDataOutI17DmElementHandle_tEEvRT_"].stub) abort("external symbol '_ZNK12CDmAttribute11CopyDataOutI17DmElementHandle_tEEvRT_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZNK12CDmAttribute11CopyDataOutI17DmElementHandle_tEEvRT_"](...args);
 }
 
-__ZNK12CDmAttribute11CopyDataOutI17DmElementHandle_tEEvRT_.stub = false;
-__ZNK12CDmAttribute11CopyDataOutI17DmElementHandle_tEEvRT_.sig = 'v';
+__ZNK12CDmAttribute11CopyDataOutI17DmElementHandle_tEEvRT_.stub = true;
 
 function __ZNK12CDmAttribute17IsTypeConvertableI17DmElementHandle_tEEbv(...args) {
   if (!wasmImports["_ZNK12CDmAttribute17IsTypeConvertableI17DmElementHandle_tEEbv"] || wasmImports["_ZNK12CDmAttribute17IsTypeConvertableI17DmElementHandle_tEEbv"].stub) abort("external symbol '_ZNK12CDmAttribute17IsTypeConvertableI17DmElementHandle_tEEbv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZNK12CDmAttribute17IsTypeConvertableI17DmElementHandle_tEEbv"](...args);
 }
 
-__ZNK12CDmAttribute17IsTypeConvertableI17DmElementHandle_tEEbv.stub = false;
-__ZNK12CDmAttribute17IsTypeConvertableI17DmElementHandle_tEEbv.sig = 'v';
+__ZNK12CDmAttribute17IsTypeConvertableI17DmElementHandle_tEEbv.stub = true;
 
-function __ZNK12IVP_U_Matrix6vmult4EPK11IVP_U_PointPS0_(...args) {
-  if (!wasmImports["_ZNK12IVP_U_Matrix6vmult4EPK11IVP_U_PointPS0_"] || wasmImports["_ZNK12IVP_U_Matrix6vmult4EPK11IVP_U_PointPS0_"].stub) abort("external symbol '_ZNK12IVP_U_Matrix6vmult4EPK11IVP_U_PointPS0_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZNK12IVP_U_Matrix6vmult4EPK11IVP_U_PointPS0_"](...args);
-}
+function __ZNK12IVP_U_Matrix6vmult4EPK11IVP_U_PointPS0_(...args) { return 0; }
 
 __ZNK12IVP_U_Matrix6vmult4EPK11IVP_U_PointPS0_.stub = false;
 __ZNK12IVP_U_Matrix6vmult4EPK11IVP_U_PointPS0_.sig = 'v';
 
-function __ZNK12IVP_U_Matrix6vmult4EPK17IVP_U_Float_PointP11IVP_U_Point(...args) {
-  if (!wasmImports["_ZNK12IVP_U_Matrix6vmult4EPK17IVP_U_Float_PointP11IVP_U_Point"] || wasmImports["_ZNK12IVP_U_Matrix6vmult4EPK17IVP_U_Float_PointP11IVP_U_Point"].stub) abort("external symbol '_ZNK12IVP_U_Matrix6vmult4EPK17IVP_U_Float_PointP11IVP_U_Point' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZNK12IVP_U_Matrix6vmult4EPK17IVP_U_Float_PointP11IVP_U_Point"](...args);
-}
+function __ZNK12IVP_U_Matrix6vmult4EPK17IVP_U_Float_PointP11IVP_U_Point(...args) { return 0; }
 
 __ZNK12IVP_U_Matrix6vmult4EPK17IVP_U_Float_PointP11IVP_U_Point.stub = false;
 __ZNK12IVP_U_Matrix6vmult4EPK17IVP_U_Float_PointP11IVP_U_Point.sig = 'v';
 
-function __ZNK12IVP_U_Matrix7vimult4EPK11IVP_U_PointPS0_(...args) {
-  if (!wasmImports["_ZNK12IVP_U_Matrix7vimult4EPK11IVP_U_PointPS0_"] || wasmImports["_ZNK12IVP_U_Matrix7vimult4EPK11IVP_U_PointPS0_"].stub) abort("external symbol '_ZNK12IVP_U_Matrix7vimult4EPK11IVP_U_PointPS0_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZNK12IVP_U_Matrix7vimult4EPK11IVP_U_PointPS0_"](...args);
-}
+function __ZNK12IVP_U_Matrix7vimult4EPK11IVP_U_PointPS0_(...args) { return 0; }
 
 __ZNK12IVP_U_Matrix7vimult4EPK11IVP_U_PointPS0_.stub = false;
 __ZNK12IVP_U_Matrix7vimult4EPK11IVP_U_PointPS0_.sig = 'v';
@@ -6198,85 +5825,54 @@ function __ZNK13CWorkerThread12GetCallParamEv(...args) {
   return wasmImports["_ZNK13CWorkerThread12GetCallParamEv"](...args);
 }
 
-__ZNK13CWorkerThread12GetCallParamEv.stub = false;
-__ZNK13CWorkerThread12GetCallParamEv.sig = 'v';
+__ZNK13CWorkerThread12GetCallParamEv.stub = true;
 
-function __ZNK13IVP_U_Matrix36vmult3EPK11IVP_U_PointPS0_(...args) {
-  if (!wasmImports["_ZNK13IVP_U_Matrix36vmult3EPK11IVP_U_PointPS0_"] || wasmImports["_ZNK13IVP_U_Matrix36vmult3EPK11IVP_U_PointPS0_"].stub) abort("external symbol '_ZNK13IVP_U_Matrix36vmult3EPK11IVP_U_PointPS0_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZNK13IVP_U_Matrix36vmult3EPK11IVP_U_PointPS0_"](...args);
-}
+function __ZNK13IVP_U_Matrix36vmult3EPK11IVP_U_PointPS0_(...args) { return 0; }
 
 __ZNK13IVP_U_Matrix36vmult3EPK11IVP_U_PointPS0_.stub = false;
 __ZNK13IVP_U_Matrix36vmult3EPK11IVP_U_PointPS0_.sig = 'v';
 
-function __ZNK13IVP_U_Matrix37vimult3EPK11IVP_U_PointPS0_(...args) {
-  if (!wasmImports["_ZNK13IVP_U_Matrix37vimult3EPK11IVP_U_PointPS0_"] || wasmImports["_ZNK13IVP_U_Matrix37vimult3EPK11IVP_U_PointPS0_"].stub) abort("external symbol '_ZNK13IVP_U_Matrix37vimult3EPK11IVP_U_PointPS0_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZNK13IVP_U_Matrix37vimult3EPK11IVP_U_PointPS0_"](...args);
-}
+function __ZNK13IVP_U_Matrix37vimult3EPK11IVP_U_PointPS0_(...args) { return 0; }
 
 __ZNK13IVP_U_Matrix37vimult3EPK11IVP_U_PointPS0_.stub = false;
 __ZNK13IVP_U_Matrix37vimult3EPK11IVP_U_PointPS0_.sig = 'v';
 
-function __ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK11IVP_U_PointPS0_(...args) {
-  if (!wasmImports["_ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK11IVP_U_PointPS0_"] || wasmImports["_ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK11IVP_U_PointPS0_"].stub) abort("external symbol '_ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK11IVP_U_PointPS0_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK11IVP_U_PointPS0_"](...args);
-}
+function __ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK11IVP_U_PointPS0_(...args) { return 0; }
 
 __ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK11IVP_U_PointPS0_.stub = false;
 __ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK11IVP_U_PointPS0_.sig = 'v';
 
-function __ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK17IVP_U_Float_PointPS0_(...args) {
-  if (!wasmImports["_ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK17IVP_U_Float_PointPS0_"] || wasmImports["_ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK17IVP_U_Float_PointPS0_"].stub) abort("external symbol '_ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK17IVP_U_Float_PointPS0_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK17IVP_U_Float_PointPS0_"](...args);
-}
+function __ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK17IVP_U_Float_PointPS0_(...args) { return 0; }
 
 __ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK17IVP_U_Float_PointPS0_.stub = false;
 __ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK17IVP_U_Float_PointPS0_.sig = 'v';
 
-function __ZNK16IVP_Cache_Object33transform_vector_to_object_coordsEPK11IVP_U_PointPS0_(...args) {
-  if (!wasmImports["_ZNK16IVP_Cache_Object33transform_vector_to_object_coordsEPK11IVP_U_PointPS0_"] || wasmImports["_ZNK16IVP_Cache_Object33transform_vector_to_object_coordsEPK11IVP_U_PointPS0_"].stub) abort("external symbol '_ZNK16IVP_Cache_Object33transform_vector_to_object_coordsEPK11IVP_U_PointPS0_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZNK16IVP_Cache_Object33transform_vector_to_object_coordsEPK11IVP_U_PointPS0_"](...args);
-}
+function __ZNK16IVP_Cache_Object33transform_vector_to_object_coordsEPK11IVP_U_PointPS0_(...args) { return 0; }
 
 __ZNK16IVP_Cache_Object33transform_vector_to_object_coordsEPK11IVP_U_PointPS0_.stub = false;
 __ZNK16IVP_Cache_Object33transform_vector_to_object_coordsEPK11IVP_U_PointPS0_.sig = 'v';
 
-function __ZNK16IVP_Cache_Object34transform_position_to_world_coordsEPK17IVP_U_Float_PointP11IVP_U_Point(...args) {
-  if (!wasmImports["_ZNK16IVP_Cache_Object34transform_position_to_world_coordsEPK17IVP_U_Float_PointP11IVP_U_Point"] || wasmImports["_ZNK16IVP_Cache_Object34transform_position_to_world_coordsEPK17IVP_U_Float_PointP11IVP_U_Point"].stub) abort("external symbol '_ZNK16IVP_Cache_Object34transform_position_to_world_coordsEPK17IVP_U_Float_PointP11IVP_U_Point' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZNK16IVP_Cache_Object34transform_position_to_world_coordsEPK17IVP_U_Float_PointP11IVP_U_Point"](...args);
-}
+function __ZNK16IVP_Cache_Object34transform_position_to_world_coordsEPK17IVP_U_Float_PointP11IVP_U_Point(...args) { return 0; }
 
 __ZNK16IVP_Cache_Object34transform_position_to_world_coordsEPK17IVP_U_Float_PointP11IVP_U_Point.stub = false;
 __ZNK16IVP_Cache_Object34transform_position_to_world_coordsEPK17IVP_U_Float_PointP11IVP_U_Point.sig = 'v';
 
-function __ZNK16IVP_Cache_Object35transform_position_to_object_coordsEPK11IVP_U_PointPS0_(...args) {
-  if (!wasmImports["_ZNK16IVP_Cache_Object35transform_position_to_object_coordsEPK11IVP_U_PointPS0_"] || wasmImports["_ZNK16IVP_Cache_Object35transform_position_to_object_coordsEPK11IVP_U_PointPS0_"].stub) abort("external symbol '_ZNK16IVP_Cache_Object35transform_position_to_object_coordsEPK11IVP_U_PointPS0_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZNK16IVP_Cache_Object35transform_position_to_object_coordsEPK11IVP_U_PointPS0_"](...args);
-}
+function __ZNK16IVP_Cache_Object35transform_position_to_object_coordsEPK11IVP_U_PointPS0_(...args) { return 0; }
 
 __ZNK16IVP_Cache_Object35transform_position_to_object_coordsEPK11IVP_U_PointPS0_.stub = false;
 __ZNK16IVP_Cache_Object35transform_position_to_object_coordsEPK11IVP_U_PointPS0_.sig = 'v';
 
-function __ZNK17IVP_Contact_Point10is_same_asEPK11IVP_Mindist(...args) {
-  if (!wasmImports["_ZNK17IVP_Contact_Point10is_same_asEPK11IVP_Mindist"] || wasmImports["_ZNK17IVP_Contact_Point10is_same_asEPK11IVP_Mindist"].stub) abort("external symbol '_ZNK17IVP_Contact_Point10is_same_asEPK11IVP_Mindist' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZNK17IVP_Contact_Point10is_same_asEPK11IVP_Mindist"](...args);
-}
+function __ZNK17IVP_Contact_Point10is_same_asEPK11IVP_Mindist(...args) { return 0; }
 
 __ZNK17IVP_Contact_Point10is_same_asEPK11IVP_Mindist.stub = false;
 __ZNK17IVP_Contact_Point10is_same_asEPK11IVP_Mindist.sig = 'v';
 
-function __ZNK17IVP_U_Float_Point11real_lengthEv(...args) {
-  if (!wasmImports["_ZNK17IVP_U_Float_Point11real_lengthEv"] || wasmImports["_ZNK17IVP_U_Float_Point11real_lengthEv"].stub) abort("external symbol '_ZNK17IVP_U_Float_Point11real_lengthEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZNK17IVP_U_Float_Point11real_lengthEv"](...args);
-}
+function __ZNK17IVP_U_Float_Point11real_lengthEv(...args) { return 0; }
 
 __ZNK17IVP_U_Float_Point11real_lengthEv.stub = false;
 __ZNK17IVP_U_Float_Point11real_lengthEv.sig = 'v';
 
-function __ZNK17IVP_U_Float_Point16fast_real_lengthEv(...args) {
-  if (!wasmImports["_ZNK17IVP_U_Float_Point16fast_real_lengthEv"] || wasmImports["_ZNK17IVP_U_Float_Point16fast_real_lengthEv"].stub) abort("external symbol '_ZNK17IVP_U_Float_Point16fast_real_lengthEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZNK17IVP_U_Float_Point16fast_real_lengthEv"](...args);
-}
+function __ZNK17IVP_U_Float_Point16fast_real_lengthEv(...args) { return 0; }
 
 __ZNK17IVP_U_Float_Point16fast_real_lengthEv.stub = false;
 __ZNK17IVP_U_Float_Point16fast_real_lengthEv.sig = 'v';
@@ -6286,21 +5882,14 @@ function __ZNK19GenericThreadLocals16CThreadLocalBase3GetEv(...args) {
   return wasmImports["_ZNK19GenericThreadLocals16CThreadLocalBase3GetEv"](...args);
 }
 
-__ZNK19GenericThreadLocals16CThreadLocalBase3GetEv.stub = false;
-__ZNK19GenericThreadLocals16CThreadLocalBase3GetEv.sig = 'v';
+__ZNK19GenericThreadLocals16CThreadLocalBase3GetEv.stub = true;
 
-function __ZNK8IVP_Core25get_surface_speed_on_testEPK17IVP_U_Float_PointS2_S2_PS0_(...args) {
-  if (!wasmImports["_ZNK8IVP_Core25get_surface_speed_on_testEPK17IVP_U_Float_PointS2_S2_PS0_"] || wasmImports["_ZNK8IVP_Core25get_surface_speed_on_testEPK17IVP_U_Float_PointS2_S2_PS0_"].stub) abort("external symbol '_ZNK8IVP_Core25get_surface_speed_on_testEPK17IVP_U_Float_PointS2_S2_PS0_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZNK8IVP_Core25get_surface_speed_on_testEPK17IVP_U_Float_PointS2_S2_PS0_"](...args);
-}
+function __ZNK8IVP_Core25get_surface_speed_on_testEPK17IVP_U_Float_PointS2_S2_PS0_(...args) { return 0; }
 
 __ZNK8IVP_Core25get_surface_speed_on_testEPK17IVP_U_Float_PointS2_S2_PS0_.stub = false;
 __ZNK8IVP_Core25get_surface_speed_on_testEPK17IVP_U_Float_PointS2_S2_PS0_.sig = 'v';
 
-function __ZNK8IVP_Hash4findEPKc(...args) {
-  if (!wasmImports["_ZNK8IVP_Hash4findEPKc"] || wasmImports["_ZNK8IVP_Hash4findEPKc"].stub) abort("external symbol '_ZNK8IVP_Hash4findEPKc' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZNK8IVP_Hash4findEPKc"](...args);
-}
+function __ZNK8IVP_Hash4findEPKc(...args) { return 0; }
 
 __ZNK8IVP_Hash4findEPKc.stub = false;
 __ZNK8IVP_Hash4findEPKc.sig = 'v';
@@ -6310,61 +5899,51 @@ function __ZNV16CThreadFastMutex4LockEjj(...args) {
   return wasmImports["_ZNV16CThreadFastMutex4LockEjj"](...args);
 }
 
-__ZNV16CThreadFastMutex4LockEjj.stub = false;
-__ZNV16CThreadFastMutex4LockEjj.sig = 'v';
+__ZNV16CThreadFastMutex4LockEjj.stub = true;
 
 function __ZTI10IDirect3D9(...args) {
   if (!wasmImports["_ZTI10IDirect3D9"] || wasmImports["_ZTI10IDirect3D9"].stub) abort("external symbol '_ZTI10IDirect3D9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTI10IDirect3D9"](...args);
 }
 
-__ZTI10IDirect3D9.stub = false;
-__ZTI10IDirect3D9.sig = 'v';
+__ZTI10IDirect3D9.stub = true;
 
 function __ZTI13CWorkerThread(...args) {
   if (!wasmImports["_ZTI13CWorkerThread"] || wasmImports["_ZTI13CWorkerThread"].stub) abort("external symbol '_ZTI13CWorkerThread' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTI13CWorkerThread"](...args);
 }
 
-__ZTI13CWorkerThread.stub = false;
-__ZTI13CWorkerThread.sig = 'v';
+__ZTI13CWorkerThread.stub = true;
 
 function __ZTI15IDirect3DQuery9(...args) {
   if (!wasmImports["_ZTI15IDirect3DQuery9"] || wasmImports["_ZTI15IDirect3DQuery9"].stub) abort("external symbol '_ZTI15IDirect3DQuery9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTI15IDirect3DQuery9"](...args);
 }
 
-__ZTI15IDirect3DQuery9.stub = false;
-__ZTI15IDirect3DQuery9.sig = 'v';
+__ZTI15IDirect3DQuery9.stub = true;
 
 function __ZTI16IDirect3DDevice9(...args) {
   if (!wasmImports["_ZTI16IDirect3DDevice9"] || wasmImports["_ZTI16IDirect3DDevice9"].stub) abort("external symbol '_ZTI16IDirect3DDevice9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTI16IDirect3DDevice9"](...args);
 }
 
-__ZTI16IDirect3DDevice9.stub = false;
-__ZTI16IDirect3DDevice9.sig = 'v';
+__ZTI16IDirect3DDevice9.stub = true;
 
 function __ZTI17IDirect3DSurface9(...args) {
   if (!wasmImports["_ZTI17IDirect3DSurface9"] || wasmImports["_ZTI17IDirect3DSurface9"].stub) abort("external symbol '_ZTI17IDirect3DSurface9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTI17IDirect3DSurface9"](...args);
 }
 
-__ZTI17IDirect3DSurface9.stub = false;
-__ZTI17IDirect3DSurface9.sig = 'v';
+__ZTI17IDirect3DSurface9.stub = true;
 
 function __ZTI17IDirect3DTexture9(...args) {
   if (!wasmImports["_ZTI17IDirect3DTexture9"] || wasmImports["_ZTI17IDirect3DTexture9"].stub) abort("external symbol '_ZTI17IDirect3DTexture9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTI17IDirect3DTexture9"](...args);
 }
 
-__ZTI17IDirect3DTexture9.stub = false;
-__ZTI17IDirect3DTexture9.sig = 'v';
+__ZTI17IDirect3DTexture9.stub = true;
 
-function __ZTI17IVP_Listener_Hull(...args) {
-  if (!wasmImports["_ZTI17IVP_Listener_Hull"] || wasmImports["_ZTI17IVP_Listener_Hull"].stub) abort("external symbol '_ZTI17IVP_Listener_Hull' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZTI17IVP_Listener_Hull"](...args);
-}
+function __ZTI17IVP_Listener_Hull(...args) { return 0; }
 
 __ZTI17IVP_Listener_Hull.stub = false;
 __ZTI17IVP_Listener_Hull.sig = 'v';
@@ -6374,384 +5953,336 @@ function __ZTI18IDirect3DResource9(...args) {
   return wasmImports["_ZTI18IDirect3DResource9"](...args);
 }
 
-__ZTI18IDirect3DResource9.stub = false;
-__ZTI18IDirect3DResource9.sig = 'v';
+__ZTI18IDirect3DResource9.stub = true;
 
 function __ZTI20CUniformRandomStream(...args) {
   if (!wasmImports["_ZTI20CUniformRandomStream"] || wasmImports["_ZTI20CUniformRandomStream"].stub) abort("external symbol '_ZTI20CUniformRandomStream' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTI20CUniformRandomStream"](...args);
 }
 
-__ZTI20CUniformRandomStream.stub = false;
-__ZTI20CUniformRandomStream.sig = 'v';
+__ZTI20CUniformRandomStream.stub = true;
 
 function __ZTI20IUniformRandomStream(...args) {
   if (!wasmImports["_ZTI20IUniformRandomStream"] || wasmImports["_ZTI20IUniformRandomStream"].stub) abort("external symbol '_ZTI20IUniformRandomStream' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTI20IUniformRandomStream"](...args);
 }
 
-__ZTI20IUniformRandomStream.stub = false;
-__ZTI20IUniformRandomStream.sig = 'v';
+__ZTI20IUniformRandomStream.stub = true;
 
 function __ZTI21IDirect3DBaseTexture9(...args) {
   if (!wasmImports["_ZTI21IDirect3DBaseTexture9"] || wasmImports["_ZTI21IDirect3DBaseTexture9"].stub) abort("external symbol '_ZTI21IDirect3DBaseTexture9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTI21IDirect3DBaseTexture9"](...args);
 }
 
-__ZTI21IDirect3DBaseTexture9.stub = false;
-__ZTI21IDirect3DBaseTexture9.sig = 'v';
+__ZTI21IDirect3DBaseTexture9.stub = true;
 
 function __ZTI21IDirect3DCubeTexture9(...args) {
   if (!wasmImports["_ZTI21IDirect3DCubeTexture9"] || wasmImports["_ZTI21IDirect3DCubeTexture9"].stub) abort("external symbol '_ZTI21IDirect3DCubeTexture9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTI21IDirect3DCubeTexture9"](...args);
 }
 
-__ZTI21IDirect3DCubeTexture9.stub = false;
-__ZTI21IDirect3DCubeTexture9.sig = 'v';
+__ZTI21IDirect3DCubeTexture9.stub = true;
 
 function __ZTI21IDirect3DIndexBuffer9(...args) {
   if (!wasmImports["_ZTI21IDirect3DIndexBuffer9"] || wasmImports["_ZTI21IDirect3DIndexBuffer9"].stub) abort("external symbol '_ZTI21IDirect3DIndexBuffer9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTI21IDirect3DIndexBuffer9"](...args);
 }
 
-__ZTI21IDirect3DIndexBuffer9.stub = false;
-__ZTI21IDirect3DIndexBuffer9.sig = 'v';
+__ZTI21IDirect3DIndexBuffer9.stub = true;
 
 function __ZTI21IDirect3DPixelShader9(...args) {
   if (!wasmImports["_ZTI21IDirect3DPixelShader9"] || wasmImports["_ZTI21IDirect3DPixelShader9"].stub) abort("external symbol '_ZTI21IDirect3DPixelShader9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTI21IDirect3DPixelShader9"](...args);
 }
 
-__ZTI21IDirect3DPixelShader9.stub = false;
-__ZTI21IDirect3DPixelShader9.sig = 'v';
+__ZTI21IDirect3DPixelShader9.stub = true;
 
 function __ZTI22IDirect3DVertexBuffer9(...args) {
   if (!wasmImports["_ZTI22IDirect3DVertexBuffer9"] || wasmImports["_ZTI22IDirect3DVertexBuffer9"].stub) abort("external symbol '_ZTI22IDirect3DVertexBuffer9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTI22IDirect3DVertexBuffer9"](...args);
 }
 
-__ZTI22IDirect3DVertexBuffer9.stub = false;
-__ZTI22IDirect3DVertexBuffer9.sig = 'v';
+__ZTI22IDirect3DVertexBuffer9.stub = true;
 
 function __ZTI22IDirect3DVertexShader9(...args) {
   if (!wasmImports["_ZTI22IDirect3DVertexShader9"] || wasmImports["_ZTI22IDirect3DVertexShader9"].stub) abort("external symbol '_ZTI22IDirect3DVertexShader9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTI22IDirect3DVertexShader9"](...args);
 }
 
-__ZTI22IDirect3DVertexShader9.stub = false;
-__ZTI22IDirect3DVertexShader9.sig = 'v';
+__ZTI22IDirect3DVertexShader9.stub = true;
 
 function __ZTI23IDirect3DVolumeTexture9(...args) {
   if (!wasmImports["_ZTI23IDirect3DVolumeTexture9"] || wasmImports["_ZTI23IDirect3DVolumeTexture9"].stub) abort("external symbol '_ZTI23IDirect3DVolumeTexture9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTI23IDirect3DVolumeTexture9"](...args);
 }
 
-__ZTI23IDirect3DVolumeTexture9.stub = false;
-__ZTI23IDirect3DVolumeTexture9.sig = 'v';
+__ZTI23IDirect3DVolumeTexture9.stub = true;
 
 function __ZTI27IDirect3DVertexDeclaration9(...args) {
   if (!wasmImports["_ZTI27IDirect3DVertexDeclaration9"] || wasmImports["_ZTI27IDirect3DVertexDeclaration9"].stub) abort("external symbol '_ZTI27IDirect3DVertexDeclaration9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTI27IDirect3DVertexDeclaration9"](...args);
 }
 
-__ZTI27IDirect3DVertexDeclaration9.stub = false;
-__ZTI27IDirect3DVertexDeclaration9.sig = 'v';
+__ZTI27IDirect3DVertexDeclaration9.stub = true;
 
 function __ZTI7CThread(...args) {
   if (!wasmImports["_ZTI7CThread"] || wasmImports["_ZTI7CThread"].stub) abort("external symbol '_ZTI7CThread' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTI7CThread"](...args);
 }
 
-__ZTI7CThread.stub = false;
-__ZTI7CThread.sig = 'v';
+__ZTI7CThread.stub = true;
 
 function __ZTI8IUnknown(...args) {
   if (!wasmImports["_ZTI8IUnknown"] || wasmImports["_ZTI8IUnknown"].stub) abort("external symbol '_ZTI8IUnknown' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTI8IUnknown"](...args);
 }
 
-__ZTI8IUnknown.stub = false;
-__ZTI8IUnknown.sig = 'v';
+__ZTI8IUnknown.stub = true;
 
 function __ZTS10IDirect3D9(...args) {
   if (!wasmImports["_ZTS10IDirect3D9"] || wasmImports["_ZTS10IDirect3D9"].stub) abort("external symbol '_ZTS10IDirect3D9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTS10IDirect3D9"](...args);
 }
 
-__ZTS10IDirect3D9.stub = false;
-__ZTS10IDirect3D9.sig = 'v';
+__ZTS10IDirect3D9.stub = true;
 
 function __ZTS13CWorkerThread(...args) {
   if (!wasmImports["_ZTS13CWorkerThread"] || wasmImports["_ZTS13CWorkerThread"].stub) abort("external symbol '_ZTS13CWorkerThread' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTS13CWorkerThread"](...args);
 }
 
-__ZTS13CWorkerThread.stub = false;
-__ZTS13CWorkerThread.sig = 'v';
+__ZTS13CWorkerThread.stub = true;
 
 function __ZTS15IDirect3DQuery9(...args) {
   if (!wasmImports["_ZTS15IDirect3DQuery9"] || wasmImports["_ZTS15IDirect3DQuery9"].stub) abort("external symbol '_ZTS15IDirect3DQuery9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTS15IDirect3DQuery9"](...args);
 }
 
-__ZTS15IDirect3DQuery9.stub = false;
-__ZTS15IDirect3DQuery9.sig = 'v';
+__ZTS15IDirect3DQuery9.stub = true;
 
 function __ZTS16IDirect3DDevice9(...args) {
   if (!wasmImports["_ZTS16IDirect3DDevice9"] || wasmImports["_ZTS16IDirect3DDevice9"].stub) abort("external symbol '_ZTS16IDirect3DDevice9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTS16IDirect3DDevice9"](...args);
 }
 
-__ZTS16IDirect3DDevice9.stub = false;
-__ZTS16IDirect3DDevice9.sig = 'v';
+__ZTS16IDirect3DDevice9.stub = true;
 
 function __ZTS17IDirect3DSurface9(...args) {
   if (!wasmImports["_ZTS17IDirect3DSurface9"] || wasmImports["_ZTS17IDirect3DSurface9"].stub) abort("external symbol '_ZTS17IDirect3DSurface9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTS17IDirect3DSurface9"](...args);
 }
 
-__ZTS17IDirect3DSurface9.stub = false;
-__ZTS17IDirect3DSurface9.sig = 'v';
+__ZTS17IDirect3DSurface9.stub = true;
 
 function __ZTS17IDirect3DTexture9(...args) {
   if (!wasmImports["_ZTS17IDirect3DTexture9"] || wasmImports["_ZTS17IDirect3DTexture9"].stub) abort("external symbol '_ZTS17IDirect3DTexture9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTS17IDirect3DTexture9"](...args);
 }
 
-__ZTS17IDirect3DTexture9.stub = false;
-__ZTS17IDirect3DTexture9.sig = 'v';
+__ZTS17IDirect3DTexture9.stub = true;
 
 function __ZTS18IDirect3DResource9(...args) {
   if (!wasmImports["_ZTS18IDirect3DResource9"] || wasmImports["_ZTS18IDirect3DResource9"].stub) abort("external symbol '_ZTS18IDirect3DResource9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTS18IDirect3DResource9"](...args);
 }
 
-__ZTS18IDirect3DResource9.stub = false;
-__ZTS18IDirect3DResource9.sig = 'v';
+__ZTS18IDirect3DResource9.stub = true;
 
 function __ZTS20CUniformRandomStream(...args) {
   if (!wasmImports["_ZTS20CUniformRandomStream"] || wasmImports["_ZTS20CUniformRandomStream"].stub) abort("external symbol '_ZTS20CUniformRandomStream' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTS20CUniformRandomStream"](...args);
 }
 
-__ZTS20CUniformRandomStream.stub = false;
-__ZTS20CUniformRandomStream.sig = 'v';
+__ZTS20CUniformRandomStream.stub = true;
 
 function __ZTS20IUniformRandomStream(...args) {
   if (!wasmImports["_ZTS20IUniformRandomStream"] || wasmImports["_ZTS20IUniformRandomStream"].stub) abort("external symbol '_ZTS20IUniformRandomStream' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTS20IUniformRandomStream"](...args);
 }
 
-__ZTS20IUniformRandomStream.stub = false;
-__ZTS20IUniformRandomStream.sig = 'v';
+__ZTS20IUniformRandomStream.stub = true;
 
 function __ZTS21IDirect3DBaseTexture9(...args) {
   if (!wasmImports["_ZTS21IDirect3DBaseTexture9"] || wasmImports["_ZTS21IDirect3DBaseTexture9"].stub) abort("external symbol '_ZTS21IDirect3DBaseTexture9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTS21IDirect3DBaseTexture9"](...args);
 }
 
-__ZTS21IDirect3DBaseTexture9.stub = false;
-__ZTS21IDirect3DBaseTexture9.sig = 'v';
+__ZTS21IDirect3DBaseTexture9.stub = true;
 
 function __ZTS21IDirect3DCubeTexture9(...args) {
   if (!wasmImports["_ZTS21IDirect3DCubeTexture9"] || wasmImports["_ZTS21IDirect3DCubeTexture9"].stub) abort("external symbol '_ZTS21IDirect3DCubeTexture9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTS21IDirect3DCubeTexture9"](...args);
 }
 
-__ZTS21IDirect3DCubeTexture9.stub = false;
-__ZTS21IDirect3DCubeTexture9.sig = 'v';
+__ZTS21IDirect3DCubeTexture9.stub = true;
 
 function __ZTS21IDirect3DIndexBuffer9(...args) {
   if (!wasmImports["_ZTS21IDirect3DIndexBuffer9"] || wasmImports["_ZTS21IDirect3DIndexBuffer9"].stub) abort("external symbol '_ZTS21IDirect3DIndexBuffer9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTS21IDirect3DIndexBuffer9"](...args);
 }
 
-__ZTS21IDirect3DIndexBuffer9.stub = false;
-__ZTS21IDirect3DIndexBuffer9.sig = 'v';
+__ZTS21IDirect3DIndexBuffer9.stub = true;
 
 function __ZTS21IDirect3DPixelShader9(...args) {
   if (!wasmImports["_ZTS21IDirect3DPixelShader9"] || wasmImports["_ZTS21IDirect3DPixelShader9"].stub) abort("external symbol '_ZTS21IDirect3DPixelShader9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTS21IDirect3DPixelShader9"](...args);
 }
 
-__ZTS21IDirect3DPixelShader9.stub = false;
-__ZTS21IDirect3DPixelShader9.sig = 'v';
+__ZTS21IDirect3DPixelShader9.stub = true;
 
 function __ZTS22IDirect3DVertexBuffer9(...args) {
   if (!wasmImports["_ZTS22IDirect3DVertexBuffer9"] || wasmImports["_ZTS22IDirect3DVertexBuffer9"].stub) abort("external symbol '_ZTS22IDirect3DVertexBuffer9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTS22IDirect3DVertexBuffer9"](...args);
 }
 
-__ZTS22IDirect3DVertexBuffer9.stub = false;
-__ZTS22IDirect3DVertexBuffer9.sig = 'v';
+__ZTS22IDirect3DVertexBuffer9.stub = true;
 
 function __ZTS22IDirect3DVertexShader9(...args) {
   if (!wasmImports["_ZTS22IDirect3DVertexShader9"] || wasmImports["_ZTS22IDirect3DVertexShader9"].stub) abort("external symbol '_ZTS22IDirect3DVertexShader9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTS22IDirect3DVertexShader9"](...args);
 }
 
-__ZTS22IDirect3DVertexShader9.stub = false;
-__ZTS22IDirect3DVertexShader9.sig = 'v';
+__ZTS22IDirect3DVertexShader9.stub = true;
 
 function __ZTS23IDirect3DVolumeTexture9(...args) {
   if (!wasmImports["_ZTS23IDirect3DVolumeTexture9"] || wasmImports["_ZTS23IDirect3DVolumeTexture9"].stub) abort("external symbol '_ZTS23IDirect3DVolumeTexture9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTS23IDirect3DVolumeTexture9"](...args);
 }
 
-__ZTS23IDirect3DVolumeTexture9.stub = false;
-__ZTS23IDirect3DVolumeTexture9.sig = 'v';
+__ZTS23IDirect3DVolumeTexture9.stub = true;
 
 function __ZTS27IDirect3DVertexDeclaration9(...args) {
   if (!wasmImports["_ZTS27IDirect3DVertexDeclaration9"] || wasmImports["_ZTS27IDirect3DVertexDeclaration9"].stub) abort("external symbol '_ZTS27IDirect3DVertexDeclaration9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTS27IDirect3DVertexDeclaration9"](...args);
 }
 
-__ZTS27IDirect3DVertexDeclaration9.stub = false;
-__ZTS27IDirect3DVertexDeclaration9.sig = 'v';
+__ZTS27IDirect3DVertexDeclaration9.stub = true;
 
 function __ZTS7CThread(...args) {
   if (!wasmImports["_ZTS7CThread"] || wasmImports["_ZTS7CThread"].stub) abort("external symbol '_ZTS7CThread' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTS7CThread"](...args);
 }
 
-__ZTS7CThread.stub = false;
-__ZTS7CThread.sig = 'v';
+__ZTS7CThread.stub = true;
 
 function __ZTS8IUnknown(...args) {
   if (!wasmImports["_ZTS8IUnknown"] || wasmImports["_ZTS8IUnknown"].stub) abort("external symbol '_ZTS8IUnknown' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTS8IUnknown"](...args);
 }
 
-__ZTS8IUnknown.stub = false;
-__ZTS8IUnknown.sig = 'v';
+__ZTS8IUnknown.stub = true;
 
 function __ZTV10IDirect3D9(...args) {
   if (!wasmImports["_ZTV10IDirect3D9"] || wasmImports["_ZTV10IDirect3D9"].stub) abort("external symbol '_ZTV10IDirect3D9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTV10IDirect3D9"](...args);
 }
 
-__ZTV10IDirect3D9.stub = false;
-__ZTV10IDirect3D9.sig = 'v';
+__ZTV10IDirect3D9.stub = true;
 
 function __ZTV13CWorkerThread(...args) {
   if (!wasmImports["_ZTV13CWorkerThread"] || wasmImports["_ZTV13CWorkerThread"].stub) abort("external symbol '_ZTV13CWorkerThread' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTV13CWorkerThread"](...args);
 }
 
-__ZTV13CWorkerThread.stub = false;
-__ZTV13CWorkerThread.sig = 'v';
+__ZTV13CWorkerThread.stub = true;
 
 function __ZTV15IDirect3DQuery9(...args) {
   if (!wasmImports["_ZTV15IDirect3DQuery9"] || wasmImports["_ZTV15IDirect3DQuery9"].stub) abort("external symbol '_ZTV15IDirect3DQuery9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTV15IDirect3DQuery9"](...args);
 }
 
-__ZTV15IDirect3DQuery9.stub = false;
-__ZTV15IDirect3DQuery9.sig = 'v';
+__ZTV15IDirect3DQuery9.stub = true;
 
 function __ZTV16IDirect3DDevice9(...args) {
   if (!wasmImports["_ZTV16IDirect3DDevice9"] || wasmImports["_ZTV16IDirect3DDevice9"].stub) abort("external symbol '_ZTV16IDirect3DDevice9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTV16IDirect3DDevice9"](...args);
 }
 
-__ZTV16IDirect3DDevice9.stub = false;
-__ZTV16IDirect3DDevice9.sig = 'v';
+__ZTV16IDirect3DDevice9.stub = true;
 
 function __ZTV17IDirect3DSurface9(...args) {
   if (!wasmImports["_ZTV17IDirect3DSurface9"] || wasmImports["_ZTV17IDirect3DSurface9"].stub) abort("external symbol '_ZTV17IDirect3DSurface9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTV17IDirect3DSurface9"](...args);
 }
 
-__ZTV17IDirect3DSurface9.stub = false;
-__ZTV17IDirect3DSurface9.sig = 'v';
+__ZTV17IDirect3DSurface9.stub = true;
 
 function __ZTV17IDirect3DTexture9(...args) {
   if (!wasmImports["_ZTV17IDirect3DTexture9"] || wasmImports["_ZTV17IDirect3DTexture9"].stub) abort("external symbol '_ZTV17IDirect3DTexture9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTV17IDirect3DTexture9"](...args);
 }
 
-__ZTV17IDirect3DTexture9.stub = false;
-__ZTV17IDirect3DTexture9.sig = 'v';
+__ZTV17IDirect3DTexture9.stub = true;
 
 function __ZTV20CUniformRandomStream(...args) {
   if (!wasmImports["_ZTV20CUniformRandomStream"] || wasmImports["_ZTV20CUniformRandomStream"].stub) abort("external symbol '_ZTV20CUniformRandomStream' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTV20CUniformRandomStream"](...args);
 }
 
-__ZTV20CUniformRandomStream.stub = false;
-__ZTV20CUniformRandomStream.sig = 'v';
+__ZTV20CUniformRandomStream.stub = true;
 
 function __ZTV21IDirect3DBaseTexture9(...args) {
   if (!wasmImports["_ZTV21IDirect3DBaseTexture9"] || wasmImports["_ZTV21IDirect3DBaseTexture9"].stub) abort("external symbol '_ZTV21IDirect3DBaseTexture9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTV21IDirect3DBaseTexture9"](...args);
 }
 
-__ZTV21IDirect3DBaseTexture9.stub = false;
-__ZTV21IDirect3DBaseTexture9.sig = 'v';
+__ZTV21IDirect3DBaseTexture9.stub = true;
 
 function __ZTV21IDirect3DCubeTexture9(...args) {
   if (!wasmImports["_ZTV21IDirect3DCubeTexture9"] || wasmImports["_ZTV21IDirect3DCubeTexture9"].stub) abort("external symbol '_ZTV21IDirect3DCubeTexture9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTV21IDirect3DCubeTexture9"](...args);
 }
 
-__ZTV21IDirect3DCubeTexture9.stub = false;
-__ZTV21IDirect3DCubeTexture9.sig = 'v';
+__ZTV21IDirect3DCubeTexture9.stub = true;
 
 function __ZTV21IDirect3DIndexBuffer9(...args) {
   if (!wasmImports["_ZTV21IDirect3DIndexBuffer9"] || wasmImports["_ZTV21IDirect3DIndexBuffer9"].stub) abort("external symbol '_ZTV21IDirect3DIndexBuffer9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTV21IDirect3DIndexBuffer9"](...args);
 }
 
-__ZTV21IDirect3DIndexBuffer9.stub = false;
-__ZTV21IDirect3DIndexBuffer9.sig = 'v';
+__ZTV21IDirect3DIndexBuffer9.stub = true;
 
 function __ZTV21IDirect3DPixelShader9(...args) {
   if (!wasmImports["_ZTV21IDirect3DPixelShader9"] || wasmImports["_ZTV21IDirect3DPixelShader9"].stub) abort("external symbol '_ZTV21IDirect3DPixelShader9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTV21IDirect3DPixelShader9"](...args);
 }
 
-__ZTV21IDirect3DPixelShader9.stub = false;
-__ZTV21IDirect3DPixelShader9.sig = 'v';
+__ZTV21IDirect3DPixelShader9.stub = true;
 
 function __ZTV22IDirect3DVertexBuffer9(...args) {
   if (!wasmImports["_ZTV22IDirect3DVertexBuffer9"] || wasmImports["_ZTV22IDirect3DVertexBuffer9"].stub) abort("external symbol '_ZTV22IDirect3DVertexBuffer9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTV22IDirect3DVertexBuffer9"](...args);
 }
 
-__ZTV22IDirect3DVertexBuffer9.stub = false;
-__ZTV22IDirect3DVertexBuffer9.sig = 'v';
+__ZTV22IDirect3DVertexBuffer9.stub = true;
 
 function __ZTV22IDirect3DVertexShader9(...args) {
   if (!wasmImports["_ZTV22IDirect3DVertexShader9"] || wasmImports["_ZTV22IDirect3DVertexShader9"].stub) abort("external symbol '_ZTV22IDirect3DVertexShader9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTV22IDirect3DVertexShader9"](...args);
 }
 
-__ZTV22IDirect3DVertexShader9.stub = false;
-__ZTV22IDirect3DVertexShader9.sig = 'v';
+__ZTV22IDirect3DVertexShader9.stub = true;
 
 function __ZTV23IDirect3DVolumeTexture9(...args) {
   if (!wasmImports["_ZTV23IDirect3DVolumeTexture9"] || wasmImports["_ZTV23IDirect3DVolumeTexture9"].stub) abort("external symbol '_ZTV23IDirect3DVolumeTexture9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTV23IDirect3DVolumeTexture9"](...args);
 }
 
-__ZTV23IDirect3DVolumeTexture9.stub = false;
-__ZTV23IDirect3DVolumeTexture9.sig = 'v';
+__ZTV23IDirect3DVolumeTexture9.stub = true;
 
 function __ZTV27IDirect3DVertexDeclaration9(...args) {
   if (!wasmImports["_ZTV27IDirect3DVertexDeclaration9"] || wasmImports["_ZTV27IDirect3DVertexDeclaration9"].stub) abort("external symbol '_ZTV27IDirect3DVertexDeclaration9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTV27IDirect3DVertexDeclaration9"](...args);
 }
 
-__ZTV27IDirect3DVertexDeclaration9.stub = false;
-__ZTV27IDirect3DVertexDeclaration9.sig = 'v';
+__ZTV27IDirect3DVertexDeclaration9.stub = true;
 
 function __ZTV7CThread(...args) {
   if (!wasmImports["_ZTV7CThread"] || wasmImports["_ZTV7CThread"].stub) abort("external symbol '_ZTV7CThread' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_ZTV7CThread"](...args);
 }
 
-__ZTV7CThread.stub = false;
-__ZTV7CThread.sig = 'v';
+__ZTV7CThread.stub = true;
 
 function ___assert_fail(condition, filename, line, func) {
   condition >>>= 0;
@@ -24866,34 +24397,24 @@ var webglPowerPreferences = [ "default", "low-power", "high-performance" ];
     renderViaOffscreenBackBuffer: GROWABLE_HEAP_I8()[attributes + 32 >>> 0]
   };
   var canvas = findCanvasEventTarget(target);
-  if (!canvas) {
-    // FALLBACK: Worker has no DOM access — create standalone OffscreenCanvas
-    if (typeof OffscreenCanvas !== 'undefined') {
-      canvas = new OffscreenCanvas(1280, 800);
-      console.log('[GL] Fallback OffscreenCanvas(1280,800) created for worker');
-    } else {
-      console.error('[GL] No canvas and no OffscreenCanvas available');
-      return 0;
-    }
+  // PATCH: Always use OffscreenCanvas fallback — never create GL context on HTML canvas
+  // This prevents transferControlToOffscreen() from failing later in pthread_create
+  if (typeof OffscreenCanvas !== 'undefined') {
+    canvas = new OffscreenCanvas(1280, 800);
+    console.log('[GL] Forced OffscreenCanvas(1280,800) — preserving HTML canvas for pthread transfer');
+  } else if (!canvas) {
+    console.error('[GL] No canvas and no OffscreenCanvas available');
+    return 0;
   }
   if (canvas.offscreenCanvas) canvas = canvas.offscreenCanvas;
   if (contextAttributes.explicitSwapControl) {
     var supportsOffscreenCanvas = canvas.transferControlToOffscreen || (_emscripten_supports_offscreencanvas() && canvas instanceof OffscreenCanvas);
     if (!supportsOffscreenCanvas) {
-      return 0;
-    }
-    if (canvas.transferControlToOffscreen) {
-      if (!canvas.controlTransferredOffscreen) {
-        GL.offscreenCanvases[canvas.id] = {
-          canvas: canvas.transferControlToOffscreen(),
-          canvasSharedPtr: _malloc(12),
-          id: canvas.id
-        };
-        canvas.controlTransferredOffscreen = true;
-      } else if (!GL.offscreenCanvases[canvas.id]) {
-        return 0;
-      }
-      canvas = GL.offscreenCanvases[canvas.id];
+      // PATCH: Don't return 0 — use fallback OffscreenCanvas instead
+      console.log('[GL] explicitSwapControl but no transferControlToOffscreen — using fallback');
+    } else if (canvas.transferControlToOffscreen) {
+      // PATCH: Skip early transfer — let pthread_create handle it
+      console.log('[GL] Skipping early canvas transfer — deferred to pthread_create');
     }
   }
   var contextHandle = GL.createContext(canvas, contextAttributes);
@@ -25192,77 +24713,77 @@ function _g_ClockSpeed(...args) {
   return wasmImports["g_ClockSpeed"](...args);
 }
 
-_g_ClockSpeed.stub = false;
+_g_ClockSpeed.stub = true;
 
 function _g_ClockSpeedMicrosecondsMultiplier(...args) {
   if (!wasmImports["g_ClockSpeedMicrosecondsMultiplier"] || wasmImports["g_ClockSpeedMicrosecondsMultiplier"].stub) abort("external symbol 'g_ClockSpeedMicrosecondsMultiplier' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["g_ClockSpeedMicrosecondsMultiplier"](...args);
 }
 
-_g_ClockSpeedMicrosecondsMultiplier.stub = false;
+_g_ClockSpeedMicrosecondsMultiplier.stub = true;
 
 function _g_ClockSpeedMillisecondsMultiplier(...args) {
   if (!wasmImports["g_ClockSpeedMillisecondsMultiplier"] || wasmImports["g_ClockSpeedMillisecondsMultiplier"].stub) abort("external symbol 'g_ClockSpeedMillisecondsMultiplier' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["g_ClockSpeedMillisecondsMultiplier"](...args);
 }
 
-_g_ClockSpeedMillisecondsMultiplier.stub = false;
+_g_ClockSpeedMillisecondsMultiplier.stub = true;
 
 function _g_ClockSpeedSecondsMultiplier(...args) {
   if (!wasmImports["g_ClockSpeedSecondsMultiplier"] || wasmImports["g_ClockSpeedSecondsMultiplier"].stub) abort("external symbol 'g_ClockSpeedSecondsMultiplier' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["g_ClockSpeedSecondsMultiplier"](...args);
 }
 
-_g_ClockSpeedSecondsMultiplier.stub = false;
+_g_ClockSpeedSecondsMultiplier.stub = true;
 
 function _g_VCoverage(...args) {
   if (!wasmImports["g_VCoverage"] || wasmImports["g_VCoverage"].stub) abort("external symbol 'g_VCoverage' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["g_VCoverage"](...args);
 }
 
-_g_VCoverage.stub = false;
+_g_VCoverage.stub = true;
 
 function _g_dwClockSpeed(...args) {
   if (!wasmImports["g_dwClockSpeed"] || wasmImports["g_dwClockSpeed"].stub) abort("external symbol 'g_dwClockSpeed' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["g_dwClockSpeed"](...args);
 }
 
-_g_dwClockSpeed.stub = false;
+_g_dwClockSpeed.stub = true;
 
 function _g_nThreadID(...args) {
   if (!wasmImports["g_nThreadID"] || wasmImports["g_nThreadID"].stub) abort("external symbol 'g_nThreadID' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["g_nThreadID"](...args);
 }
 
-_g_nThreadID.stub = false;
+_g_nThreadID.stub = true;
 
 function _g_pMemAlloc(...args) {
   if (!wasmImports["g_pMemAlloc"] || wasmImports["g_pMemAlloc"].stub) abort("external symbol 'g_pMemAlloc' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["g_pMemAlloc"](...args);
 }
 
-_g_pMemAlloc.stub = false;
+_g_pMemAlloc.stub = true;
 
 function _g_pSteamClientGameServer(...args) {
   if (!wasmImports["g_pSteamClientGameServer"] || wasmImports["g_pSteamClientGameServer"].stub) abort("external symbol 'g_pSteamClientGameServer' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["g_pSteamClientGameServer"](...args);
 }
 
-_g_pSteamClientGameServer.stub = false;
+_g_pSteamClientGameServer.stub = true;
 
 function _g_pThreadPool(...args) {
   if (!wasmImports["g_pThreadPool"] || wasmImports["g_pThreadPool"].stub) abort("external symbol 'g_pThreadPool' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["g_pThreadPool"](...args);
 }
 
-_g_pThreadPool.stub = false;
+_g_pThreadPool.stub = true;
 
 function _g_pVCR(...args) {
   if (!wasmImports["g_pVCR"] || wasmImports["g_pVCR"].stub) abort("external symbol 'g_pVCR' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["g_pVCR"](...args);
 }
 
-_g_pVCR.stub = false;
+_g_pVCR.stub = true;
 
 function _getnameinfo(sa, salen, node, nodelen, serv, servlen, flags) {
   sa >>>= 0;
@@ -25324,14 +24845,14 @@ function _toglGetClientRect(...args) {
   return wasmImports["toglGetClientRect"](...args);
 }
 
-_toglGetClientRect.stub = false;
+_toglGetClientRect.stub = true;
 
 function _vtune(...args) {
   if (!wasmImports["vtune"] || wasmImports["vtune"].stub) abort("external symbol 'vtune' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["vtune"](...args);
 }
 
-_vtune.stub = false;
+_vtune.stub = true;
 
 var getCFunc = ident => {
   var func = Module["_" + ident];
@@ -31874,7 +31395,74 @@ Module.__glStubs = {
 
 function assignWasmImports() {
   wasmImports = {
-    /** @export */ _ZN16IVP_Compact_Edge10next_tableE: __ZN16IVP_Compact_Edge10next_tableE,
+    /** @export */ ZN11IVP_Mindist32try_to_generate_managed_frictionEPP19IVP_Friction_SystemP8IVP_BOOLP19IVP_Simulation_UnitS3_: __ZN11IVP_Mindist32try_to_generate_managed_frictionEPP19IVP_Friction_SystemP8IVP_BOOLP19IVP_Simulation_UnitS3_,
+    /** @export */ ZN11IVP_Mindist9do_impactEv: __ZN11IVP_Mindist9do_impactEv,
+    /** @export */ ZN11IVP_U_Point12fast_normizeEv: __ZN11IVP_U_Point12fast_normizeEv,
+    /** @export */ ZN11IVP_U_Point15set_interpolateEPKS_S1_d: __ZN11IVP_U_Point15set_interpolateEPKS_S1_d,
+    /** @export */ ZN11IVP_U_Point18calc_cross_productEPKS_S1_: __ZN11IVP_U_Point18calc_cross_productEPKS_S1_,
+    /** @export */ ZN11IVP_U_Point24real_length_plus_normizeEv: __ZN11IVP_U_Point24real_length_plus_normizeEv,
+    /** @export */ ZN11IVP_U_Point7normizeEv: __ZN11IVP_U_Point7normizeEv,
+    /** @export */ ZN12IVP_KK_Input28calc_quad_distance_edge_edgeEv: __ZN12IVP_KK_Input28calc_quad_distance_edge_edgeEv,
+    /** @export */ ZN12IVP_KK_InputC1EPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_: __ZN12IVP_KK_InputC1EPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_,
+    /** @export */ ZN12IVP_U_Memory14neuer_sp_blockEj: __ZN12IVP_U_Memory14neuer_sp_blockEj,
+    /** @export */ ZN12IVP_U_Memory20free_mem_transactionEv: __ZN12IVP_U_Memory20free_mem_transactionEv,
+    /** @export */ ZN13IVP_3D_Solver27find_first_t_for_value_collEdd8IVP_TimeS0_P18IVP_U_Matrix_CacheS2_PdPS0_: __ZN13IVP_3D_Solver27find_first_t_for_value_collEdd8IVP_TimeS0_P18IVP_U_Matrix_CacheS2_PdPS0_,
+    /** @export */ ZN13IVP_3D_Solver30find_first_t_for_value_max_devEd8IVP_TimeS0_iP18IVP_U_Matrix_CacheS2_PdPS0_: __ZN13IVP_3D_Solver30find_first_t_for_value_max_devEd8IVP_TimeS0_iP18IVP_U_Matrix_CacheS2_PdPS0_,
+    /** @export */ ZN14IVP_OV_Element19add_to_hull_managerEP16IVP_Hull_Managerd: __ZN14IVP_OV_Element19add_to_hull_managerEP16IVP_Hull_Managerd,
+    /** @export */ ZN14IVP_OV_ElementC1EP15IVP_Real_Object: __ZN14IVP_OV_ElementC1EP15IVP_Real_Object,
+    /** @export */ ZN14IVP_U_Min_List19remove_minlist_elemEj: __ZN14IVP_U_Min_List19remove_minlist_elemEj,
+    /** @export */ ZN14IVP_U_Min_List3addEPvf: __ZN14IVP_U_Min_List3addEPvf,
+    /** @export */ ZN15IVP_Inline_Math11isqrt_floatEf: __ZN15IVP_Inline_Math11isqrt_floatEf,
+    /** @export */ ZN15IVP_Inline_Math12isqrt_doubleEd: __ZN15IVP_Inline_Math12isqrt_doubleEd,
+    /** @export */ ZN16IVP_Cache_Object19update_cache_objectEv: __ZN16IVP_Cache_Object19update_cache_objectEv,
+    /** @export */ ZN16IVP_Compact_Edge10next_tableE: __ZN16IVP_Compact_Edge10next_tableE,
+    /** @export */ ZN16IVP_Compact_Edge10prev_tableE: __ZN16IVP_Compact_Edge10prev_tableE,
+    /** @export */ ZN16IVP_Time_Manager12remove_eventEP14IVP_Time_Event: __ZN16IVP_Time_Manager12remove_eventEP14IVP_Time_Event,
+    /** @export */ ZN17IVP_Contact_PointC1EP11IVP_Mindist: __ZN17IVP_Contact_PointC1EP11IVP_Mindist,
+    /** @export */ ZN17IVP_Contact_PointD1Ev: __ZN17IVP_Contact_PointD1Ev,
+    /** @export */ ZN17IVP_U_Float_Point7normizeEv: __ZN17IVP_U_Float_Point7normizeEv,
+    /** @export */ ZN17IVP_U_Vector_Base13increment_memEv: __ZN17IVP_U_Vector_Base13increment_memEv,
+    /** @export */ ZN19IVP_OV_Tree_Manager17insert_ov_elementEP14IVP_OV_ElementddP12IVP_U_VectorIS0_E: __ZN19IVP_OV_Tree_Manager17insert_ov_elementEP14IVP_OV_ElementddP12IVP_U_VectorIS0_E,
+    /** @export */ ZN19IVP_OV_Tree_Manager17remove_ov_elementEP14IVP_OV_Element: __ZN19IVP_OV_Tree_Manager17remove_ov_elementEP14IVP_OV_Element,
+    /** @export */ ZN20IVP_U_BigVector_Base13increment_memEv: __ZN20IVP_U_BigVector_Base13increment_memEv,
+    /** @export */ ZN22IVP_Controller_Phantom19mindist_left_volumeEP11IVP_Mindist: __ZN22IVP_Controller_Phantom19mindist_left_volumeEP11IVP_Mindist,
+    /** @export */ ZN22IVP_Controller_Phantom22mindist_entered_volumeEP11IVP_Mindist: __ZN22IVP_Controller_Phantom22mindist_entered_volumeEP11IVP_Mindist,
+    /** @export */ ZN24IVP_Cache_Object_Manager16get_cache_objectEP15IVP_Real_Object: __ZN24IVP_Cache_Object_Manager16get_cache_objectEP15IVP_Real_Object,
+    /** @export */ ZN24IVP_Compact_Ledge_Solver17calc_hesse_objectEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Hesse: __ZN24IVP_Compact_Ledge_Solver17calc_hesse_objectEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Hesse,
+    /** @export */ ZN24IVP_Compact_Ledge_Solver20calc_pos_other_spaceEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointS4_P11IVP_U_Point: __ZN24IVP_Compact_Ledge_Solver20calc_pos_other_spaceEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointS4_P11IVP_U_Point,
+    /** @export */ ZN24IVP_Compact_Ledge_Solver20give_world_coords_ATEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointP11IVP_U_Point: __ZN24IVP_Compact_Ledge_Solver20give_world_coords_ATEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointP11IVP_U_Point,
+    /** @export */ ZN24IVP_Compact_Ledge_Solver21calc_unscaled_KK_valsERK12IVP_KK_InputP22IVP_Unscaled_KK_Result: __ZN24IVP_Compact_Ledge_Solver21calc_unscaled_KK_valsERK12IVP_KK_InputP22IVP_Unscaled_KK_Result,
+    /** @export */ ZN24IVP_Compact_Ledge_Solver27calc_unscaled_s_val_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP21IVP_Unscaled_S_Result: __ZN24IVP_Compact_Ledge_Solver27calc_unscaled_s_val_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP21IVP_Unscaled_S_Result,
+    /** @export */ ZN24IVP_Compact_Ledge_Solver29calc_unscaled_qr_vals_F_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP22IVP_Unscaled_QR_Result: __ZN24IVP_Compact_Ledge_Solver29calc_unscaled_qr_vals_F_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP22IVP_Unscaled_QR_Result,
+    /** @export */ ZN24IVP_Compact_Ledge_Solver31quad_dist_edge_to_point_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_Point: __ZN24IVP_Compact_Ledge_Solver31quad_dist_edge_to_point_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_Point,
+    /** @export */ ZN24IVP_Compact_Ledge_Solver34calc_hesse_vec_object_not_normizedEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Point: __ZN24IVP_Compact_Ledge_Solver34calc_hesse_vec_object_not_normizedEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Point,
+    /** @export */ ZN27IVP_Mindist_Minimize_Solver13p_minimize_BFEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point: __ZN27IVP_Mindist_Minimize_Solver13p_minimize_BFEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point,
+    /** @export */ ZN27IVP_Mindist_Minimize_Solver13p_minimize_BKEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point: __ZN27IVP_Mindist_Minimize_Solver13p_minimize_BKEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point,
+    /** @export */ ZN27IVP_Mindist_Minimize_Solver13p_minimize_BPEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point: __ZN27IVP_Mindist_Minimize_Solver13p_minimize_BPEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point,
+    /** @export */ ZN27IVP_Mindist_Minimize_Solver13p_minimize_KKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_: __ZN27IVP_Mindist_Minimize_Solver13p_minimize_KKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_,
+    /** @export */ ZN27IVP_Mindist_Minimize_Solver13p_minimize_PFEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_: __ZN27IVP_Mindist_Minimize_Solver13p_minimize_PFEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_,
+    /** @export */ ZN27IVP_Mindist_Minimize_Solver13p_minimize_PKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_: __ZN27IVP_Mindist_Minimize_Solver13p_minimize_PKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_,
+    /** @export */ ZN27IVP_Mindist_Minimize_Solver13p_minimize_PPEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_: __ZN27IVP_Mindist_Minimize_Solver13p_minimize_PPEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_,
+    /** @export */ ZN8IVP_Hash3addEPKcPv: __ZN8IVP_Hash3addEPKcPv,
+    /** @export */ ZN8IVP_HashC1EiiPv: __ZN8IVP_HashC1EiiPv,
+    /** @export */ ZN8IVP_HashD1Ev: __ZN8IVP_HashD1Ev,
+    /** @export */ ZNK11IVP_U_Point11real_lengthEv: __ZNK11IVP_U_Point11real_lengthEv,
+    /** @export */ ZNK12IVP_U_Matrix6vmult4EPK11IVP_U_PointPS0_: __ZNK12IVP_U_Matrix6vmult4EPK11IVP_U_PointPS0_,
+    /** @export */ ZNK12IVP_U_Matrix6vmult4EPK17IVP_U_Float_PointP11IVP_U_Point: __ZNK12IVP_U_Matrix6vmult4EPK17IVP_U_Float_PointP11IVP_U_Point,
+    /** @export */ ZNK12IVP_U_Matrix7vimult4EPK11IVP_U_PointPS0_: __ZNK12IVP_U_Matrix7vimult4EPK11IVP_U_PointPS0_,
+    /** @export */ ZNK13IVP_U_Matrix36vmult3EPK11IVP_U_PointPS0_: __ZNK13IVP_U_Matrix36vmult3EPK11IVP_U_PointPS0_,
+    /** @export */ ZNK13IVP_U_Matrix37vimult3EPK11IVP_U_PointPS0_: __ZNK13IVP_U_Matrix37vimult3EPK11IVP_U_PointPS0_,
+    /** @export */ ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK11IVP_U_PointPS0_: __ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK11IVP_U_PointPS0_,
+    /** @export */ ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK17IVP_U_Float_PointPS0_: __ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK17IVP_U_Float_PointPS0_,
+    /** @export */ ZNK16IVP_Cache_Object33transform_vector_to_object_coordsEPK11IVP_U_PointPS0_: __ZNK16IVP_Cache_Object33transform_vector_to_object_coordsEPK11IVP_U_PointPS0_,
+    /** @export */ ZNK16IVP_Cache_Object34transform_position_to_world_coordsEPK17IVP_U_Float_PointP11IVP_U_Point: __ZNK16IVP_Cache_Object34transform_position_to_world_coordsEPK17IVP_U_Float_PointP11IVP_U_Point,
+    /** @export */ ZNK16IVP_Cache_Object35transform_position_to_object_coordsEPK11IVP_U_PointPS0_: __ZNK16IVP_Cache_Object35transform_position_to_object_coordsEPK11IVP_U_PointPS0_,
+    /** @export */ ZNK17IVP_Contact_Point10is_same_asEPK11IVP_Mindist: __ZNK17IVP_Contact_Point10is_same_asEPK11IVP_Mindist,
+    /** @export */ ZNK17IVP_U_Float_Point11real_lengthEv: __ZNK17IVP_U_Float_Point11real_lengthEv,
+    /** @export */ ZNK17IVP_U_Float_Point16fast_real_lengthEv: __ZNK17IVP_U_Float_Point16fast_real_lengthEv,
+    /** @export */ ZNK8IVP_Core25get_surface_speed_on_testEPK17IVP_U_Float_PointS2_S2_PS0_: __ZNK8IVP_Core25get_surface_speed_on_testEPK17IVP_U_Float_PointS2_S2_PS0_,
+    /** @export */ ZNK8IVP_Hash4findEPKc: __ZNK8IVP_Hash4findEPKc,
+    /** @export */ ZTI17IVP_Listener_Hull: __ZTI17IVP_Listener_Hull,
     /** @export */ ApproximateProcessMemoryUsage: _ApproximateProcessMemoryUsage,
     /** @export */ BuildCmdLine: _BuildCmdLine,
     /** @export */ COM_TimestampedLog: _COM_TimestampedLog,
