@@ -160,10 +160,18 @@
            }
        });
 
-       // Lade die von Build #88 kompilierte Engine
+       // Lade die Engine (Build #105 — pre.js jetzt korrekt im Build)
        log("Lade hl2_launcher.js...");
        const script = document.createElement('script');
        script.src = 'hl2_launcher.js';
+       script.onload = function() {
+           // pre.js deklariert canvasElement etc. als null — hier zu DOM Elements zuweisen
+           if (typeof canvasElement !== 'undefined') canvasElement = document.getElementById('game-canvas');
+           if (typeof statusElement !== 'undefined') statusElement = document.getElementById('loading-status');
+           if (typeof progressElement !== 'undefined') progressElement = document.getElementById('progress');
+           if (typeof spinnerElement !== 'undefined') spinnerElement = document.getElementById('spinner');
+           console.log('[POST-LOAD] canvasElement =', canvasElement ? 'OK' : 'null');
+       };
        document.body.appendChild(script);
 
    </script>
