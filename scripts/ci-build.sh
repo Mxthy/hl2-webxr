@@ -698,10 +698,13 @@ emcc_link() {
   _sp_hash=$(grep "em_loop_iteration\|EMSCRIPTEN_KEEPALIVE.*em_loop" "$REPO_ROOT/scripts/ci-build.sh" | md5sum | cut -c1-8)
   _sp_cache="$ENGINE_DIR/build/.sp_hash"
   if [ -f "$_sp_cache" ] && [ "$(cat "$_sp_cache")" != "$_sp_hash" ]; then
-    log "Source patches changed — forcing emcc_link re-run"
+    log "Source patches changed — forcing waf_build + emcc_link re-run"
     sed -i '/emcc_link/d' "$checkpoint_file" 2>/dev/null || true
+    sed -i '/waf_build/d' "$checkpoint_file" 2>/dev/null || true
     # Also clear source_patches checkpoint to re-apply patches
     sed -i '/source_patches/d' "$checkpoint_file" 2>/dev/null || true
+    # Clear waf build cache to force recompilation with KEEPALIVE
+    find "$ENGINE_DIR/build" -mindepth 1 -delete 2>/dev/null || true
   fi
   echo "$_sp_hash" > "$_sp_cache" 2>/dev/null || true
 
