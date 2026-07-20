@@ -769,6 +769,24 @@ emcc_link() {
     log "  webxr_hooks.cpp not found, skipping (Phase 2 engine hooks)"
   fi
 
+  # Copy pre.js and shell.html from repo root to ENGINE_DIR/emscripten/ (emcc runs from ENGINE_DIR)
+  mkdir -p "$ENGINE_DIR/emscripten" 2>/dev/null || true
+  [ -f "$REPO_ROOT/emscripten/pre.js" ] && cp "$REPO_ROOT/emscripten/pre.js" "$ENGINE_DIR/emscripten/pre.js"
+  [ -f "$REPO_ROOT/emscripten/shell.html" ] && cp "$REPO_ROOT/emscripten/shell.html" "$ENGINE_DIR/emscripten/shell.html" || true
+  # Ensure pre.js content is fresh (not from a previous cached build)
+  if [ ! -f "$ENGINE_DIR/emscripten/pre.js" ]; then
+    log "  WARNING: pre.js not found — creating minimal pre.js"
+    cat > "$ENGINE_DIR/emscripten/pre.js" << 'PRE_JS_FALLBACK'
+var canvasElement = null;
+var statusElement = null;
+var progressElement = null;
+var spinnerElement = null;
+var __allowCanvasTransfer = true;
+var transferredCanvasNames = "";
+PRE_JS_FALLBACK
+  fi
+  log "  pre.js: $(wc -c < "$ENGINE_DIR/emscripten/pre.js" 2>/dev/null || echo 'missing') bytes"
+
   log "Running: emcc link → hl2_launcher.html ..."
   emcc \
     -sUSE_BZIP2=1 -sUSE_SDL=2 -sUSE_FREETYPE=1 -sUSE_LIBJPEG=1 \
