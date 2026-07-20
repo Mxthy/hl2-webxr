@@ -488,7 +488,9 @@ POST_JS_EOF
   # The Source Engine defines em_loop_iteration() as 'static' in sys_dll2.cpp.
   # wasm-ld DCE strips it because no exported function references it directly.
   # The main WASM imports _Z17em_loop_iterationv from env, but no side module exports it.
-  # Fix: Make it extern "C" with EMSCRIPTEN_KEEPALIVE to prevent DCE and name mangling.
+  # Fix: Add EMSCRIPTEN_KEEPALIVE (WITHOUT extern "C") to prevent DCE.
+  # Must keep C++ linkage — the main WASM imports _Z17em_loop_iterationv (mangled name).
+  # extern "C" would rename to _em_loop_iteration and the import would NOT be satisfied.
   for sys_dll in "$ENGINE_DIR/engine/gamedll/sys_dll2.cpp" "$ENGINE_DIR/engine/sys_dll2.cpp"; do
     if [ -f "$sys_dll" ]; then
       log "  patch: em_loop_iteration KEEPALIVE in $sys_dll"
@@ -498,9 +500,9 @@ POST_JS_EOF
       fi
       # Replace 'static void em_loop_iteration()' with KEEPALIVE version
       # The function might be 'static void em_loop_iteration()' or 'static void em_loop_iteration(void)'
-      sed -i 's/static void em_loop_iteration *( *void *)/extern "C" EMSCRIPTEN_KEEPALIVE void em_loop_iteration(void)/g' "$sys_dll"
+      sed -i 's/static void em_loop_iteration *( *void *)/EMSCRIPTEN_KEEPALIVE void em_loop_iteration(void)/g' "$sys_dll"
       # Also handle 'static void em_loop_iteration()' without void
-      sed -i 's/static void em_loop_iteration *()/extern "C" EMSCRIPTEN_KEEPALIVE void em_loop_iteration(void)/g' "$sys_dll"
+      sed -i 's/static void em_loop_iteration *()/EMSCRIPTEN_KEEPALIVE void em_loop_iteration(void)/g' "$sys_dll"
       # Verify the patch was applied
       if grep -q 'EMSCRIPTEN_KEEPALIVE.*em_loop_iteration' "$sys_dll"; then
         log "  ✓ em_loop_iteration now has EMSCRIPTEN_KEEPALIVE"
@@ -780,7 +782,7 @@ emcc_link() {
     -sOFFSCREENCANVASES_TO_PTHREAD="#game-canvas" \
     -sOFFSCREENCANVAS_SUPPORT=1 \
     "-sEXPORTED_RUNTIME_METHODS=['wasmMemory','addRunDependency','removeRunDependency','FS','callMain','abort','HEAPU8','ccall','cwrap','wasmExports','getValue','setValue','HEAPF32','HEAPU32','lengthBytesUTF8','stringToUTF8','UTF8ToString']" \
-    -sEXPORTED_FUNCTIONS=_em_loop_iteration \
+    -sEXPORTED_FUNCTIONS=_Z17em_loop_iterationv \
     --pre-js emscripten/pre.js \
     --post-js emscripten/post.js \
     -sERROR_ON_UNDEFINED_SYMBOLS=0 \
