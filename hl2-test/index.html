@@ -26,6 +26,11 @@
 </head>
 <body>
 
+   <!-- Hidden elements for Emscripten DataLoader globals -->
+   <div id="spinner" style="display:none;"></div>
+   <div id="status" style="display:none;"></div>
+   <progress id="progress" hidden></progress>
+   
    <canvas id="game-canvas" width="1280" height="800" oncontextmenu="event.preventDefault()"></canvas>
 
    <div id="debug-overlay">

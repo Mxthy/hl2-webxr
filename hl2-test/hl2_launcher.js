@@ -104,7 +104,7 @@ if (ENVIRONMENT_IS_NODE) {
 // include: /home/runner/work/hl2-webxr/hl2-webxr/engine/portal-port/emscripten/pre.js
 Module["arguments"] = Module["arguments"] || [];
 
-Module["arguments"].push("-game", "hl2", "-windowed", "-w", "1280", "-h", "800", "-novid", "-noip", "-language", "english", "+mat_hdr_level", "0", "+mat_colorcorrection", "1", "+mat_queue_mode", "0", "-nomessagebox", "-console", "+cl_showfps", "1", "+map", "background01");
+Module["arguments"].push("-game", "portal", "-noip", "-language", "english", "-windowed", "+mat_hdr_level", "0", "+mat_colorcorrection", "1");
 
 class DataLoader {
   mapsOrdered=[ "background1", "testchmb_a_00", "testchmb_a_01", "testchmb_a_02", "testchmb_a_03", "testchmb_a_04", "testchmb_a_05", "testchmb_a_06", "testchmb_a_07", "testchmb_a_08", "testchmb_a_09", "testchmb_a_10", "testchmb_a_11", "testchmb_a_13", "testchmb_a_14", "testchmb_a_15" ];
@@ -132,18 +132,17 @@ class DataLoader {
   }
   async setProgress(mapName, progress) {
     if (progress < 1) {
-      spinnerElement.style.display = "";
-      statusElement.innerText = `Downloading map ${mapName}`;
-      progressElement.hidden = false;
-      progressElement.value = progress;
+      if (spinnerElement) spinnerElement.style.display = "";
+      if (statusElement) statusElement.innerText = `Downloading map ${mapName}`;
+      if (progressElement) progressElement.hidden = false;
+      if (progressElement) progressElement.value = progress;
     } else {
-      spinnerElement.style.display = "none";
-      statusElement.innerText = "";
-      progressElement.hidden = true;
+      if (spinnerElement) spinnerElement.style.display = "none";
+      if (statusElement) statusElement.innerText = "";
+      if (progressElement) progressElement.hidden = true;
     }
   }
   async loadMap(mapName) {
-    console.log('[CHUNK-LOAD] Starting loadMap: ' + mapName);
     this.setProgress(mapName, 0);
     let resolve, reject;
     const promise = new Promise((res, rej) => {
@@ -159,7 +158,6 @@ class DataLoader {
       reject(new Error(`cannot load map ${mapName}`));
     };
     xhr.onload = e => {
-      console.log('[CHUNK-LOAD] ' + mapName + ' loaded! ' + xhr.response.byteLength + ' bytes');
       this.setProgress(mapName, 1);
       const dv = new DataView(xhr.response);
       let offset = 0;
@@ -174,11 +172,9 @@ class DataLoader {
         FS.mkdirTree(dir);
         FS.writeFile(path, blob);
       }
-      console.log('[CHUNK-LOAD] ' + mapName + ' — all files written to MEMFS ✓');
       resolve();
     };
     xhr.open("GET", chunkUrl(mapName), true);
-    console.log('[CHUNK-LOAD] Fetching: ' + chunkUrl(mapName));
     xhr.send();
     return promise;
   }
@@ -196,7 +192,7 @@ Module.downloadMap = (lock, mapName) => {
 // end include: /home/runner/work/hl2-webxr/hl2-webxr/engine/portal-port/emscripten/pre.js
 
 // === ASSET CONFIG: Single immutable source for chunk URLs ===
-const ASSET_ORIGIN = 'http://localhost:8087';
+const ASSET_ORIGIN = 'https://hl2-assets-proxy.hl2-webxr.workers.dev';
 const CHUNK_PREFIX = ASSET_ORIGIN + '/chunks';
 
 function chunkUrl(mapName) {
@@ -419,18 +415,6 @@ if (ENVIRONMENT_IS_NODE) {
   defaultPrintErr = (...args) => fs.writeSync(2, args.join(" ") + "\n");
 }
 
-var _origDefaultPrint = defaultPrint;
-defaultPrint = function(text) {
-  if (text === '' || text === '\n' || (typeof text === 'string' && text.trim() === '')) {
-    // Log empty print calls with a stack trace to find who's printing the empty message
-    try {
-      var stack = new Error().stack;
-      var frames = stack.split('\n').slice(1, 5);
-      console.warn('[EMPTY-PRINT] empty printf — caller: ' + frames.join(' | '));
-    } catch(e) {}
-  }
-  _origDefaultPrint(text);
-};
 var out = Module["print"] || defaultPrint;
 
 var err = Module["printErr"] || defaultPrintErr;
@@ -708,38 +692,23 @@ if (ENVIRONMENT_IS_PTHREAD) {
       }
     } catch (ex) {
       if (ex === "ESCAPE_SIGTRAP") {
-        console.warn("[WORKER] ✅ ESCAPE_SIGTRAP caught — stack unwound, trying manual main loop start");
+        console.warn("[WORKER] ESCAPE_SIGTRAP caught — stack unwound, starting main loop");
         ABORT = false;
         EXITSTATUS = 0;
-        // Try to manually start the main loop with em_loop_iteration (JS function directly)
         try {
-          // Pass the JS function directly — setMainLoop accepts both function pointers and JS functions
           setMainLoop(__Z17em_loop_iterationv, 0, true);
-          console.log("[POST-UNWIND] ✅ Main loop started manually!");
+          console.log("[POST-UNWIND] Main loop started (unwind exception is normal)");
         } catch(mlEx) {
           if (mlEx === "unwind") {
-            // "unwind" is NORMAL — setMainLoop throws it to return to the JS event loop
-            console.log("[POST-UNWIND] ✅ Main loop started (unwind exception is normal)");
+            console.log("[POST-UNWIND] Main loop started (unwind exception is normal)");
           } else {
             console.error("[POST-UNWIND] Failed to start main loop: " + mlEx);
           }
         }
       } else if (ex === "ESCAPE_EXIT") {
-        console.warn("[WORKER] ✅ ESCAPE_EXIT caught — _proc_exit bypassed, continuing execution");
+        console.warn("[WORKER] ESCAPE_EXIT caught — _proc_exit bypassed, continuing");
         ABORT = false;
         EXITSTATUS = 0;
-        // Try to manually start the main loop if em_loop_iteration is available
-        try {
-          if (typeof _em_loop_iteration === 'function' && _em_loop_iteration !== _em_loop_iteration_stub) {
-            console.log("[POST-EXIT] Calling emscripten_set_main_loop with em_loop_iteration...");
-            _emscripten_set_main_loop(_em_loop_iteration, 0, true);
-            console.log("[POST-EXIT] ✅ Main loop started!");
-          } else {
-            console.warn("[POST-EXIT] em_loop_iteration is a stub — cannot start main loop");
-          }
-        } catch(e) {
-          console.error("[POST-EXIT] Failed to start main loop: " + e);
-        }
       } else if (ex instanceof WebAssembly.RuntimeError && (ex.message?.includes('unreachable') || ex.message?.includes('Aborted'))) {
         err(`worker: caught non-fatal RuntimeError (continuing): ${ex.message?.substring(0, 80)}`);
         ABORT = false;
@@ -846,57 +815,6 @@ var __RELOC_FUNCS__ = [];
 var runtimeInitialized = false;
 
 function preRun() {
-  // Intercept FS.open to log/fix SourceScheme access
-  console.log('[FS-TRACE] FS.open override installed in preRun, ENVIRONMENT_IS_PTHREAD=' + ENVIRONMENT_IS_PTHREAD);
-  var _orig_FS_open = FS.open;
-  var _fs_open_count = 0;
-  FS.open = function(path, flags, mode) {
-    _fs_open_count++;
-    if (_fs_open_count <= 5 || (path && typeof path === 'string' && (path.indexOf('Scheme') >= 0 || path.indexOf('scheme') >= 0 || path.indexOf('Resource') >= 0 || path.indexOf('gameinfo') >= 0 || path.indexOf('surfaceprop') >= 0 || path.indexOf('manifest') >= 0 || path.indexOf('scripts/') >= 0))) {
-      // Check existence for debugging
-      if (path && typeof path === 'string' && path.indexOf('surfaceproperties_manifest') >= 0) {
-        try {
-          var exists = FS.analyzePath(path).exists;
-          console.log('[FS-TRACE] surfaceproperties_manifest EXISTS=' + exists + ' at ' + path);
-          if (!exists) {
-            // List /hl2/scripts/ contents
-            try {
-              var dir = FS.readdir('/hl2/scripts/');
-              console.log('[FS-TRACE] /hl2/scripts/ contents: ' + JSON.stringify(dir));
-            } catch(e2) { console.log('[FS-TRACE] Cannot list /hl2/scripts/: ' + e2); }
-          }
-        } catch(e) { console.log('[FS-TRACE] analyzePath error: ' + e); }
-      }
-      console.log('[FS-TRACE] #' + _fs_open_count + ' open: ' + path);
-    }
-    if (path && typeof path === 'string' && (path.toLowerCase().indexOf('sourcescheme') >= 0)) {
-      var exists = false;
-      try { exists = FS.analyzePath(path).exists; } catch(e) {}
-      console.log('[FS-TRACE] open: ' + path + ' flags=' + flags + ' exists=' + exists);
-      if (!exists) {
-        var prefixes = ['/hl2/', '/hl2/platform/', '/platform/', '/hl2/hl2/', '/'];
-        for (var i = 0; i < prefixes.length; i++) {
-          var p = prefixes[i] + path;
-          try {
-            if (FS.analyzePath(p).exists) {
-              console.log('[FS-TRACE] Found at: ' + p + ' — redirecting');
-              return _orig_FS_open.call(FS, p, flags, mode);
-            }
-          } catch(e) {}
-        }
-        // If still not found, create it on the fly from our known content
-        if (typeof schemeResContent !== 'undefined') {
-          try {
-            FS.mkdirTree(path.substring(0, path.lastIndexOf('/')));
-            FS.writeFile(path, schemeResContent);
-            console.log('[FS-TRACE] Created on-demand: ' + path);
-            return _orig_FS_open.call(FS, path, flags, mode);
-          } catch(e) { console.warn('[FS-TRACE] Create failed: ' + e); }
-        }
-      }
-    }
-    return _orig_FS_open.call(FS, path, flags, mode);
-  };
   assert(!ENVIRONMENT_IS_PTHREAD);
   // PThreads reuse the runtime from the main thread.
   if (Module["preRun"]) {
@@ -1052,15 +970,31 @@ function removeRunDependency(id) {
   }
 }
 
-function abort(what) {
-  if (what && what.indexOf && what.indexOf('IVP_Compact_Edge') >= 0) { console.warn('[skip] ' + what); return; }
-  if (what && what.indexOf && what.indexOf('unreachable') >= 0) { console.warn('[skip] unreachable'); return; }
-  if (what !== undefined) {
-    console.log('[ABORT-CAUGHT] ' + what);
-  } else {
-    console.log('[ABORT-CAUGHT] abort called with undefined reason');
-  }
-  try { console.log('[ABORT-STACK] ' + new Error().stack.split('\n').slice(0,8).join(' | ')); } catch(e) {}
+/** @param {string|number=} what */ function abort(what) {
+  Module["onAbort"]?.(what);
+  what = "Aborted(" + what + ")";
+  // TODO(sbc): Should we remove printing and leave it up to whoever
+  // catches the exception?
+  err(what);
+  ABORT = true;
+  // Use a wasm runtime error, because a JS error might be seen as a foreign
+  // exception, which means we'd run destructors on it. We need the error to
+  // simply make the program stop.
+  // FIXME This approach does not work in Wasm EH because it currently does not assume
+  // all RuntimeErrors are from traps; it decides whether a RuntimeError is from
+  // a trap or not based on a hidden field within the object. So at the moment
+  // we don't have a way of throwing a wasm trap from JS. TODO Make a JS API that
+  // allows this in the wasm spec.
+  // Suppress closure compiler warning here. Closure compiler's builtin extern
+  // definition for WebAssembly.RuntimeError claims it takes no arguments even
+  // though it can.
+  // TODO(https://github.com/google/closure-compiler/pull/3913): Remove if/when upstream closure gets fixed.
+  /** @suppress {checkTypes} */ var e = new WebAssembly.RuntimeError(what);
+  // Throw the error whether or not MODULARIZE is set because abort is used
+  // in code paths apart from instantiation where an exception is expected
+  // to be thrown when abort is called.
+  // Non-fatal abort: log and continue
+  console.error('[ABORT-CAUGHT] ' + what);
   ABORT = false;
   EXITSTATUS = 0;
   return;
@@ -1191,66 +1125,12 @@ function createWasm() {
       dynamicLibraries = metadata.neededDynlibs.concat(dynamicLibraries);
     }
     mergeLibSymbols(wasmExports, "main");
-  // Override 'raise' in wasmImports so side modules (.so) get a no-op instead
-  // of the real raise() which triggers action_abort → abort → __abort_js
-  // The main module's internal calls to raise use the WASM table, not wasmImports
-  var _orig_raise_wasm = wasmImports["raise"];
-  var _raiseCallCount = 0;
+  // Override raise for side modules — throw ESCAPE_SIGTRAP to unwind stack
   wasmImports["raise"] = function(sig) {
-    _raiseCallCount++;
-    if (_raiseCallCount <= 10) {
-      console.error("🔥 INTERCEPTED SIGNAL: " + sig + " (call #" + _raiseCallCount + ") — throwing ESCAPE_SIGTRAP");
-    }
-    // Throw to unwind the C++ call stack and prevent 'unreachable' after raise
+    console.error('[RAISE-SIDE] raise(' + sig + ') from side module — throwing ESCAPE_SIGTRAP');
     throw "ESCAPE_SIGTRAP";
   };
-  console.log("[OVERRIDE] wasmImports['raise'] replaced with return-0 for side modules");
-  
-  // Heartbeat: log every 5 seconds to check if engine is alive
-  var _heartbeatCount = 0;
-  setInterval(function() {
-    _heartbeatCount++;
-    console.log("[HEARTBEAT] tick #" + _heartbeatCount + " — ABORT=" + ABORT + " EXITSTATUS=" + EXITSTATUS);
-  }, 5000);
-  
-  // Also intercept SDL_ReportAssertion to get the assertion details
-  var _orig_SDL_ReportAssertion = wasmImports["SDL_ReportAssertion"];
-  wasmImports["SDL_ReportAssertion"] = function(data, func, file, line) {
-    // SDL_AssertData structure:
-    // int always_ignore (4 bytes)
-    // int trigger_count (4 bytes)  
-    // const char* condition (4 bytes)
-    // const char* filename (4 bytes)
-    // int linenum (4 bytes)
-    // char function[128] (128 bytes)
-    // Total: 148 bytes (approximately)
-    
-    var condStr = "(unknown)", fileStr = "(unknown)", funcStr = "(unknown)";
-    try {
-      // Read condition string pointer
-      var condPtr = HEAPU32[(data + 8) >>> 2];
-      if (condPtr) condStr = UTF8ToString(condPtr);
-      // Read filename string pointer
-      var filePtr = HEAPU32[(data + 12) >>> 2];
-      if (filePtr) fileStr = UTF8ToString(filePtr);
-      // Read line number
-      var lineNum = HEAPU32[(data + 16) >>> 2];
-      // Read function name (inline char[128] at offset 20)
-      var funcPtr = data + 20;
-      funcStr = UTF8ToString(funcPtr);
-      
-      console.error("🚨 SDL ASSERTION FAILED!");
-      console.error("   Condition: " + condStr);
-      console.error("   File: " + fileStr + ":" + lineNum);
-      console.error("   Function: " + funcStr);
-    } catch(e) {
-      console.error("[SDL_ASSERT] Error reading assert data: " + e);
-      console.error("[SDL_ASSERT] data=" + data + " func=" + func + " file=" + file + " line=" + line);
-    }
-    // Still throw to unwind — the assertion is fatal
-    throw "ESCAPE_SIGTRAP";
-  };
-  console.log("[OVERRIDE] wasmImports['SDL_ReportAssertion'] intercepted for assertion details");
+  console.log("[OVERRIDE] wasmImports['raise'] replaced with ESCAPE_SIGTRAP throw");
     LDSO.init();
     loadDylibs();
     wasmExports = applySignatureConversions(wasmExports);
@@ -1870,34 +1750,6 @@ var GOTHandler = {
   }
 };
 
-// Main thread: handle rendered frame messages from GL worker
-var __mainCanvasCtx2D = null;
-var __frameCounter = 0;
-function __handleRenderedFrame(bitmap) {
-  try {
-    if (!__mainCanvasCtx2D) {
-      if (typeof window !== 'undefined' && window.__htmlCanvasCtx2D) {
-        __mainCanvasCtx2D = window.__htmlCanvasCtx2D;
-      } else {
-        var c = document.getElementById('canvas');
-        if (!c) return;
-        __mainCanvasCtx2D = c.getContext('2d');
-      }
-    }
-    if (__mainCanvasCtx2D && bitmap) {
-      __mainCanvasCtx2D.drawImage(bitmap, 0, 0, __mainCanvasCtx2D.canvas.width, __mainCanvasCtx2D.canvas.height);
-      bitmap.close();
-      __frameCounter++;
-      if (__frameCounter % 30 === 0) {
-        console.log('[RENDER] Frame #' + __frameCounter + ' drawn to HTML canvas');
-        if (typeof window !== 'undefined' && window.__updateFrameCount) window.__updateFrameCount();
-      }
-    }
-  } catch(e) {
-    console.warn('[RENDER] drawImage failed: ' + e);
-  }
-}
-
 var terminateWorker = worker => {
   worker.terminate();
   // terminate() can be asynchronous, so in theory the worker can continue
@@ -2013,17 +1865,8 @@ var convertI32PairToI53Checked = (lo, hi) => {
   return rtn;
 };
 
-var _orig_proc_exit = function(code) {
-  if (ENVIRONMENT_IS_PTHREAD) return proxyToMainThread(0, 0, 1, code);
-  EXITSTATUS = code;
-  if (!keepRuntimeAlive()) {
-    PThread.terminateAllThreads();
-    Module["onExit"]?.(code);
-    ABORT = true;
-  }
-  quit_(code, new ExitStatus(code));
-};
 function _proc_exit(code) {
+  if (ENVIRONMENT_IS_PTHREAD) return proxyToMainThread(0, 0, 1, code);
   console.warn('[PROC-EXIT] _proc_exit(' + code + ') — throwing ESCAPE_EXIT to skip unreachable');
   EXITSTATUS = 0;
   ABORT = false;
@@ -2033,20 +1876,22 @@ function _proc_exit(code) {
 _proc_exit.sig = "vi";
 
 var handleException = e => {
-  // Certain exception types we do not treat as errors since they are used for
-  // internal control flow.
-  // 1. ExitStatus, which is thrown by exit()
-  // 2. "unwind", which is thrown by emscripten_unwind_to_js_event_loop() and others
-  //    that wish to return to JS event loop.
   if (e instanceof ExitStatus || e == "unwind") {
     return EXITSTATUS;
   }
-  checkStackCookie();
   if (e instanceof WebAssembly.RuntimeError) {
+    var msg = e.message || '';
+    if (msg.includes('unreachable') || msg.includes('Aborted')) {
+      console.error('[HANDLE-EXC] Caught RuntimeError: ' + msg.substring(0, 100) + ' — continuing');
+      ABORT = false;
+      EXITSTATUS = 0;
+      return 0;
+    }
     if (_emscripten_stack_get_current() <= 0) {
       err("Stack overflow detected.  You can try increasing -sSTACK_SIZE (currently set to 67108864)");
     }
   }
+  checkStackCookie();
   quit_(1, e);
 };
 
@@ -2064,15 +1909,24 @@ function exitOnMainThread(returnCode) {
 }
 
 /** @suppress {duplicate } */ /** @param {boolean|number=} implicit */ var exitJS = (status, implicit) => {
-  // NON-FATAL: Allow engine to continue past Sys_Error/_exit calls
-  // Sys_Error calls raise(SIGTRAP) then _exit(100). We catch both and continue.
-  console.warn('[EXIT-NONFATAL] _exit called with status=' + status + ' — continuing execution');
-  try { console.warn('[EXIT-STACK] ' + new Error().stack.split('\n').slice(0,5).join(' | ')); } catch(e) {}
-  EXITSTATUS = 0;
-  ABORT = false;
-  // Don't throw "unwind", don't call exitOnMainThread, don't call _proc_exit
-  // Just return — let the C++ code continue past the _exit() call
-  return;
+  EXITSTATUS = status;
+  checkUnflushedContent();
+  if (ENVIRONMENT_IS_PTHREAD) {
+    // implicit exit can never happen on a pthread
+    assert(!implicit);
+    // When running in a pthread we propagate the exit back to the main thread
+    // where it can decide if the whole process should be shut down or not.
+    // The pthread may have decided not to exit its own runtime, for example
+    // because it runs a main loop, but that doesn't affect the main thread.
+    exitOnMainThread(status);
+    throw "unwind";
+  }
+  // if exit() was called explicitly, warn the user if the runtime isn't actually being shut down
+  if (keepRuntimeAlive() && !implicit) {
+    var msg = `program exited (with status: ${status}), but keepRuntimeAlive() is set (counter=${runtimeKeepaliveCounter}) due to an async operation, so halting execution but not exiting the runtime or preventing further async execution (you can use emscripten_force_exit, if you want to force a true shutdown)`;
+    err(msg);
+  }
+  _proc_exit(status);
 };
 
 var _exit = exitJS;
@@ -2174,30 +2028,9 @@ var PThread = {
   receiveObjectTransfer(data) {
     if (typeof GL != "undefined") {
       Object.assign(GL.offscreenCanvases, data.offscreenCanvases);
-      console.log('[WORKER-CANVAS] Received offscreenCanvases keys: ' + Object.keys(data.offscreenCanvases || {}));
-      if (GL.offscreenCanvases['canvas'] && GL.offscreenCanvases['canvas'].offscreenCanvas) {
-        // Store the transferred OffscreenCanvas globally in the worker
-        self.myManualCanvas = GL.offscreenCanvases['canvas'].offscreenCanvas;
-        // CRITICAL: Also set Module.canvas — the engine uses Module.canvas directly,
-        // not findCanvasEventTarget, for SDL/GL context creation
-        Module["canvas"] = self.myManualCanvas;
-        console.log('[WORKER-CANVAS] Set Module.canvas + self.myManualCanvas (' + self.myManualCanvas.width + 'x' + self.myManualCanvas.height + ')');
-        
-        // Override findCanvasEventTarget to always return our manual canvas
-        // This bypasses all Emscripten pointer/string lookup logic
-        if (typeof findCanvasEventTarget !== 'undefined') {
-          var _originalFindCanvas = findCanvasEventTarget;
-          findCanvasEventTarget = function(target) {
-            if (self.myManualCanvas) {
-              console.log('[GL-CREATE] findCanvasEventTarget returning manual canvas in worker (Module.canvas=' + (Module.canvas ? 'set' : 'null') + ')');
-              return self.myManualCanvas;
-            }
-            return _originalFindCanvas(target);
-          };
-          console.log('[WORKER-CANVAS] findCanvasEventTarget overridden to return manual canvas');
-        }
-      } else {
-        console.log('[WORKER-CANVAS] No canvas in offscreenCanvases — this worker will use fallback');
+      if (!Module["canvas"] && data.moduleCanvasId && GL.offscreenCanvases[data.moduleCanvasId]) {
+        Module["canvas"] = GL.offscreenCanvases[data.moduleCanvasId].offscreenCanvas;
+        Module["canvas"].id = data.moduleCanvasId;
       }
     }
   },
@@ -2210,11 +2043,6 @@ var PThread = {
     worker.onmessage = e => {
       var d = e["data"];
       var cmd = d.cmd;
-      // Handle rendered frame from GL worker
-      if (cmd === '__renderedFrame') {
-        __handleRenderedFrame(d.bitmap);
-        return;
-      }
       // If this message is intended to a recipient that is not the main
       // thread, forward it to the target thread.
       if (d.targetThread && d.targetThread != _pthread_self()) {
@@ -3050,7 +2878,7 @@ var resolveGlobalSymbol = (symName, direct = false) => {
       if (!resolved) {
         resolved = moduleExports[sym];
       }
-      if (!resolved) { console.warn('resolveSymbol: undefined ' + sym + ' — returning stub addr'); return 0x100000; }
+      assert(resolved, `undefined symbol '${sym}'. perhaps a side module was not linked in? if this global was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment`);
       return resolved;
     }
     // TODO kill ↓↓↓ (except "symbols local to this module", it will likely be
@@ -3390,24 +3218,13 @@ var reportUndefinedSymbols = () => {
         // Ignore undefined symbols that are imported as weak.
         continue;
       }
-      if (!value) {
-        // Stub undefined data symbols with a valid memory address
-        if (symName.indexOf('IVP_Compact_Edge') >= 0) {
-          entry.value = symName.indexOf('prev_table') >= 0 ? 0x800400 : 0x800000;
-          console.warn('[stub] ' + symName + ' → ' + entry.value);
-          continue;
-        }
-        console.warn('[stub] ' + symName + ' → 0x100000');
-        entry.value = 0x100000;
-        continue;
-      }
+      assert(value, `undefined symbol '${symName}'. perhaps a side module was not linked in? if this global was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment`);
       if (typeof value == "function") {
-        try { entry.value = addFunction(value, value.sig); } catch(e) { console.warn('[stub] addFunction failed for ' + symName); entry.value = 0x100000; }
+        /** @suppress {checkTypes} */ entry.value = addFunction(value, value.sig);
       } else if (typeof value == "number") {
         entry.value = value;
       } else {
-        console.warn('[stub] bad export type for ' + symName + ': ' + (typeof value));
-        entry.value = 0x100000;
+        throw new Error(`bad export type for '${symName}': ${typeof value}`);
       }
     }
   }
@@ -4358,16 +4175,12 @@ function __Z15Studio_MaxFramePK10CStudioHdriPKf(...args) {
 
 __Z15Studio_MaxFramePK10CStudioHdriPKf.stub = true;
 
-var __em_loop_tick_count = 0;
-function __Z17em_loop_iterationv() {
-  __em_loop_tick_count++;
-  if (__em_loop_tick_count <= 5 || __em_loop_tick_count % 100 === 0) {
-    console.log("[EM-LOOP-TICK] #" + __em_loop_tick_count + " — main loop is running!");
-  }
-  // em_loop_iteration is the engine's main tick function (stripped by DCE)
-  // This JS stub allows the main loop to run — a CI rebuild with KEEPALIVE is needed for real rendering
-  return 0;
+function __Z17em_loop_iterationv(...args) {
+  if (!wasmImports["_Z17em_loop_iterationv"] || wasmImports["_Z17em_loop_iterationv"].stub) console.warn('[EM-LOOP] em_loop_iteration not found — using JS no-op fallback'); return 0;
+  return wasmImports["_Z17em_loop_iterationv"](...args);
 }
+
+__Z17em_loop_iterationv.stub = true;
 
 function __Z22Studio_BoneIndexByNamePK10CStudioHdrPKc(...args) {
   if (!wasmImports["_Z22Studio_BoneIndexByNamePK10CStudioHdrPKc"] || wasmImports["_Z22Studio_BoneIndexByNamePK10CStudioHdrPKc"].stub) abort("external symbol '_Z22Studio_BoneIndexByNamePK10CStudioHdrPKc' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
@@ -5350,13 +5163,15 @@ function __ZN16IVP_Cache_Object19update_cache_objectEv(...args) {
 __ZN16IVP_Cache_Object19update_cache_objectEv.stub = true;
 
 function __ZN16IVP_Compact_Edge10next_tableE(...args) {
-  return 0x800000;
+  if (!wasmImports["_ZN16IVP_Compact_Edge10next_tableE"] || wasmImports["_ZN16IVP_Compact_Edge10next_tableE"].stub) abort("external symbol '_ZN16IVP_Compact_Edge10next_tableE' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN16IVP_Compact_Edge10next_tableE"](...args);
 }
 
 __ZN16IVP_Compact_Edge10next_tableE.stub = true;
 
 function __ZN16IVP_Compact_Edge10prev_tableE(...args) {
-  return 0x800400;
+  if (!wasmImports["_ZN16IVP_Compact_Edge10prev_tableE"] || wasmImports["_ZN16IVP_Compact_Edge10prev_tableE"].stub) abort("external symbol '_ZN16IVP_Compact_Edge10prev_tableE' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN16IVP_Compact_Edge10prev_tableE"](...args);
 }
 
 __ZN16IVP_Compact_Edge10prev_tableE.stub = true;
@@ -6639,11 +6454,7 @@ function ___assert_fail(condition, filename, line, func) {
   condition >>>= 0;
   filename >>>= 0;
   func >>>= 0;
-  var condStr = condition ? UTF8ToString(condition) : "(null)";
-  var fileStr = filename ? UTF8ToString(filename) : "unknown";
-  var funcStr = func ? UTF8ToString(func) : "unknown";
-  console.error("[ASSERT-FAIL] condition: " + condStr + " at: " + fileStr + ":" + line + " in: " + funcStr);
-  abort(`Assertion failed: ${condStr}, at: ` + [ fileStr, line, funcStr ]);
+  abort(`Assertion failed: ${UTF8ToString(condition)}, at: ` + [ filename ? UTF8ToString(filename) : "unknown filename", line, func ? UTF8ToString(func) : "unknown function" ]);
 }
 
 ___assert_fail.sig = "vppip";
@@ -6709,35 +6520,12 @@ function ___cxa_throw(ptr, type, destructor) {
   ptr >>>= 0;
   type >>>= 0;
   destructor >>>= 0;
-  // Log the C++ exception details before the assert kills us
-  var excMsg = "";
-  try {
-    // Try to read the exception object from WASM heap
-    // C++ exceptions typically have a message at offset 0 (std::exception::what())
-    var whatPtr = HEAPU32[ptr >>> 2];
-    if (whatPtr) {
-      excMsg = UTF8ToString(whatPtr);
-    }
-  } catch(e) { excMsg = "(could not read: " + e + ")"; }
-  console.error("[CXA_THROW] C++ exception thrown! ptr=" + ptr + " type=" + type + " msg='" + excMsg + "'");
-  // Also try to get the type name
-  try {
-    var typeInfoPtr = HEAPU32[(type + 8) >>> 2]; // __type_info name pointer
-    if (typeInfoPtr) {
-      var typeName = UTF8ToString(typeInfoPtr);
-      console.error("[CXA_THROW] Exception type: " + typeName);
-    }
-  } catch(e) {}
-  
   var info = new ExceptionInfo(ptr);
+  // Initialize ExceptionInfo content after it was allocated in __cxa_allocate_exception.
   info.init(type, destructor);
   exceptionLast = ptr;
   uncaughtExceptionCount++;
-  // Instead of assert(false) which kills us, just log and return
-  // This lets the WASM code continue (it should hit unreachable after this)
-  console.error("[CXA_THROW] Exception catching is DISABLED — exception will become abort/unreachable");
-  // Don't call assert — let the WASM handle it
-  _setThrew(1, 0);
+  assert(false, "Exception thrown, but exception catching is not enabled. Compile with -sNO_DISABLE_EXCEPTION_CATCHING or -sEXCEPTION_CATCHING_ALLOWED=[..] to catch. (note: in dynamic linking, if a side module wants exceptions, the main module must be built with that support)");
 }
 
 ___cxa_throw.sig = "vppp";
@@ -6776,35 +6564,14 @@ function ___pthread_create_js(pthread_ptr, attr, startRoutine, arg) {
   // fetch whatever canvases were passed to build in
   // -sOFFSCREENCANVASES_TO_PTHREAD= command line.
   if (transferredCanvasNames == 4294967295) {
-    transferredCanvasNames = "";
+    transferredCanvasNames = "#game-canvas";
   } else {
     transferredCanvasNames = UTF8ToString(transferredCanvasNames).trim();
   }
   transferredCanvasNames = transferredCanvasNames ? transferredCanvasNames.split(",") : [];
-  // Manual canvas transfer — don't let pthread_create try to transfer again
-  transferredCanvasNames = transferredCanvasNames.filter(function(n) { return n !== 'canvas'; });
   var offscreenCanvases = {};
   // Dictionary of OffscreenCanvas objects we'll transfer to the created thread to own
   var moduleCanvasId = Module["canvas"]?.id || "";
-  
-  // MANUAL CANVAS TRANSFER: Transfer the OffscreenCanvas to the FIRST worker only
-  // With +mat_queue_mode 0, the Source Engine renders synchronously in Worker 1 (main thread)
-  // This is where GL.createContext fires — the manual canvas is waiting there
-  if (!ENVIRONMENT_IS_PTHREAD && typeof window !== 'undefined' && window.manualOffscreenCanvas && !window.canvasHasBeenTransferred) {
-    moduleCanvasId = 'canvas';
-    var manualCanvas = window.manualOffscreenCanvas;
-    offscreenCanvases['canvas'] = {
-      offscreenCanvas: manualCanvas,
-      canvasSharedPtr: _malloc(12),
-      id: 'canvas'
-    };
-    GROWABLE_HEAP_I32()[(offscreenCanvases['canvas'].canvasSharedPtr >>> 2)] = manualCanvas.width;
-    GROWABLE_HEAP_I32()[((offscreenCanvases['canvas'].canvasSharedPtr + 4) >>> 2)] = manualCanvas.height;
-    GROWABLE_HEAP_U32()[((offscreenCanvases['canvas'].canvasSharedPtr + 8) >>> 2)] = 0;
-    transferList.push(manualCanvas);
-    window.canvasHasBeenTransferred = true;
-    console.log('[CANVAS] Transferring OffscreenCanvas to FIRST worker (mat_queue_mode 0 = single-threaded render)');
-  }
   // Note that transferredCanvasNames might be null (so we cannot do a for-of loop).
   for (var name of transferredCanvasNames) {
     name = name.trim();
@@ -6859,8 +6626,6 @@ function ___pthread_create_js(pthread_ptr, attr, startRoutine, arg) {
           // this Canvas to be controlled via an OffscreenCanvas (there is no
           // way to undo this in the spec)
           canvas.controlTransferredOffscreen = true;
-          // Prevent re-transfer on subsequent pthread_create calls
-          transferredCanvasNames = transferredCanvasNames.filter(function(n) { return n !== name; });
         } else {
           err(`pthread_create: cannot transfer control of canvas "${name}" to pthread, because current browser does not support OffscreenCanvas!`);
           // If building with OFFSCREEN_FRAMEBUFFER=1 mode, we don't need to
@@ -12726,7 +12491,6 @@ var GL = {
     }
   },
   createContext: (/** @type {HTMLCanvasElement} */ canvas, webGLContextAttributes) => {
-    console.log('[GL-CREATE] GL.createContext called! canvas type=' + (canvas ? (canvas instanceof OffscreenCanvas ? 'OffscreenCanvas(' + canvas.width + 'x' + canvas.height + ')' : typeof canvas) : 'null') + ' hasManual=' + (!!self.myManualCanvas) + ' isPthread=' + ENVIRONMENT_IS_PTHREAD);
     // BUG: Workaround Safari WebGL issue: After successfully acquiring WebGL
     // context on a canvas, calling .getContext() will always return that
     // context independent of which 'webgl' or 'webgl2'
@@ -12859,47 +12623,21 @@ var GL = {
 var maybeCStringToJsString = cString => cString > 2 ? UTF8ToString(cString) : cString;
 
 var findCanvasEventTarget = target => {
-  // PATCH B: If worker has a manually transferred canvas, always return it
-  if (typeof self !== 'undefined' && self.myManualCanvas) {
-    if (!findCanvasEventTarget._logged) {
-      findCanvasEventTarget._logged = true;
-      console.log('[FIND-CANVAS] Returning self.myManualCanvas (' + self.myManualCanvas.width + 'x' + self.myManualCanvas.height + ') target=' + (typeof target === 'string' ? target : String(target)));
-    }
-    return self.myManualCanvas;
-  }
-  if (typeof GL !== 'undefined' && GL.offscreenCanvases) {
-    for (var key in GL.offscreenCanvases) {
-      if (key == 'canvas' && (target == 'canvas' || target == 0 || !target)) {
-        var entry = GL.offscreenCanvases[key];
-        if (entry && entry.offscreenCanvas) return entry.offscreenCanvas;
-        if (entry) return entry;
-      }
-    }
-  }
   target = maybeCStringToJsString(target);
-  var found = null;
-  if (GL.offscreenCanvases && typeof target === 'string') {
-    var key1 = target.substr(1);
-    if (GL.offscreenCanvases[key1]) {
-      found = GL.offscreenCanvases[key1].offscreenCanvas || GL.offscreenCanvases[key1];
-    } else if (target == "canvas" && Object.keys(GL.offscreenCanvases).length > 0) {
-      var firstKey = Object.keys(GL.offscreenCanvases)[0];
-      found = GL.offscreenCanvases[firstKey].offscreenCanvas || GL.offscreenCanvases[firstKey];
-    }
-  }
-  if (!found && typeof document != "undefined") {
-    found = document.querySelector(target);
-  }
-  if (found) return found;
-  if (typeof OffscreenCanvas != "undefined") {
-    var fb = new OffscreenCanvas(1280, 800);
-    fb.id = "game-canvas";
-    if (!GL.offscreenCanvases) GL.offscreenCanvases = {};
-    GL.offscreenCanvases["game-canvas"] = fb;
-    console.log("[hl2] Fallback OffscreenCanvas created (worker hasManual=" + (!!self.myManualCanvas) + ")");
-    return fb;
-  }
-  return null;
+  // When compiling with OffscreenCanvas support and looking up a canvas to target,
+  // we first look up if the target Canvas has been transferred to OffscreenCanvas use.
+  // These transfers are represented/tracked by GL.offscreenCanvases object, which contain
+  // the OffscreenCanvas element for each regular Canvas element that has been transferred.
+  // Note that each pthread/worker have their own set of GL.offscreenCanvases. That is,
+  // when an OffscreenCanvas is transferred from a pthread/main thread to another pthread,
+  // it will move in the GL.offscreenCanvases array between threads. Hence GL.offscreenCanvases
+  // represents the set of OffscreenCanvases owned by the current calling thread.
+  // First check out the list of OffscreenCanvases by CSS selector ID ('#myCanvasID')
+  return GL.offscreenCanvases[target.substr(1)] || // Remove '#' prefix
+  // If not found, if one is querying by using DOM tag name selector 'canvas', grab the first
+  // OffscreenCanvas that we can find.
+  (target == "canvas" && Object.keys(GL.offscreenCanvases)[0]) || // If that is not found either, query via the regular DOM selector.
+  (typeof document != "undefined" && document.querySelector(target));
 };
 
 var setCanvasElementSizeCallingThread = (target, width, height) => {
@@ -13391,7 +13129,7 @@ _emscripten_set_main_loop_timing.sig = "iii";
      * @param {number=} arg
      * @param {boolean=} noSetTiming
      */ var setMainLoop = (iterFunc, fps, simulateInfiniteLoop, arg, noSetTiming) => {
-  console.log("[SET-MAIN-LOOP] setMainLoop called! fps=" + fps + " simulateInfinite=" + simulateInfiniteLoop + " iterFunc=" + (typeof iterFunc));
+  console.log("[SET-MAIN-LOOP] setMainLoop called! fps=" + fps + " simulateInfinite=" + simulateInfiniteLoop + " iterFunc=" + typeof iterFunc);
   assert(!MainLoop.func, "emscripten_set_main_loop: there can only be one main loop function at once: call emscripten_cancel_main_loop to cancel the previous one before setting a new one with different parameters.");
   MainLoop.func = iterFunc;
   MainLoop.arg = arg;
@@ -18827,20 +18565,6 @@ function _eglQueryString(display, name) {
 _eglQueryString.sig = "ppi";
 
 function _eglSwapBuffers(dpy, surface) {
-  console.log('[SWAP] _eglSwapBuffers called! isPthread=' + ENVIRONMENT_IS_PTHREAD + ' hasContext=' + (!!GL.currentContext));
-  // CAPTURE FRAME: Before swapping, grab the rendered content as ImageBitmap
-  // and post it to the main thread for display on the visible HTML canvas
-  if (ENVIRONMENT_IS_PTHREAD && GL.currentContext && GL.currentContext.GLctx) {
-    try {
-      var glCanvas = GL.currentContext.GLctx.canvas;
-      if (glCanvas instanceof OffscreenCanvas && glCanvas.transferToImageBitmap) {
-        var bitmap = glCanvas.transferToImageBitmap();
-        postMessage({cmd: '__renderedFrame', bitmap: bitmap}, [bitmap]);
-      }
-    } catch(e) {
-      // transferToImageBitmap might fail if no frame was rendered yet
-    }
-  }
   if (ENVIRONMENT_IS_PTHREAD) return proxyToMainThread(158, 0, 1, dpy, surface);
   dpy >>>= 0;
   surface >>>= 0;
@@ -24374,7 +24098,7 @@ function _emscripten_set_keyup_callback_on_thread(target, userData, useCapture, 
 
 _emscripten_set_keyup_callback_on_thread.sig = "ippipp";
 
-function _emscripten_set_main_loop(func, fps, simulateInfiniteLoop) { console.log("[MAIN-LOOP] emscripten_set_main_loop CALLED!");
+function _emscripten_set_main_loop(func, fps, simulateInfiniteLoop) {
   func >>>= 0;
   var iterFunc = getWasmTableEntry(func);
   setMainLoop(iterFunc, fps, simulateInfiniteLoop);
@@ -24840,7 +24564,14 @@ var webglPowerPreferences = [ "default", "low-power", "high-performance" ];
   };
   var canvas = findCanvasEventTarget(target);
   if (!canvas) {
-    return 0;
+    // FALLBACK: Worker has no DOM access — create standalone OffscreenCanvas
+    if (typeof OffscreenCanvas !== 'undefined') {
+      canvas = new OffscreenCanvas(1280, 800);
+      console.log('[GL] Fallback OffscreenCanvas(1280,800) created for worker');
+    } else {
+      console.error('[GL] No canvas and no OffscreenCanvas available');
+      return 0;
+    }
   }
   if (canvas.offscreenCanvas) canvas = canvas.offscreenCanvas;
   if (contextAttributes.explicitSwapControl) {
@@ -27779,7 +27510,7 @@ function _emscripten_get_main_loop_timing(mode, value) {
 
 _emscripten_get_main_loop_timing.sig = "vpp";
 
-var _emscripten_set_main_loop_arg = function(func, arg, fps, simulateInfiniteLoop) { console.log('[MAIN-LOOP-ARG] emscripten_set_main_loop_arg CALLED!');
+var _emscripten_set_main_loop_arg = function(func, arg, fps, simulateInfiniteLoop) {
   func >>>= 0;
   arg >>>= 0;
   var iterFunc = () => getWasmTableEntry(func)(arg);
@@ -31571,9 +31302,9 @@ for (/**@suppress{duplicate}*/ var i = 0; i <= 288; ++i) {
 }
 
 registerPreMainLoop(() => {
-  // FRAME: Auto-commit path for OffscreenCanvas
+  // If the current GL context is an OffscreenCanvas, but it was initialized
+  // with implicit swap mode, perform the swap on behalf of the user.
   if (GL.currentContext && !GL.currentContextIsProxied && !GL.currentContext.attributes.explicitSwapControl && GL.currentContext.GLctx.commit) {
-    console.log('[SWAP] Auto-commit in main loop (GL.currentContext.GLctx.commit)');
     GL.currentContext.GLctx.commit();
   }
 });
@@ -34084,13 +33815,6 @@ var _putchar = createExportWrapper("putchar", 1);
 var _qsort = createExportWrapper("qsort", 4);
 
 var _raise = createExportWrapper("raise", 1);
-// Override raise to prevent SIGTRAP from causing abort
-var _orig_raise = _raise;
-_raise = function(sig) {
-  console.warn('[raise] signal ' + sig + ' — non-fatal (returning 0)');
-  return 0;
-};
-_raise.sig = "ii";
 
 var _srand = createExportWrapper("srand", 1);
 
@@ -34683,388 +34407,19 @@ run();
   } catch (e) {
     console.warn("[hl2] /MOD/ setup error:", e);
   }
-  // ---- Pre-load essential manifest files (must exist before engine start) ----
-    // PATCH 3: gameinfo.txt (required by engine setup)
-    var gameinfoContent = [
-      '"GameInfo"',
-      '{',
-      '\tgame\t"hl2"',
-      '\ttitle\t"HALF-LIFE 2"',
-      '\ttype\t"singleplayer_only"',
-      '\tnomapmissingmodel\t"0"',
-      '\tnomodels\t"0"',
-      '\tnohimodels\t"1"',
-      '\tnocrosshair\t"0"',
-      '\tdeveloper\t"VALVE"',
-      '\tdeveloper_url\t"1"',
-      '\ticon\t"hl2"',
-      '\tFileSystem',
-      '\t{',
-      '\t\tSteamAppId\t2153',
-      '\t\tToolsAppId\t211',
-      '\t\tSearchPaths',
-      '\t\t{',
-      '\t\t\tGame+GameBin\t|gameinfo_path|.',
-      '\t\t\tPlatform+GameBin\t|gameinfo_path|.',
-      '\t\t\tGame\t\t\t|gameinfo_path|.',
-      '\t\t\tPlatform\t\t|gameinfo_path|platform',
-      '\t\t}',
-      '\t}',
-      '}'
-    ].join('\n');
-    FS.writeFile("/hl2/gameinfo.txt", gameinfoContent);
-    // steam.inf — REQUIRED by Source Engine for SteamAPI initialization
-    // Without this, the engine aborts during "Cache materials" phase
-    var steamInf = 'PatchVersion=1.0.0.0\nProductName=hl2\nappID=2153\n';
-    FS.writeFile("/hl2/steam.inf", steamInf);
-    FS.writeFile("/steam.inf", steamInf);
-    console.log("[hl2] gameinfo.txt + steam.inf created in MEMFS");
-    // VTF v7.1 fix — correct field offsets from nillerusr source (vtf.h)
-    // imageFormat at offset 52, numMipLevels at offset 56, header size = 64
-    var createDummyVTF = function(path) {
-      var vtf = new Uint8Array([
-        0x56, 0x54, 0x46, 0x00, 0x07, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00,
-        0x04, 0x00, 0x04, 0x00, 0x00, 0x40, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x3f, 0x00, 0x00, 0x00, 0x3f, 0x00, 0x00, 0x00, 0x3f, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00,
-        0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff,
-        0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff,
-        0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff,
-        0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff, 0x80, 0x80, 0x80, 0xff,
-      ]);
-      try { FS.writeFile(path, vtf); } catch(e) { console.warn('[hl2] VTF create failed: ' + path); }
-    };
-    createDummyVTF('/hl2/materials/dev/identitylightwarp.vtf');
-    createDummyVTF('/hl2/materials/engine/normalizedrandomdirections2d.vtf');
-    createDummyVTF('/hl2/materials/effects/flashlight_border.vtf');
-    // Background image — CRITICAL: without this, the engine calls _exit(0) and
-    // never enters the render loop. Use the same createDummyVTF format that works.
-    try { FS.mkdirTree('/hl2/materials/console'); } catch(e) {}
-    createDummyVTF('/hl2/materials/console/background01_widescreen.vtf');
-    createDummyVTF('/hl2/materials/console/startup_loading.vtf');
-    createDummyVTF('/hl2/materials/console/startup_loading_4by3.vtf');
-    createDummyVTF('/hl2/materials/console/background01_4by3.vtf');
-    // Background material .vmt files — engine needs these to render the background
-    var bgVMT = '"UnlitGeneric"\n{\n  "$basetexture" "console/background01_widescreen"\n  "$vertexcolor" "1"\n  "$vertexalpha" "1"\n  "$ignorez" "1"\n  "$nofog" "1"\n}\n';
-    var startupVMT = '"UnlitGeneric"\n{\n  "$basetexture" "console/startup_loading"\n  "$vertexcolor" "1"\n  "$vertexalpha" "1"\n  "$ignorez" "1"\n  "$nofog" "1"\n}\n';
-    try {
-      FS.mkdirTree('/hl2/materials/console');
-      FS.writeFile('/hl2/materials/console/background01_widescreen.vmt', bgVMT);
-      FS.writeFile('/hl2/materials/console/startup_loading.vmt', startupVMT);
-      FS.writeFile('/hl2/materials/console/startup_loading_4by3.vmt', startupVMT);
-      FS.writeFile('/hl2/materials/console/background01_4by3.vmt', bgVMT);
-    } catch(e) { console.warn('[hl2] VMT create failed: ' + e); }
-    // chapterbackgrounds.txt — tells the engine which background to use
-    var chapterBG = '"chapterbackgrounds"\n{\n  "1" "background01_widescreen"\n  "2" "background01_widescreen"\n}\n';
-    try {
-      FS.mkdirTree('/hl2/scripts');
-      FS.writeFile('/hl2/scripts/chapterbackgrounds.txt', chapterBG);
-    } catch(e) { console.warn('[hl2] chapterbackgrounds.txt create failed: ' + e); }
-    console.log('[hl2] VTF v7.1 + VMT + chapterbackgrounds created in MEMFS');
-    // Additional config files the engine needs during 'Cache materials'
-    try {
-      FS.mkdirTree('/hl2/scripts');
-      FS.writeFile('/hl2/scripts/cheatcodes.txt', '"cheatcodes"\n{\n}\n');
-      FS.writeFile('/hl2/scripts/mod_cheatcodes.txt', '"cheatcodes"\n{\n}\n');
-      FS.writeFile('/hl2/scripts/plugin_animations.txt', '"plugin_animations"\n{\n}\n');
-      FS.writeFile('/hl2/scripts/debugoptions.txt', '"debugoptions"\n{\n}\n');
-      // enginevguilayout.res — VGUI layout for engine console/UI
-      var vguiLayout = '"enginevguilayout"\n{\n  "Console"\n  {\n    "xpos" "0"\n    "ypos" "0"\n    "wide" "1280"\n    "tall" "800"\n  }\n}\n';
-      FS.writeFile('/hl2/scripts/enginevguilayout.res', vguiLayout);
-      console.log('[hl2] Additional config files (cheatcodes, debugoptions, vguilayout) created');
-    // GameUI resources — VGUI2 main menu needs these or it throws fatal error
-    try {
-      FS.mkdirTree('/hl2/resource');
-      // clientscheme.res — main menu layout
-      var clientScheme = '"Clientscheme"\n{\n  "Scheme"\n  {\n    "Colors"\n    {\n      "White" "255 255 255 255"\n      "Black" "0 0 0 255"\n    }\n  }\n}\n';
-      FS.writeFile('/hl2/resource/clientscheme.res', clientScheme);
-      // Minimal TTF font (empty but valid enough to not crash)
-      FS.writeFile('/hl2/resource/halflife2.ttf', new Uint8Array(0));
-      // GameUI localization file
-      FS.writeFile('/hl2/resource/gameui_english.txt', '"lang"\n{\n  "Language" "english"\n}\n');
-      console.log('[hl2] GameUI resources (clientscheme, font, gameui_english) created');
-    } catch(e) { console.warn('[hl2] GameUI resource create failed: ' + e); }
-    } catch(e) { console.warn('[hl2] Config files create failed: ' + e); }
-    console.log('[STEP-1] About to write SourceScheme.res...');
-
-    // Write SourceScheme.res (VGUI resource scheme — required by engine)
-    FS.mkdirTree('/hl2/resource');
-    FS.mkdirTree('/hl2/Resource');
-    FS.mkdirTree('/hl2/platform/Resource');
-    var schemeRes = [
-      '"Scheme"',
-      '{',
-      '\t// Fonts',
-      '\tFonts',
-      '\t{',
-      '\t\t"Default"',
-      '\t\t{',
-      '\t\t\t"1"',
-      '\t\t\t{',
-      '\t\t\t\t"name"\t\t"Tahoma"',
-      '\t\t\t\t"tall"\t\t"16"',
-      '\t\t\t\t"weight"\t\t"0"',
-      '\t\t\t\t"ypos"\t\t"0"',
-      '\t\t\t}',
-      '\t\t}',
-      '\t\t"Marlett"',
-      '\t\t{',
-      '\t\t\t"1"',
-      '\t\t\t{',
-      '\t\t\t\t"name"\t\t"Marlett"',
-      '\t\t\t\t"tall"\t\t"13"',
-      '\t\t\t\t"weight"\t\t"0"',
-      '\t\t\t\t"ypos"\t\t"0"',
-      '\t\t\t}',
-      '\t\t}',
-      '\t\t"Courier New"',
-      '\t\t{',
-      '\t\t\t"1"',
-      '\t\t\t{',
-      '\t\t\t\t"name"\t\t"Courier New"',
-      '\t\t\t\t"tall"\t\t"13"',
-      '\t\t\t\t"weight"\t\t"0"',
-      '\t\t\t}',
-      '\t\t}',
-      '\t}',
-      '\t// Colors',
-      '\tColors',
-      '\t{',
-      '\t\t"BaseText"\t\t"255 255 255 255"',
-      '\t\t"BrightBaseText"\t"255 255 255 255"',
-      '\t\t"DimBaseText"\t\t"180 180 180 255"',
-      '\t\t"DimText"\t\t"120 120 120 255"',
-      '\t\t"SelectionBG"\t\t"50 50 50 255"',
-      '\t\t"SelectionBG2"\t"70 70 70 255"',
-      '\t\t"ListBG"\t\t\t"0 0 0 255"',
-      '\t\t"TitleText"\t\t"255 255 255 255"',
-      '\t\t"TitleDimText"\t\t"180 180 180 255"',
-      '\t\t"TitleBG"\t\t"100 100 100 255"',
-      '\t\t"TitleDimBG"\t\t"0 0 0 255"',
-      '\t\t"Cursor"\t\t"255 255 255 255"',
-      '\t\t"CheckBg"\t\t"90 90 90 255"',
-      '\t\t"CheckFg"\t\t"255 255 255 255"',
-      '\t\t"CheckCheck"\t\t"50 50 50 255"',
-      '\t\t"CheckBg"\t\t"90 90 90 255"',
-      '\t\t"ListSelFg"\t\t"255 255 255 255"',
-      '\t\t"ListSelBg"\t\t"70 70 70 255"',
-      '\t\t"white"\t\t\t"255 255 255 255"',
-      '\t\t"black"\t\t\t"0 0 0 255"',
-      '\t\t"Blank"\t\t\t"0 0 0 0"',
-      '\t}',
-      '\t// Borders',
-      '\tBorders',
-      '\t{',
-      '\t\t"DefaultBorder"',
-      '\t\t{',
-      '\t\t\t"1"',
-      '\t\t\t{',
-      '\t\t\t\t"color"\t\t"0 0 0 255"',
-      '\t\t\t}',
-      '\t\t}',
-      '\t\t"NoBorder"',
-      '\t\t{',
-      '\t\t\t"1"',
-      '\t\t\t{',
-      '\t\t\t\t"color"\t\t"0 0 0 0"',
-      '\t\t\t}',
-      '\t\t}',
-      '\t\t"ButtonBorder"',
-      '\t\t{',
-      '\t\t\t"1"',
-      '\t\t\t{',
-      '\t\t\t\t"color"\t\t"80 80 80 255"',
-      '\t\t\t}',
-      '\t\t}',
-      '\t\t"FrameBorder"',
-      '\t\t{',
-      '\t\t\t"1"',
-      '\t\t\t{',
-      '\t\t\t\t"color"\t\t"100 100 100 255"',
-      '\t\t\t}',
-      '\t\t}',
-      '\t\t"TabBorder"',
-      '\t\t{',
-      '\t\t\t"1"',
-      '\t\t\t{',
-      '\t\t\t\t"color"\t\t"80 80 80 255"',
-      '\t\t\t}',
-      '\t\t}',
-      '\t\t"ScrollBorder"',
-      '\t\t{',
-      '\t\t\t"1"',
-      '\t\t\t{',
-      '\t\t\t\t"color"\t\t"80 80 80 255"',
-      '\t\t\t}',
-      '\t\t}',
-      '\t\t"ButtonDepressedBorder"',
-      '\t\t{',
-      '\t\t\t"1"',
-      '\t\t\t{',
-      '\t\t\t\t"color"\t\t"60 60 60 255"',
-      '\t\t\t}',
-      '\t\t}',
-      '\t\t"ButtonKeyFocusBorder"',
-      '\t\t{',
-      '\t\t\t"1"',
-      '\t\t\t{',
-      '\t\t\t\t"color"\t\t"80 80 80 255"',
-      '\t\t\t}',
-      '\t\t}',
-      '\t\t"ButtonSelectedBorder"',
-      '\t\t{',
-      '\t\t\t"1"',
-      '\t\t\t{',
-      '\t\t\t\t"color"\t\t"80 80 80 255"',
-      '\t\t\t}',
-      '\t\t}',
-      '\t}',
-      '}'
-    ].join('\n');
-    // Write BOTH mixed-case AND all-lowercase paths (filesystem lowercases paths!)
-    FS.writeFile('/hl2/resource/SourceScheme.res', schemeRes);
-    FS.writeFile('/hl2/Resource/SourceScheme.res', schemeRes);
-    FS.writeFile('/hl2/resource/sourcescheme.res', schemeRes);
-    FS.writeFile('/hl2/Resource/SourceScheme.res', schemeRes);
-    FS.writeFile('/hl2/platform/Resource/SourceScheme.res', schemeRes);
-    console.log('[STEP-2] SourceScheme.res written, about to write manifests...');
-    // Wrap all SourceScheme.res copies in try-catch — directory may not exist
-    var schemeDirs = [
-      '/hl2/platform/resource', '/platform/Resource', '/platform/resource',
-      '/Resource', '/resource', '/bin/Resource', '/hl2/platform'
-    ];
-    for (var sd = 0; sd < schemeDirs.length; sd++) {
-      try { FS.mkdirTree(schemeDirs[sd]); } catch(e) {}
-    }
-    var schemePaths = [
-      '/hl2/platform/resource/sourcescheme.res',
-      '/platform/Resource/SourceScheme.res',
-      '/platform/resource/sourcescheme.res',
-      '/Resource/SourceScheme.res',
-      '/resource/sourcescheme.res',
-      '/bin/Resource/SourceScheme.res'
-    ];
-    for (var sp = 0; sp < schemePaths.length; sp++) {
-      try { FS.writeFile(schemePaths[sp], schemeRes); } catch(e) {}
-    }
-    console.log('[hl2] SourceScheme.res written to MEMFS (all paths)');
-    // Write surfaceproperties_manifest.txt + surfaceproperties.txt (physics material system — required by engine)
-    FS.mkdirTree('/hl2/scripts');
-    var surfaceManifest = [
-      '"surfaceproperties_manifest"',
-      '{',
-      '\t"file"\t\t"scripts/surfaceproperties.txt"',
-      '}'
-    ].join('\n');
-    var surfaceProps = [
-      '"surfaceproperties"',
-      '{',
-      '\t"default"\t\t{ "density" "1000" "elasticity" "0.1" "friction" "0.8" }',
-      '\t"metal"\t\t{ "density" "1000" "elasticity" "0.2" "friction" "0.8" }',
-      '\t"glass"\t\t{ "density" "1000" "elasticity" "0.5" "friction" "0.5" }',
-      '\t"concrete"\t{ "density" "1000" "elasticity" "0.1" "friction" "0.9" }',
-      '\t"wood"\t\t{ "density" "1000" "elasticity" "0.3" "friction" "0.7" }',
-      '\t"plastic"\t{ "density" "1000" "elasticity" "0.4" "friction" "0.6" }',
-      '\t"water"\t\t{ "density" "1000" "elasticity" "0.1" "friction" "0.1" }',
-      '}'
-    ].join('\n');
-    FS.writeFile('/hl2/scripts/surfaceproperties_manifest.txt', surfaceManifest);
-    FS.writeFile('/hl2/scripts/surfaceproperties.txt', surfaceProps);
-    console.log('[hl2] surfaceproperties_manifest.txt + surfaceproperties.txt written to MEMFS');
-    // Write game_sounds_manifest.txt + other script manifests (required by engine)
-    var gameSoundsManifest = [
-      '"game_sounds_manifest"',
-      '{',
-      '\t"file"\t\t"scripts/game_sounds.txt"',
-      '\t"file"\t\t"scripts/game_sounds_vehicles.txt"',
-      '\t"file"\t\t"scripts/game_sounds_physics.txt"',
-      '\t"file"\t\t"scripts/game_sounds_weapons.txt"',
-      '}'
-    ].join('\n');
-    FS.writeFile('/hl2/scripts/game_sounds_manifest.txt', gameSoundsManifest);
-    console.log('[STEP-4] game_sounds written, about to write soundscapes...');
-    // Minimal game_sounds.txt (empty but valid)
-    FS.writeFile('/hl2/scripts/game_sounds.txt', '"game_sounds"\n{\n}\n');
-    FS.writeFile('/hl2/scripts/game_sounds_vehicles.txt', '"game_sounds"\n{\n}\n');
-    FS.writeFile('/hl2/scripts/game_sounds_physics.txt', '"game_sounds"\n{\n}\n');
-    FS.writeFile('/hl2/scripts/game_sounds_weapons.txt', '"game_sounds"\n{\n}\n');
-    // Closecaption manifest
-    var closecaptionManifest = [
-      '"closecaption_manifest"',
-      '{',
-      '\t"file"\t\t"scripts/closecaption_english.txt"',
-      '}'
-    ].join('\n');
-    FS.writeFile('/hl2/scripts/closecaption_manifest.txt', closecaptionManifest);
-    FS.writeFile('/hl2/scripts/closecaption_english.txt', '"lang"\n{\n"Language" "english"\n"Tokens"\n{\n}\n}\n');
-    // ModActors (if needed)
-    FS.mkdirTree('/hl2/scripts/actor');
-    // hud layout
-    FS.mkdirTree('/hl2/scripts');
-    console.log('[hl2] game_sounds_manifest + script manifests written to MEMFS');
-    // Write ALL remaining script manifests (Source Engine requires these during init)
-    var soundscapesManifest = [
-      '"soundscapes_manifest"',
-      '{',
-      '\t"file"\t\t"scripts/soundscapes.txt"',
-      '}'
-    ].join('\n');
-    FS.writeFile('/hl2/scripts/soundscapes_manifest.txt', soundscapesManifest);
-    console.log('[STEP-5] soundscapes written, about to write _modmanifest...');
-    FS.writeFile('/hl2/scripts/soundscapes.txt', '"soundscapes"\n{\n}\n');
-    // _modmanifest.txt (mod resource manifest)
-    var modManifest = [
-      '"_modmanifest"',
-      '{',
-      '\t"file"\t\t"scripts/game_sounds_manifest.txt"',
-      '\t"file"\t\t"scripts/surfaceproperties_manifest.txt"',
-      '\t"file"\t\t"scripts/soundscapes_manifest.txt"',
-      '}'
-    ].join('\n');
-    FS.writeFile('/hl2/scripts/_modmanifest.txt', modManifest);
-    console.log('[STEP-6] _modmanifest written, about to write hud/kb...');
-    // vgui resource files
-    FS.mkdirTree('/hl2/resource');
-    var hudLayout = [
-      '"HudLayout.res"',
-      '{',
-      '\t"HudHealth"',
-      '\t{',
-      '\t\t"fieldname"\t\t"HudHealth"',
-      '\t\t"xpos"\t\t"16"',
-      '\t\t"ypos"\t\t"16"',
-      '\t\t"wide"\t\t"102"',
-      '\t\t"tall"\t\t"36"',
-      '\t}',
-      '}',
-    ].join('\n');
-    FS.writeFile('/hl2/scripts/HudLayout.res', hudLayout);
-    // kb_act.lst (keybindings)
-    FS.writeFile('/hl2/scripts/kb_act.lst', '');
-    // kb_def.lst (default keybindings)
-    FS.writeFile('/hl2/scripts/kb_def.lst', '');
-    // hudanimations.txt
-    FS.writeFile('/hl2/scripts/hudanimations.txt', '"hudanimations"\n{\n}\n');
-    // modtext (mod text file)
-    FS.writeFile('/hl2/scripts/modtext.txt', '"modtext"\n{\n}\n');
-    console.log('[hl2] ALL script manifests written to MEMFS (soundscapes, _modmanifest, hud, kb)');
-
   // ---- Shader + Asset chunk loading ----
   // Load order: shaders → background1 + materials → engine start
   // Shaders MUST be in MEMFS before callMain() — without them the engine aborts
-  console.log("[SHADER-LOAD] Reached shader loading block. dataLoader: " + (typeof dataLoader) + ", loadMapCached: " + (typeof dataLoader !== "undefined" && !!dataLoader.loadMapCached));
-  try { addRunDependency("load_game_data"); } catch(e) { console.error("[SHADER-LOAD] addRunDependency FAILED: " + e); }
-  console.log("[SHADER-LOAD] addRunDependency done, starting chain...");
+  addRunDependency("load_game_data");
   // Load shaders chunk first (critical, non-optional)
   var loadShaders = (typeof dataLoader !== "undefined" && dataLoader.loadMapCached) ? dataLoader.loadMapCached("shaders") : Promise.reject(new Error("dataLoader not available"));
-  loadShaders.catch(function(e) { console.error("[SHADER-LOAD] loadShaders REJECTED: " + e); });
   loadShaders.then(function() {
     console.log("[hl2] shaders.data loaded — " + FS.readdir("/hl2/shaders").length + " shader dirs in MEMFS");
     // === v6 SHADER OVERWRITE ===
     // The retail 2153 shaders are version 1 (2004 format).
     // The nillerusr engine (Source 2013) requires version 6 shaders.
     // Download v6 shaders from R2 and overwrite the v1 files in MEMFS.
-    return fetchChunk("shaders_v6").then(function(v6Buffer) {
+    fetchChunk("shaders_v6").then(function(v6Buffer) {
       var dv = new DataView(v6Buffer);
       var off = 0;
       var replaced = 0;
@@ -35086,11 +34441,10 @@ run();
           console.warn("[hl2] v6 shader overwrite failed for " + path + ": " + e);
         }
       }
-      console.log("[hl2] v6 shaders: " + replaced + " files overwritten in MEMFS ✓ — engine can now start");
+      console.log("[hl2] v6 shaders: " + replaced + " files overwritten in MEMFS");
     }).catch(function(e) {
       console.warn("[hl2] v6 shader download failed (using v1 fallback): " + e);
     });
-  }).then(function() {
     // Preflight: verify critical shader families exist
     var criticalShaders = [ "vertexlit_and_unlit_generic_vs20", "vertexlit_and_unlit_generic_ps20b", "lightmappedgeneric_vs20", "lightmappedgeneric_ps20b" ];
     var missing = [];
@@ -35118,10 +34472,9 @@ run();
       console.error("[hl2] MISSING SHADERS: " + missing.join(", "));
       console.error("[hl2] Engine will crash on shader loading!");
     } else {
-      console.log("[hl2] Shader preflight OK ✓ — " + criticalShaders.length + " critical shaders found");
+      console.log("[hl2] Shader preflight OK ✓");
     }
     // Now load background1 + materials in parallel
-    console.log("[CHUNK-LOAD] About to load background1 + materials in parallel");
     return Promise.all([ dataLoader.loadMap("background1"), dataLoader.loadMap("materials") ]);
   }).then(function() {
     // Fix case-sensitive directory names (MEMFS is case-sensitive)
@@ -35158,32 +34511,58 @@ run();
     fixCase("/hl2/materials", "dev");
     fixCase("/hl2/materials", "engine");
     fixCase("/hl2/materials", "effects");
-    // [MOVED] gameinfo + VTF writing moved to pre-load section
-
-    // [MOVED] scheme writing moved to pre-load section
-
-    var schemeResContent = schemeRes;
-    // Also write to CWD-relative paths (engine may resolve relative to CWD)
-    FS.mkdirTree('/hl2/hl2/Resource');
-    FS.mkdirTree('/hl2/hl2/resource');
-    FS.writeFile('/hl2/hl2/Resource/SourceScheme.res', schemeRes);
-    FS.writeFile('/hl2/hl2/resource/SourceScheme.res', schemeRes);
-    // Write to bin (some Source builds use bin/ as search root)
-    FS.mkdirTree('/bin/hl2/Resource');
-    FS.writeFile('/bin/hl2/Resource/SourceScheme.res', schemeRes);
-    console.log('[hl2] SourceScheme.res also written to CWD-relative paths');
-    // Also write relative to CWD
-    try {
-      var cwd = FS.cwd();
-      console.log('[hl2] MEMFS CWD: ' + cwd);
-      FS.mkdirTree(cwd + '/Resource');
-      FS.writeFile(cwd + '/Resource/SourceScheme.res', schemeRes);
-      console.log('[hl2] SourceScheme.res written to CWD: ' + cwd + '/Resource/');
-    } catch(e) {
-      console.warn('[hl2] CWD SourceScheme write: ' + e);
+    // PATCH 3: gameinfo.txt (required by engine setup)
+    var gameinfoContent = '"GameInfo"\n{\n  game  "HL2"\n  title  "Half-Life 2"\n  type  singleplayer_only\n  developer  "Valve"\n  icon  "hl2"\n  FileSystem\n  {\n    SteamAppId  2153\n    ToolsAppId  211\n    SearchPaths\n    {\n      Game  |gameinfo_path|.\n      Game  hl2\n      Platform  platform\n    }\n  }\n}';
+    FS.writeFile("/hl2/gameinfo.txt", gameinfoContent);
+    console.log("[hl2] gameinfo.txt created in MEMFS");
+    // PATCH 4: VTF files — replace dummy VTFs with proper VTF format
+    var vtfFixList = [ "/hl2/materials/dev/identitylightwarp.vtf", "/hl2/materials/engine/normalizedrandomdirections2d.vtf", "/hl2/materials/effects/flashlight_border.vtf" ];
+    var vtfFixed = 0;
+    for (var vi = 0; vi < vtfFixList.length; vi++) {
+      var vtfPath = vtfFixList[vi];
+      if (FS.analyzePath(vtfPath).exists) {
+        var existing = FS.readFile(vtfPath);
+        if (existing[0] !== 86) {
+          var vtfHeader = new Uint8Array(84);
+          vtfHeader[0] = 86;
+          vtfHeader[1] = 84;
+          vtfHeader[2] = 70;
+          vtfHeader[3] = 0;
+          vtfHeader[4] = 7;
+          vtfHeader[8] = 1;
+          vtfHeader[12] = 80;
+          vtfHeader[16] = 4;
+          vtfHeader[18] = 4;
+          vtfHeader[20] = 0;
+          vtfHeader[21] = 64;
+          vtfHeader[24] = 1;
+          vtfHeader[44] = 12;
+          vtfHeader[48] = 1;
+          vtfHeader[52] = 12;
+          vtfHeader[56] = 1;
+          vtfHeader[57] = 1;
+          vtfHeader[58] = 1;
+          vtfHeader[80] = 128;
+          vtfHeader[81] = 128;
+          vtfHeader[82] = 128;
+          vtfHeader[83] = 255;
+          var fullImage = new Uint8Array(64);
+          for (var fi = 0; fi < 16; fi++) {
+            fullImage[fi * 4] = 128;
+            fullImage[fi * 4 + 1] = 128;
+            fullImage[fi * 4 + 2] = 128;
+            fullImage[fi * 4 + 3] = 255;
+          }
+          var fullVtf = new Uint8Array(80 + 4 + 64);
+          fullVtf.set(vtfHeader.subarray(0, 80), 0);
+          fullVtf.set(vtfHeader.subarray(80, 84), 80);
+          fullVtf.set(fullImage, 84);
+          FS.writeFile(vtfPath, fullVtf);
+          vtfFixed++;
+        }
+      }
     }
-    // [MOVED] manifest writing moved to pre-load section
-
+    console.log("[hl2] Fixed " + vtfFixed + " VTF files in MEMFS");
     // PATCH 5: Shader version — patch .vcs files from version 1 to version 6
     try {
       var fxcDir = "/hl2/shaders/fxc";
@@ -35225,23 +34604,6 @@ run();
     }
     console.log("[hl2] All chunks loaded, starting engine...");
     removeRunDependency("load_game_data");
-
-    // Debug: verify MEMFS state after chunk loading
-    try {
-      console.log('[POST-LOAD] MEMFS root: ' + JSON.stringify(FS.readdir('/').slice(0,20)));
-      console.log('[POST-LOAD] /hl2 exists: ' + FS.analyzePath('/hl2').exists);
-      if (FS.analyzePath('/hl2').exists) {
-        var hl2contents = FS.readdir('/hl2');
-        console.log('[POST-LOAD] /hl2 contents: ' + JSON.stringify(hl2contents.slice(0,30)));
-      }
-      console.log('[POST-LOAD] /hl2/gameinfo.txt: ' + FS.analyzePath('/hl2/gameinfo.txt').exists);
-      console.log('[POST-LOAD] /hl2/Resource exists: ' + FS.analyzePath('/hl2/Resource').exists);
-      if (FS.analyzePath('/hl2/Resource').exists) {
-        console.log('[POST-LOAD] /hl2/Resource contents: ' + JSON.stringify(FS.readdir('/hl2/Resource')));
-      }
-      console.log('[POST-LOAD] /Resource exists: ' + FS.analyzePath('/Resource').exists);
-      console.log('[POST-LOAD] /hl2/scripts exists: ' + FS.analyzePath('/hl2/scripts').exists);
-    } catch(e) { console.warn('[POST-LOAD] error: ' + e); }
   }).catch(function(err) {
     console.error("[hl2] Chunk load error: " + err + " — starting with partial data");
     removeRunDependency("load_game_data");

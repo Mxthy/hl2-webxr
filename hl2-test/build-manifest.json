@@ -5,7 +5,7 @@
   "main_module": "hl2_launcher.wasm",
   "main_module_size": 4037713,
   "main_module_sha256": "2e14839bd29816f8c0d71418364a11611cca6fef9789c889da919e491d28652c",
-  "js_size": 1389401,
+  "js_size": 1395200,
   "html_size": 6628,
   "side_module_count": 25,
   "asset_base_url": "https://hl2-assets-proxy.hl2-webxr.workers.dev/chunks/",
