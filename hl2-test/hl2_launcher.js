@@ -1,3 +1,22 @@
+// Pre.js globals (declared in index.html if running in browser)
+var canvasElement = typeof canvasElement !== 'undefined' ? canvasElement : null;
+var statusElement = typeof statusElement !== 'undefined' ? statusElement : null;
+var progressElement = typeof progressElement !== 'undefined' ? progressElement : null;
+var spinnerElement = typeof spinnerElement !== 'undefined' ? spinnerElement : null;
+var __allowCanvasTransfer = typeof __allowCanvasTransfer !== 'undefined' ? __allowCanvasTransfer : true;
+var transferredCanvasNames = typeof transferredCanvasNames !== 'undefined' ? transferredCanvasNames : "";
+var FRAME_READY_OFFSET = typeof FRAME_READY_OFFSET !== 'undefined' ? FRAME_READY_OFFSET : 0;
+var HMD_POSE_OFFSET = typeof HMD_POSE_OFFSET !== 'undefined' ? HMD_POSE_OFFSET : 4;
+var LEFT_VIEW_OFFSET = typeof LEFT_VIEW_OFFSET !== 'undefined' ? LEFT_VIEW_OFFSET : 32;
+var LEFT_PROJ_OFFSET = typeof LEFT_PROJ_OFFSET !== 'undefined' ? LEFT_PROJ_OFFSET : 96;
+var RIGHT_VIEW_OFFSET = typeof RIGHT_VIEW_OFFSET !== 'undefined' ? RIGHT_VIEW_OFFSET : 160;
+var RIGHT_PROJ_OFFSET = typeof RIGHT_PROJ_OFFSET !== 'undefined' ? RIGHT_PROJ_OFFSET : 224;
+var CONTROLLER_L_POSE = typeof CONTROLLER_L_POSE !== 'undefined' ? CONTROLLER_L_POSE : 288;
+var CONTROLLER_L_DATA = typeof CONTROLLER_L_DATA !== 'undefined' ? CONTROLLER_L_DATA : 320;
+var CONTROLLER_R_POSE = typeof CONTROLLER_R_POSE !== 'undefined' ? CONTROLLER_R_POSE : 352;
+var CONTROLLER_R_DATA = typeof CONTROLLER_R_DATA !== 'undefined' ? CONTROLLER_R_DATA : 384;
+var CONTROLLER_ACTIVE_OFFSET = typeof CONTROLLER_ACTIVE_OFFSET !== 'undefined' ? CONTROLLER_ACTIVE_OFFSET : 416;
+
 // Support for growable heap + pthreads, where the buffer may change, so JS views
 // must be updated.
 function GROWABLE_HEAP_I8() {
@@ -192,7 +211,7 @@ Module.downloadMap = (lock, mapName) => {
 // end include: /home/runner/work/hl2-webxr/hl2-webxr/engine/portal-port/emscripten/pre.js
 
 // === ASSET CONFIG: Single immutable source for chunk URLs ===
-const ASSET_ORIGIN = 'https://hl2-assets-proxy.hl2-webxr.workers.dev';
+const ASSET_ORIGIN = '';  // Local testing — use same origin
 const CHUNK_PREFIX = ASSET_ORIGIN + '/chunks';
 
 function chunkUrl(mapName) {
@@ -3230,7 +3249,11 @@ var reportUndefinedSymbols = () => {
   }
 };
 
-var loadDylibs = () => {
+// Pre-populate wasmImports with IVP stub before loadDylibs
+  if (!wasmImports['_ZN16IVP_Compact_Edge10next_tableE']) {
+    wasmImports['_ZN16IVP_Compact_Edge10next_tableE'] = __ZN16IVP_Compact_Edge10next_tableE;
+  }
+  var loadDylibs = () => {
   if (!dynamicLibraries.length) {
     reportUndefinedSymbols();
     return;
@@ -5163,11 +5186,11 @@ function __ZN16IVP_Cache_Object19update_cache_objectEv(...args) {
 __ZN16IVP_Cache_Object19update_cache_objectEv.stub = true;
 
 function __ZN16IVP_Compact_Edge10next_tableE(...args) {
-  if (!wasmImports["_ZN16IVP_Compact_Edge10next_tableE"] || wasmImports["_ZN16IVP_Compact_Edge10next_tableE"].stub) abort("external symbol '_ZN16IVP_Compact_Edge10next_tableE' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
-  return wasmImports["_ZN16IVP_Compact_Edge10next_tableE"](...args);
+  // STUB: IVP_Compact_Edge::next_table — data symbol, returns 0
+  return 0;
 }
 
-__ZN16IVP_Compact_Edge10next_tableE.stub = true;
+__ZN16IVP_Compact_Edge10next_tableE.stub = false;
 
 function __ZN16IVP_Compact_Edge10prev_tableE(...args) {
   if (!wasmImports["_ZN16IVP_Compact_Edge10prev_tableE"] || wasmImports["_ZN16IVP_Compact_Edge10prev_tableE"].stub) abort("external symbol '_ZN16IVP_Compact_Edge10prev_tableE' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
