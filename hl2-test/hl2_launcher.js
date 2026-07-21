@@ -1107,6 +1107,17 @@ function createWasm() {
       dynamicLibraries = metadata.neededDynlibs.concat(dynamicLibraries);
     }
     mergeLibSymbols(wasmExports, "main");
+  wasmImports["raise"] = function(sig) {
+    console.error('[RAISE-SIDE] raise(' + sig + ') -- ESCAPE_SIGTRAP');
+    throw "ESCAPE_SIGTRAP";
+  };
+  console.log("[OVERRIDE] wasmImports['raise'] replaced");
+  // Override raise for side modules -- throw ESCAPE_SIGTRAP to unwind stack
+  wasmImports["raise"] = function(sig) {
+    console.error('[RAISE-SIDE] raise(' + sig + ') from side module -- throwing ESCAPE_SIGTRAP');
+    throw "ESCAPE_SIGTRAP";
+  };
+  console.log("[OVERRIDE] wasmImports['raise'] replaced with ESCAPE_SIGTRAP throw");
   // Override raise for side modules — throw ESCAPE_SIGTRAP to unwind stack
   wasmImports["raise"] = function(sig) {
     console.error('[RAISE-SIDE] raise(' + sig + ') from side module — throwing ESCAPE_SIGTRAP');
@@ -12480,20 +12491,17 @@ var maybeCStringToJsString = cString => cString > 2 ? UTF8ToString(cString) : cS
 
 var findCanvasEventTarget = target => {
   target = maybeCStringToJsString(target);
-  // When compiling with OffscreenCanvas support and looking up a canvas to target,
-  // we first look up if the target Canvas has been transferred to OffscreenCanvas use.
-  // These transfers are represented/tracked by GL.offscreenCanvases object, which contain
-  // the OffscreenCanvas element for each regular Canvas element that has been transferred.
-  // Note that each pthread/worker have their own set of GL.offscreenCanvases. That is,
-  // when an OffscreenCanvas is transferred from a pthread/main thread to another pthread,
-  // it will move in the GL.offscreenCanvases array between threads. Hence GL.offscreenCanvases
-  // represents the set of OffscreenCanvases owned by the current calling thread.
   // First check out the list of OffscreenCanvases by CSS selector ID ('#myCanvasID')
-  return GL.offscreenCanvases[target.substr(1)] || // Remove '#' prefix
-  // If not found, if one is querying by using DOM tag name selector 'canvas', grab the first
-  // OffscreenCanvas that we can find.
-  (target == "canvas" && Object.keys(GL.offscreenCanvases)[0]) || // If that is not found either, query via the regular DOM selector.
-  (typeof document != "undefined" && document.querySelector(target));
+  var found = GL.offscreenCanvases[target.substr(1)]; // Remove '#' prefix
+  if (found) return found;
+  // If not found, if one is querying by using DOM tag name selector 'canvas' or '#canvas',
+  // grab the first OffscreenCanvas that we can find.
+  if ((target == "canvas" || target == "#canvas") && Object.keys(GL.offscreenCanvases)[0]) {
+    return GL.offscreenCanvases[Object.keys(GL.offscreenCanvases)[0]];
+  }
+  // If that is not found either, query via the regular DOM selector.
+  if (typeof document != "undefined") return document.querySelector(target);
+  return null;
 };
 
 var setCanvasElementSizeCallingThread = (target, width, height) => {
@@ -24425,14 +24433,19 @@ var webglPowerPreferences = [ "default", "low-power", "high-performance" ];
     renderViaOffscreenBackBuffer: GROWABLE_HEAP_I8()[attributes + 32 >>> 0]
   };
   var canvas = findCanvasEventTarget(target);
-  // PATCH: Always use OffscreenCanvas fallback — never create GL context on HTML canvas
-  // This prevents transferControlToOffscreen() from failing later in pthread_create
-  if (typeof OffscreenCanvas !== 'undefined') {
-    canvas = new OffscreenCanvas(1280, 800);
-    console.log('[GL] Forced OffscreenCanvas(1280,800) — preserving HTML canvas for pthread transfer');
-  } else if (!canvas) {
-    console.error('[GL] No canvas and no OffscreenCanvas available');
-    return 0;
+  // Use the transferred OffscreenCanvas from GL.offscreenCanvases if available.
+  // This connects rendering to the visible HTML canvas via transferControlToOffscreen().
+  // Only fall back to a standalone OffscreenCanvas if no canvas was transferred.
+  if (!canvas) {
+    if (typeof OffscreenCanvas !== 'undefined') {
+      canvas = new OffscreenCanvas(1280, 800);
+      console.log('[GL] Fallback standalone OffscreenCanvas(1280,800) — no transferred canvas found');
+    } else {
+      console.error('[GL] No canvas and no OffscreenCanvas available');
+      return 0;
+    }
+  } else {
+    console.log('[GL] Using transferred canvas: ' + (canvas.id || 'unknown') + ' type=' + (canvas instanceof OffscreenCanvas ? 'OffscreenCanvas' : typeof canvas));
   }
   if (canvas.offscreenCanvas) canvas = canvas.offscreenCanvas;
   if (contextAttributes.explicitSwapControl) {
