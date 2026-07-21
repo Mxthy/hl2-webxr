@@ -4162,8 +4162,13 @@ function __Z15Studio_MaxFramePK10CStudioHdriPKf(...args) {
 
 __Z15Studio_MaxFramePK10CStudioHdriPKf.stub = true;
 
+var __emLoopCount = 0;
 function __Z17em_loop_iterationv(...args) {
   // No-op: Engine_RenderSingleFrame calls this internally, so we must NOT call it back
+  __emLoopCount++;
+  if (__emLoopCount <= 5 || __emLoopCount % 100 === 0) {
+    console.log('[EM-LOOP] iteration #' + __emLoopCount + ' called');
+  }
   return 0;
 }
 
@@ -13000,6 +13005,11 @@ _emscripten_set_main_loop_timing.sig = "iii";
   // gets it timing set for the first time.
   MainLoop.running = false;
   MainLoop.runner = function MainLoop_runner() {
+    if (!MainLoop.__runnerCount) MainLoop.__runnerCount = 0;
+    MainLoop.__runnerCount++;
+    if (MainLoop.__runnerCount <= 5) {
+      console.log('[RUNNER] call #' + MainLoop.__runnerCount + ' ABORT=' + ABORT + ' queue=' + MainLoop.queue.length + ' timing=' + MainLoop.timingMode + '/' + MainLoop.timingValue + ' frame=' + MainLoop.currentFrameNumber + ' mainloop=' + MainLoop.currentlyRunningMainloop + ' thisId=' + thisMainLoopId);
+    }
     if (ABORT) return;
     if (MainLoop.queue.length > 0) {
       var start = Date.now();
@@ -13039,6 +13049,7 @@ _emscripten_set_main_loop_timing.sig = "iii";
       MainLoop.method = "";
     }
     // just warn once per call to set main loop
+    if (MainLoop.__runnerCount <= 10) console.log('[RUNNER] calling runIter! func=' + typeof iterFunc);
     MainLoop.runIter(iterFunc);
     // catch pauses from the main loop itself
     if (!checkIsRunning()) return;
