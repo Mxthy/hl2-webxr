@@ -3,22 +3,19 @@
 <head>
    <meta charset="UTF-8">
    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-   <title>HL2 WebXR - Build #94 — IVP Fix + Canvas Transfer</title>
+   <title>HL2 WebXR - Build #105 — Map Loading + 3D Render</title>
    <script src="https://cdn.tailwindcss.com"></script>
    <style>
        body { margin: 0; overflow: hidden; background-color: #050505; color: #0f0; font-family: monospace; }
        #game-canvas { display: block; width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
-       
        #debug-overlay {
            position: absolute; top: 10px; left: 10px; z-index: 10;
            background: rgba(0,20,0,0.8); border: 1px solid #0f0; padding: 15px; border-radius: 4px;
-           width: 400px; max-height: 90vh; overflow-y: auto; pointer-events: none;
+           width: 450px; max-height: 90vh; overflow-y: auto; pointer-events: none;
        }
-       
        .hook-status { display: flex; justify-content: space-between; margin-bottom: 4px; border-bottom: 1px dashed #030; padding-bottom: 2px;}
        .status-ok { color: #0f0; font-weight: bold; }
        .status-fail { color: #f00; font-weight: bold; }
-       
        button { pointer-events: auto; background: #030; color: #0f0; border: 1px solid #0f0; padding: 5px 10px; cursor: pointer; margin-top: 10px; width: 100%;}
        button:hover { background: #050; }
        button:disabled { border-color: #333; color: #333; cursor: not-allowed; }
@@ -26,7 +23,6 @@
 </head>
 <body>
 
-   <!-- Hidden elements for Emscripten DataLoader globals -->
    <div id="spinner" style="display:none;"></div>
    <div id="status" style="display:none;"></div>
    <progress id="progress" hidden></progress>
@@ -34,23 +30,14 @@
    <canvas id="game-canvas" width="1280" height="800" oncontextmenu="event.preventDefault()"></canvas>
 
    <div id="debug-overlay">
-       <h2 class="text-xl font-bold mb-2">λ HL2 WebXR - Debugger</h2>
-       <div id="loading-status" class="text-yellow-400 mb-4 animate-pulse">Lade Engine (Build #88)...</div>
-       
-       <div class="mb-4">
-           <strong>WASM Exports Checker:</strong>
-           <div id="export-list" class="mt-2 text-sm">
-               <!-- Wird via JS befüllt -->
-           </div>
-       </div>
-
-       <button id="btn-test-bridge" disabled>Teste C++ Bridge (Disable Render)</button>
+       <h2 class="text-xl font-bold mb-2">λ HL2 WebXR - Build #105</h2>
+       <div id="loading-status" class="text-yellow-400 mb-4 animate-pulse">Lade Engine...</div>
+       <div id="export-list" class="mt-2 text-sm"></div>
+       <button id="btn-test-bridge" disabled>Teste C++ Bridge</button>
        <button id="btn-enter-vr" disabled>WebXR Session starten</button>
-       
        <div id="console-log" class="mt-4 text-xs font-mono" style="color: #888;"></div>
    </div>
 
-   <!-- Dein aktualisierter WebXR Wrapper -->
    <script src="xr_wrapper.js"></script>
 
    <script>
@@ -61,8 +48,6 @@
        const btnEnterVR = document.getElementById('btn-enter-vr');
        const consoleLog = document.getElementById('console-log');
        
-       let webxr = null;
-
        function log(msg) {
            const div = document.createElement('div');
            div.textContent = `> ${msg}`;
@@ -70,13 +55,81 @@
            console.log(msg);
        }
 
-       // Module Konfiguration für Emscripten
+       // ============================================================
+       // CHUNK UNPACKER — loads .data files into Emscripten MEMFS
+       // Format: [name_len:u32][data_len:u32][name:utf8][data:bytes]
+       // ============================================================
+       async function unpackChunkToMEMFS(chunkUrl, filterFn) {
+           console.log('[CHUNK] Fetching: ' + chunkUrl);
+           const response = await fetch(chunkUrl);
+           if (!response.ok) {
+               console.error('[CHUNK] Failed to fetch: ' + response.status);
+               return false;
+           }
+           const buffer = await response.arrayBuffer();
+           const view = new DataView(buffer);
+           let offset = 0;
+           let fileCount = 0;
+           let totalBytes = 0;
+           
+           while (offset < buffer.byteLength - 8) {
+               const nameLen = view.getUint32(offset, true); offset += 4;
+               const dataLen = view.getUint32(offset, true); offset += 4;
+               if (offset + nameLen > buffer.byteLength) break;
+               
+               const nameBytes = new Uint8Array(buffer, offset, nameLen);
+               const filename = new TextDecoder().decode(nameBytes);
+               offset += nameLen;
+               
+               if (offset + dataLen > buffer.byteLength) break;
+               const fileData = new Uint8Array(buffer, offset, dataLen);
+               offset += dataLen;
+               
+               // Filter: only load files that match
+               if (filterFn && !filterFn(filename)) continue;
+               
+               // Create parent directories
+               const dir = filename.substring(0, filename.lastIndexOf('/'));
+               if (dir) {
+                   try { FS.mkdirTree(dir, 0o777); } catch(e) {}
+               }
+               
+               // Write file to MEMFS
+               FS.writeFile(filename, fileData);
+               fileCount++;
+               totalBytes += dataLen;
+               
+               if (fileCount <= 5 || fileCount % 50 === 0) {
+                   console.log('[CHUNK] Written: ' + filename + ' (' + dataLen + ' bytes)');
+               }
+           }
+           
+           console.log('[CHUNK] Done: ' + fileCount + ' files, ' + (totalBytes/1024/1024).toFixed(1) + ' MB unpacked from ' + chunkUrl);
+           return true;
+       }
+
+       // ============================================================
+       // MODULE CONFIG
+       // ============================================================
        window.Module = {
            canvas: canvas,
-           arguments: ['-game', 'hl2', '-windowed', '-w', '1280', '-h', '800', '-novid'],
+           arguments: [
+               '-game', 'hl2',
+               '-windowed',
+               '-w', '1280', '-h', '800',
+               '-novid',
+               '-noip',
+               '+map_background', 'background01',
+               '+mat_hdr_level', '0',
+               '+mat_colorcorrection', '0',
+               '+mat_picmip', '2',
+               '-nosteam'
+           ],
            
-           preRun: [function() {
-               // Create hl2/ directory structure and gameinfo.txt in MEMFS
+           preRun: [async function() {
+               console.log('[PRE-RUN] Starting MEMFS initialization...');
+               
+               // Create hl2/ directory structure
                if (typeof FS !== 'undefined') {
                    var dirs = ['/hl2', '/hl2/cfg', '/hl2/maps', '/hl2/materials', '/hl2/scripts',
                               '/hl2/save', '/hl2/logs', '/hl2/shaders', '/hl2/resource',
@@ -86,12 +139,34 @@
                        try { FS.mkdir(d); } catch(e) {}
                    });
                    FS.writeFile('/hl2/gameinfo.txt', '"GameInfo"\n{\n\tgame\t"HL2"\n\ttitle\t"Half-Life 2"\n\ttype\tsingleplayer_only\n\tsupports_hd "1"\n\tdeveloper\t"Valve"\n\tdeveloper_url\t"http://www.valvesoftware.com"\n\tmanual_url\t"http://www.valvesoftware.com"\n\ticon\t"hl2"\n\t\n\tFileSystem\n\t{\n\t\tSteamAppId\t2153\n\t\tToolsAppId\t211\n\t\tSearchPaths\n\t\t{\n\t\t\tGame\t|gameinfo_path|.\n\t\t\tWritePath\t|gameinfo_path|.\n\t\t\tGame\thl2\n\t\t\tPlatform\tplatform\n\t\t}\n\t}\n}\n');
-                   // Create steam.inf
                    FS.writeFile('/hl2/steam.inf', '2153\nSource Engine\n1.0.0.0\n');
-                   // Create writeable MOD directory
                    try { FS.mkdir('/MOD'); } catch(e) {}
                    console.log('[MEMFS] Created hl2 directory structure + gameinfo.txt + steam.inf');
                }
+               
+               // Unpack preload chunk (BSP map + config files)
+               try {
+                   await unpackChunkToMEMFS('chunks/preload.data', null);
+               } catch(e) {
+                   console.error('[PRE-RUN] Chunk unpacking failed: ' + e.message);
+               }
+               
+               // Verify BSP exists in MEMFS
+               if (typeof FS !== 'undefined') {
+                   var bspCheck = FS.analyzePath('/hl2/maps/background01.bsp');
+                   if (bspCheck.exists) {
+                       var stat = FS.stat('/hl2/maps/background01.bsp');
+                       console.log('[MEMFS-VERIFY] ✓ /hl2/maps/background01.bsp exists (' + stat.size + ' bytes)');
+                   } else {
+                       console.error('[MEMFS-VERIFY] ✗ /hl2/maps/background01.bsp MISSING!');
+                   }
+                   
+                   // Also unpack materials from materials.data (only VMT/VTF files for now)
+                   // Skip for now — 1GB is too much. Engine will use missing-texture fallback.
+                   console.log('[MEMFS-VERIFY] Materials not loaded — engine will use fallback textures');
+               }
+               
+               console.log('[PRE-RUN] MEMFS initialization complete');
            }],
            
            setStatus: (text) => {
@@ -102,16 +177,22 @@
                loadingStatus.textContent = "Engine Runtime Ready!";
                loadingStatus.className = "text-green-400 font-bold mb-4";
                checkWasmExports();
+               
+               // Check for em_loop_iteration export
+               if (Module.wasmExports && Module.wasmExports.em_loop_iteration) {
+                   console.log('[WASM-EXPORT] em_loop_iteration found in wasmExports');
+               } else {
+                   console.warn('[WASM-EXPORT] em_loop_iteration NOT in wasmExports — using Engine_RenderSingleFrame');
+               }
            }
        };
 
-       // Prüft, ob die C++ Hooks erfolgreich ins JS exportiert wurden
        function checkWasmExports() {
            const requiredHooks = [
                '_Engine_DisableAutoRender',
                '_Engine_RenderSingleFrame',
                '_Engine_SetCameraMatrix',
-               '_malloc' // Wichtig für Speicherallokation
+               '_malloc'
            ];
 
            exportList.innerHTML = '';
@@ -136,26 +217,20 @@
                btnTestBridge.disabled = false;
                initWebXR();
            } else {
-               log("FEHLER: Nicht alle C++ Hooks wurden exportiert. Ist MAIN_MODULE=1 aktiv?");
+               log("FEHLER: Nicht alle C++ Hooks wurden exportiert.");
            }
        }
 
-       // Initialisiere die XR-Klasse — VERZÖGERT!
-       // Der Canvas wird von der Engine via PROXY_TO_PTHREAD + OFFSCREENCANVAS
-       // übernommen. Ein getContext('webgl2') im Main-Thread VOR dem Transfer
-       // würde den Canvas dauerhaft blockieren ("cannot transfer canvas" Fehler).
-       // Daher: Erst WebXR initialisieren, wenn der Nutzer explizit VR anfordert.
        async function initWebXR() {
            log("WebXR deferred until user requests VR session.");
            btnEnterVR.disabled = false;
        }
 
-       // UI Event Listener
        btnTestBridge.addEventListener('click', () => {
            log("Führe C++ Bridge Test aus...");
            try {
                Module._Engine_DisableAutoRender();
-               log("Erfolg: _Engine_DisableAutoRender ausgeführt. Engine sollte jetzt pausiert sein.");
+               log("Erfolg: _Engine_DisableAutoRender ausgeführt.");
                btnTestBridge.disabled = true;
            } catch (e) {
                log(`Crash beim Aufruf: ${e.message}`);
@@ -164,11 +239,10 @@
 
        btnEnterVR.addEventListener('click', async () => {
            try {
-               // WebGL-Kontext erst hier holen — nach Engine-Canvas-Transfer
                if (!webxr || !webxr.gl) {
                    log("Hole WebGL2-Kontext für WebXR...");
                    const gl = canvas.getContext('webgl2', { xrCompatible: true });
-                   if (!gl) { log("FEHLER: Kein WebGL2-Kontext verfügbar!"); return; }
+                   if (!gl) { log("FEHLER: Kein WebGL2-Kontext!"); return; }
                    webxr = new HL2WebXR(gl, canvas);
                    const ready = await webxr.init();
                    if (!ready) { log("WebXR Init fehlgeschlagen."); return; }
@@ -179,12 +253,10 @@
            }
        });
 
-       // Lade die Engine (Build #105 — pre.js jetzt korrekt im Build)
        log("Lade hl2_launcher.js...");
        const script = document.createElement('script');
        script.src = 'hl2_launcher.js';
        script.onload = function() {
-           // pre.js deklariert canvasElement etc. als null — hier zu DOM Elements zuweisen
            if (typeof canvasElement !== 'undefined') canvasElement = document.getElementById('game-canvas');
            if (typeof statusElement !== 'undefined') statusElement = document.getElementById('loading-status');
            if (typeof progressElement !== 'undefined') progressElement = document.getElementById('progress');
@@ -192,7 +264,6 @@
            console.log('[POST-LOAD] canvasElement =', canvasElement ? 'OK' : 'null');
        };
        document.body.appendChild(script);
-
    </script>
 </body>
 </html>

@@ -677,10 +677,14 @@ if (ENVIRONMENT_IS_PTHREAD) {
           }
         }
       } else if (ex === "ESCAPE_EXIT") {
-        console.warn("[WORKER] ESCAPE_EXIT caught — _proc_exit bypassed, starting main loop");
+        console.warn("[WORKER] ESCAPE_EXIT caught — enabling auto-render loop + starting fallback");
         ABORT = false;
         EXITSTATUS = 0;
         try {
+          if (Module.wasmExports && Module.wasmExports.EnableAutoRenderLoop) {
+            console.log("[WORKER-EXIT] Calling EnableAutoRenderLoop()...");
+            Module.wasmExports.EnableAutoRenderLoop();
+          }
           var renderFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : __Z17em_loop_iterationv;
           setMainLoop(renderFn, 0, true);
           console.log("[POST-EXIT] Main loop started with Engine_RenderSingleFrame");
@@ -1886,22 +1890,28 @@ var handleException = e => {
     return EXITSTATUS;
   }
   if (e === "ESCAPE_EXIT") {
-    console.warn("[HANDLE-EXC] ESCAPE_EXIT caught — starting render loop + keeping runtime alive");
+    console.warn("[HANDLE-EXC] ESCAPE_EXIT caught — enabling engine auto-render loop");
     ABORT = false;
     EXITSTATUS = 0;
     try {
-      var renderFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : (typeof __Z17em_loop_iterationv !== 'undefined' ? __Z17em_loop_iterationv : null);
+      // Try EnableAutoRenderLoop first — this enables the engine's native Host_Frame loop
+      // which processes the command queue (including +map_background)
+      if (Module.wasmExports && Module.wasmExports.EnableAutoRenderLoop) {
+        console.log("[POST-EXIT] Calling EnableAutoRenderLoop()...");
+        Module.wasmExports.EnableAutoRenderLoop();
+        console.log("[POST-EXIT] EnableAutoRenderLoop called — engine should now run Host_Frame + process +map_background");
+      }
+      // Also set up a fallback render loop with Engine_RenderSingleFrame
+      var renderFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : null;
       if (renderFn) {
         setMainLoop(renderFn, 0, true);
-        console.log("[POST-EXIT] Main loop started with Engine_RenderSingleFrame (from handleException)");
-      } else {
-        console.warn("[POST-EXIT] Engine_RenderSingleFrame not found yet — deferring to onRuntimeInitialized");
+        console.log("[POST-EXIT] Fallback render loop started with Engine_RenderSingleFrame");
       }
     } catch(mlEx) {
       if (mlEx === "unwind") {
         console.log("[POST-EXIT] Main loop started (unwind is normal)");
       } else {
-        console.error("[POST-EXIT] Failed to start main loop: " + mlEx);
+        console.error("[POST-EXIT] Failed: " + mlEx);
       }
     }
     return EXITSTATUS || 0;
