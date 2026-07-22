@@ -1128,7 +1128,14 @@ function createWasm() {
     loadDylibs();
     wasmExports = applySignatureConversions(wasmExports);
     Module["wasmExports"] = wasmExports;
-    registerTLSInit(wasmExports["_emscripten_tls_init"], instance.exports, metadata);
+    var tlsInit = wasmExports["_emscripten_tls_init"];
+    console.log("[MAIN-TLS] _emscripten_tls_init type: " + typeof tlsInit);
+    if (typeof tlsInit === "function") {
+      registerTLSInit(tlsInit, instance.exports, metadata);
+      console.log("[MAIN-TLS] registerTLSInit called for main module");
+    } else {
+      console.error("[MAIN-TLS] WARNING: _emscripten_tls_init not a function! TLS init skipped");
+    }
     addOnInit(wasmExports["__wasm_call_ctors"]);
     __RELOC_FUNCS__.push(wasmExports["__wasm_apply_data_relocs"]);
     // We now have the Wasm module loaded up, keep a reference to the compiled module so we can post it to the workers.
@@ -2285,7 +2292,25 @@ var getDylinkMetadata = binary => {
     binary = new Uint8Array(dylinkSection[0]);
     end = binary.length;
   } else {
-    var int32View = new Uint32Array(new Uint8Array(binary.subarray(0, 24)).buffer);
+    var int32View;
+    try {
+      var sub = binary.subarray(0, 24);
+      var copy = new Uint8Array(sub);
+      console.log('[DYLINK] binary.length=' + binary.length + ' subarray.length=' + sub.length + ' copy.buffer.byteLength=' + copy.buffer.byteLength);
+      if (copy.buffer.byteLength % 4 !== 0) {
+        console.error('[DYLINK-ERR] Buffer not 4-byte aligned! byteLength=' + copy.buffer.byteLength + ' — padding to next multiple of 4');
+        var padded = new Uint8Array(Math.ceil(copy.buffer.byteLength / 4) * 4);
+        padded.set(copy);
+        int32View = new Uint32Array(padded.buffer);
+      } else {
+        int32View = new Uint32Array(copy.buffer);
+      }
+    } catch(e) {
+      console.error('[DYLINK-ERR] Uint32Array creation failed: ' + e.message + ' binary.length=' + binary.length);
+      // Fallback: read magic number byte by byte
+      var magic = binary[0] | (binary[1] << 8) | (binary[2] << 16) | (binary[3] << 24);
+      int32View = [magic];
+    }
     var magicNumberFound = int32View[0] == 1836278016;
     failIf(!magicNumberFound, "need to see wasm magic number");
     // \0asm
@@ -2826,7 +2851,13 @@ var resolveGlobalSymbol = (symName, direct = false) => {
       * @param {Object=} localScope
       * @param {number=} handle
       */ var loadWebAssemblyModule = (binary, flags, libName, localScope, handle) => {
-  var metadata = getDylinkMetadata(binary);
+  var metadata;
+  try {
+    metadata = getDylinkMetadata(binary);
+  } catch(e) {
+    console.error('[DYLINK-ERR] getDylinkMetadata failed for binary (' + (binary ? binary.length : 'null') + ' bytes): ' + e.message);
+    throw e;
+  }
   currentModuleWeakSymbols = metadata.weakImports;
   var originalTable = wasmTable;
   // loadModule loads the wasm module after all its dependencies have been loaded.
@@ -2990,7 +3021,11 @@ var resolveGlobalSymbol = (symName, direct = false) => {
       // initialize the module
       // Only one thread should call __wasm_call_ctors, but all threads need
       // to call _emscripten_tls_init
-      registerTLSInit(moduleExports["_emscripten_tls_init"], instance.exports, metadata);
+      if (typeof moduleExports["_emscripten_tls_init"] === "function") {
+    registerTLSInit(moduleExports["_emscripten_tls_init"], instance.exports, metadata);
+  } else {
+    console.log("[TLS-SKIP] No _emscripten_tls_init export (stub module) — skipping TLS init");
+  }
       if (firstLoad) {
         var applyRelocs = moduleExports["__wasm_apply_data_relocs"];
         if (applyRelocs) {
@@ -3147,6 +3182,7 @@ var registerDynCallSymbols = exports => {
     return flags.loadAsync ? Promise.resolve(true) : true;
   }
   // allocate new DSO
+  console.log('[DYLIB] Loading side module: ' + libName);
   dso = newDSO(libName, handle, "loading");
   dso.refcount = flags.nodelete ? Infinity : 1;
   dso.global = flags.global;
@@ -3167,7 +3203,10 @@ var registerDynCallSymbols = exports => {
     }
     var libFile = locateFile(libName);
     if (flags.loadAsync) {
-      return new Promise((resolve, reject) => asyncLoad(libFile, resolve, reject));
+      return new Promise((resolve, reject) => asyncLoad(libFile, (data) => {
+        console.log('[DYLIB] ' + libName + ' loaded: ' + (data ? data.length : 'null') + ' bytes');
+        resolve(data);
+      }, reject));
     }
     // load the binary synchronously
     if (!readBinary) {
@@ -3184,9 +3223,22 @@ var registerDynCallSymbols = exports => {
     }
     // module not preloaded - load lib data and create new module from it
     if (flags.loadAsync) {
-      return loadLibData().then(libData => loadWebAssemblyModule(libData, flags, libName, localScope, handle));
+      return loadLibData().then(libData => {
+        try {
+          return loadWebAssemblyModule(libData, flags, libName, localScope, handle);
+        } catch(e) {
+          console.error('[DYLIB-ERR] loadWebAssemblyModule FAILED for ' + libName + ': ' + e.message + ' (data length: ' + (libData ? libData.length : 'null') + ')');
+          // Return empty exports to skip this module
+          return {};
+        }
+      });
     }
-    return loadWebAssemblyModule(loadLibData(), flags, libName, localScope, handle);
+    try {
+      return loadWebAssemblyModule(loadLibData(), flags, libName, localScope, handle);
+    } catch(e) {
+      console.error('[DYLIB-ERR] loadWebAssemblyModule FAILED for ' + libName + ': ' + e.message + ' (data length: ' + (loadLibData() ? loadLibData().length : 'null') + ')');
+      return {};
+    }
   }
   // module for lib is loaded - update the dso & global namespace
   function moduleLoaded(exports) {
