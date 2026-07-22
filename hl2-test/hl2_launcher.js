@@ -1881,7 +1881,24 @@ var handleException = e => {
     return EXITSTATUS;
   }
   if (e === "ESCAPE_EXIT") {
-    console.warn("[HANDLE-EXC] ESCAPE_EXIT caught — keeping runtime alive");
+    console.warn("[HANDLE-EXC] ESCAPE_EXIT caught — starting render loop + keeping runtime alive");
+    ABORT = false;
+    EXITSTATUS = 0;
+    try {
+      var renderFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : (typeof __Z17em_loop_iterationv !== 'undefined' ? __Z17em_loop_iterationv : null);
+      if (renderFn) {
+        setMainLoop(renderFn, 0, true);
+        console.log("[POST-EXIT] Main loop started with Engine_RenderSingleFrame (from handleException)");
+      } else {
+        console.warn("[POST-EXIT] Engine_RenderSingleFrame not found yet — deferring to onRuntimeInitialized");
+      }
+    } catch(mlEx) {
+      if (mlEx === "unwind") {
+        console.log("[POST-EXIT] Main loop started (unwind is normal)");
+      } else {
+        console.error("[POST-EXIT] Failed to start main loop: " + mlEx);
+      }
+    }
     return EXITSTATUS || 0;
   }
   if (e instanceof WebAssembly.RuntimeError) {
