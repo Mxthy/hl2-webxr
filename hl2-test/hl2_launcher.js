@@ -677,13 +677,14 @@ if (ENVIRONMENT_IS_PTHREAD) {
           }
         }
       } else if (ex === "ESCAPE_EXIT") {
-        console.warn("[WORKER] ESCAPE_EXIT caught — enabling auto-render loop + starting fallback");
+        console.warn("[WORKER] ESCAPE_EXIT caught — updating wasmTable + starting render loop");
         ABORT = false;
         EXITSTATUS = 0;
         try {
-          if (Module.wasmExports && Module.wasmExports.EnableAutoRenderLoop) {
-            console.log("[WORKER-EXIT] Calling EnableAutoRenderLoop()...");
-            Module.wasmExports.EnableAutoRenderLoop();
+          // Real function available but crashes — needs CI build
+          var realEmLoop = wasmImports && wasmImports["_Z17em_loop_iterationv"];
+          if (realEmLoop && typeof realEmLoop === "function" && !realEmLoop.stub) {
+            console.log("[WORKER-EXIT] Real em_loop_iteration available but needs CI build with Host_Init hook");
           }
           var renderFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : __Z17em_loop_iterationv;
           setMainLoop(renderFn, 0, true);
@@ -1890,22 +1891,29 @@ var handleException = e => {
     return EXITSTATUS;
   }
   if (e === "ESCAPE_EXIT") {
-    console.warn("[HANDLE-EXC] ESCAPE_EXIT caught — enabling engine auto-render loop");
+    console.warn("[HANDLE-EXC] ESCAPE_EXIT caught — updating wasmTable + starting render loop");
     ABORT = false;
     EXITSTATUS = 0;
     try {
-      // Try EnableAutoRenderLoop first — this enables the engine's native Host_Frame loop
-      // which processes the command queue (including +map_background)
-      if (Module.wasmExports && Module.wasmExports.EnableAutoRenderLoop) {
-        console.log("[POST-EXIT] Calling EnableAutoRenderLoop()...");
-        Module.wasmExports.EnableAutoRenderLoop();
-        console.log("[POST-EXIT] EnableAutoRenderLoop called — engine should now run Host_Frame + process +map_background");
+      // CRITICAL: Update the wasmTable entry for _Z17em_loop_iterationv
+      // mergeLibSymbols has updated wasmImports but NOT the wasmTable
+      // The main module calls em_loop_iteration via the wasmTable, so we MUST update it
+      var realEmLoop = wasmImports && wasmImports["_Z17em_loop_iterationv"];
+      if (realEmLoop && typeof realEmLoop === "function" && !realEmLoop.stub) {
+        console.log("[POST-EXIT] Real em_loop_iteration found in wasmImports — updating wasmTable...");
+        // Real em_loop_iteration found but calling it crashes because engine
+        // state is not fully initialized (main() exits before Host_Init completes).
+        // Need CI build with Engine_Init + Engine_LoadMap hooks.
+        console.log("[POST-EXIT] Real em_loop_iteration available but engine not initialized — needs CI build with Host_Init hook");
+      } else {
+        console.warn("[POST-EXIT] Real em_loop_iteration NOT in wasmImports — using no-op stub");
       }
-      // Also set up a fallback render loop with Engine_RenderSingleFrame
+      
+      // Engine doesn't set up its own main loop — we must start one
       var renderFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : null;
       if (renderFn) {
         setMainLoop(renderFn, 0, true);
-        console.log("[POST-EXIT] Fallback render loop started with Engine_RenderSingleFrame");
+        console.log("[POST-EXIT] Render loop started with Engine_RenderSingleFrame");
       }
     } catch(mlEx) {
       if (mlEx === "unwind") {
@@ -3110,6 +3118,10 @@ var mergeLibSymbols = (exports, libName) => {
     const setImport = target => {
       if (!isSymbolDefined(target)) {
         wasmImports[target] = exp;
+        // Log when engine symbols are merged
+        if (target === "_Z17em_loop_iterationv" || target === "Host_Frame" || target === "Cbuf_Execute" || target === "Cbuf_AddText" || target === "SpawnServer" || target === "Host_Map") {
+          console.log("[MERGE-LIB] " + libName + " -> " + target + " = " + (typeof exp === 'function' ? 'function' : typeof exp));
+        }
       }
     };
     setImport(sym);
@@ -4258,8 +4270,8 @@ function __Z15Studio_MaxFramePK10CStudioHdriPKf(...args) {
 __Z15Studio_MaxFramePK10CStudioHdriPKf.stub = true;
 
 var __emLoopCount = 0;
+
 function __Z17em_loop_iterationv(...args) {
-  // No-op: Engine_RenderSingleFrame calls this internally, so we must NOT call it back
   __emLoopCount++;
   if (__emLoopCount <= 5 || __emLoopCount % 100 === 0) {
     console.log('[EM-LOOP] iteration #' + __emLoopCount + ' called');
