@@ -2,7 +2,7 @@
 """Patch Emscripten-generated hl2_launcher.js with runtime safety fixes:
 1. Fallback OffscreenCanvas in setCanvasElementSizeCallingThread (worker)
 2. abort() made non-fatal
-3. handleException catches RuntimeError + ESCAPE_EXIT
+3. handleException catches RuntimeError + ESCAPE_EXIT + starts render loop
 4. Worker onmessage: ESCAPE_SIGTRAP/ESCAPE_EXIT -> setMainLoop(Engine_RenderSingleFrame)
 5. _proc_exit throws ESCAPE_EXIT directly (NO proxy)
 6. wasmImports['raise'] override for side modules
@@ -10,6 +10,10 @@
 8. setMainLoop logging
 9. findCanvasEventTarget: #canvas -> first OffscreenCanvas (ID mismatch fix)
 10. do_create_context: use transferred canvas instead of standalone
+11. getDylinkMetadata: Uint32Array alignment intercept (auto-pad + fallback)
+12. loadDynamicLibrary: logging
+13. getExports: try/catch (skip modules that fail to load — e.g. libsourcevr.so 404)
+14. TLS init guard (skip if _emscripten_tls_init is not a function)
 """
 import sys, re
 
@@ -87,7 +91,24 @@ new_3a = """var handleException = e => {
     return EXITSTATUS;
   }
   if (e === "ESCAPE_EXIT") {
-    console.warn("[HANDLE-EXC] ESCAPE_EXIT caught -- keeping runtime alive");
+    console.warn("[HANDLE-EXC] ESCAPE_EXIT caught -- starting render loop + keeping runtime alive");
+    ABORT = false;
+    EXITSTATUS = 0;
+    try {
+      var renderFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : (typeof __Z17em_loop_iterationv !== 'undefined' ? __Z17em_loop_iterationv : null);
+      if (renderFn) {
+        setMainLoop(renderFn, 0, true);
+        console.log("[POST-EXIT] Main loop started with Engine_RenderSingleFrame (from handleException)");
+      } else {
+        console.warn("[POST-EXIT] Engine_RenderSingleFrame not found yet -- deferring");
+      }
+    } catch(mlEx) {
+      if (mlEx === "unwind") {
+        console.log("[POST-EXIT] Main loop started (unwind is normal)");
+      } else {
+        console.error("[POST-EXIT] Failed to start main loop: " + mlEx);
+      }
+    }
     return EXITSTATUS || 0;
   }
   if (e instanceof WebAssembly.RuntimeError) {
@@ -344,6 +365,90 @@ else:
         print("  + do_create_context: use transferred canvas (was original)")
     else:
         print("  x do_create_context pattern not found (may already be patched)")
+
+
+
+# ============================================================
+# PATCH 11: getDylinkMetadata Uint32Array alignment intercept
+# ============================================================
+old_11 = "    var int32View = new Uint32Array(new Uint8Array(binary.subarray(0, 24)).buffer);\n    var magicNumberFound = int32View[0] == 1836278016;"
+new_11 = """    var int32View;
+    try {
+      var sub = binary.subarray(0, 24);
+      var copy = new Uint8Array(sub);
+      if (copy.buffer.byteLength % 4 !== 0) {
+        console.error('[DYLINK-ALIGN] Padding ' + copy.buffer.byteLength + ' bytes to 4-byte boundary');
+        var padded = new Uint8Array(Math.ceil(copy.buffer.byteLength / 4) * 4);
+        padded.set(copy);
+        int32View = new Uint32Array(padded.buffer);
+      } else {
+        int32View = new Uint32Array(copy.buffer);
+      }
+    } catch(e) {
+      console.error('[DYLINK-ERR] Uint32Array failed: ' + e.message + ' binary.length=' + binary.length);
+      var magic = binary[0] | (binary[1] << 8) | (binary[2] << 16) | (binary[3] << 24);
+      int32View = [magic];
+    }
+    var magicNumberFound = int32View[0] == 1836278016;"""
+if old_11 in js:
+    js = js.replace(old_11, new_11, 1)
+    patches_applied += 1
+    print("  + getDylinkMetadata: Uint32Array alignment intercept")
+else:
+    print("  x getDylinkMetadata Uint32Array pattern not found")
+
+# ============================================================
+# PATCH 12: loadDynamicLibrary logging
+# ============================================================
+old_12 = "  // allocate new DSO\n  dso = newDSO(libName, handle, \"loading\");"
+new_12 = "  // allocate new DSO\n  console.log('[DYLIB] Loading: ' + libName);\n  dso = newDSO(libName, handle, \"loading\");"
+if old_12 in js:
+    js = js.replace(old_12, new_12, 1)
+    patches_applied += 1
+    print("  + loadDynamicLibrary: logging")
+else:
+    print("  x loadDynamicLibrary pattern not found")
+
+# ============================================================
+# PATCH 13: getExports try/catch — skip modules that fail to load
+# ============================================================
+old_13 = "    if (flags.loadAsync) {\n      return loadLibData().then(libData => loadWebAssemblyModule(libData, flags, libName, localScope, handle));\n    }\n    return loadWebAssemblyModule(loadLibData(), flags, libName, localScope, handle);"
+new_13 = """    if (flags.loadAsync) {
+      return loadLibData().then(libData => {
+        try {
+          return loadWebAssemblyModule(libData, flags, libName, localScope, handle);
+        } catch(e) {
+          console.error('[DYLIB-ERR] loadWebAssemblyModule FAILED for ' + libName + ': ' + e.message + ' (data length: ' + (libData ? libData.length : 'null') + ')');
+          return {};
+        }
+      });
+    }
+    try {
+      return loadWebAssemblyModule(loadLibData(), flags, libName, localScope, handle);
+    } catch(e) {
+      console.error('[DYLIB-ERR] loadWebAssemblyModule FAILED for ' + libName + ': ' + e.message);
+      return {};
+    }"""
+if old_13 in js:
+    js = js.replace(old_13, new_13, 1)
+    patches_applied += 1
+    print("  + getExports: try/catch (skip failed modules)")
+else:
+    print("  x getExports pattern not found")
+
+# ============================================================
+# PATCH 14: TLS init guard — skip if not a function
+# ============================================================
+old_14 = "      registerTLSInit(moduleExports[\"_emscripten_tls_init\"], instance.exports, metadata);"
+new_14 = """      if (typeof moduleExports["_emscripten_tls_init"] === "function") {
+        registerTLSInit(moduleExports["_emscripten_tls_init"], instance.exports, metadata);
+      }"""
+if old_14 in js:
+    js = js.replace(old_14, new_14, 1)
+    patches_applied += 1
+    print("  + TLS init guard (skip if not a function)")
+else:
+    print("  x TLS init guard pattern not found")
 
 with open(js_path, 'w') as f:
     f.write(js)
