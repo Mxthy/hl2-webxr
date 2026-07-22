@@ -1112,6 +1112,11 @@ function createWasm() {
     throw "ESCAPE_SIGTRAP";
   };
   console.log("[OVERRIDE] wasmImports['raise'] replaced");
+  wasmImports["raise"] = function(sig) {
+    console.error('[RAISE-SIDE] raise(' + sig + ') -- ESCAPE_SIGTRAP');
+    throw "ESCAPE_SIGTRAP";
+  };
+  console.log("[OVERRIDE] wasmImports['raise'] replaced");
   // Override raise for side modules -- throw ESCAPE_SIGTRAP to unwind stack
   wasmImports["raise"] = function(sig) {
     console.error('[RAISE-SIDE] raise(' + sig + ') from side module -- throwing ESCAPE_SIGTRAP');
