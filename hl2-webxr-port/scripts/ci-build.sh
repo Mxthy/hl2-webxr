@@ -757,7 +757,7 @@ emcc_link() {
   echo "$_erm_hash" > "$_erm_cache" 2>/dev/null || true
 
   # Also force re-link if source_patches changed (e.g. em_loop_iteration patch)
-  _sp_hash=$(grep "em_loop_iteration\|EMSCRIPTEN_KEEPALIVE.*em_loop" "$REPO_ROOT/scripts/ci-build.sh" | md5sum | cut -c1-8)
+  _sp_hash=$(grep "em_loop_iteration\|EMSCRIPTEN_KEEPALIVE.*em_loop\|KEEPALIVE.*Host_Frame\|KEEPALIVE.*Host_Init\|KEEPALIVE.*Cbuf_AddText\|KEEPALIVE.*Cbuf_Execute" "$REPO_ROOT/scripts/ci-build.sh" | md5sum | cut -c1-8)
   _sp_cache="$ENGINE_DIR/build/.sp_hash"
   if [ -f "$_sp_cache" ] && [ "$(cat "$_sp_cache")" != "$_sp_hash" ]; then
     log "Source patches changed — forcing waf_build + emcc_link re-run"
