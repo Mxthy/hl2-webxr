@@ -513,6 +513,68 @@ POST_JS_EOF
     fi
   done
 
+  # === BUILD #106: KEEPALIVE patches for engine functions ===
+  # These functions need EMSCRIPTEN_KEEPALIVE so they're exported from
+  # the side module (libengine.so) and accessible via dlsym/mergeLibSymbols.
+  # Without KEEPALIVE, wasm-ld strips them via dead-code elimination.
+  
+  # Find and patch engine source files
+  for engine_src in "$ENGINE_DIR/engine/host.cpp" "$ENGINE_DIR/engine/host_state.cpp" "$ENGINE_DIR/engine/sys_dll2.cpp" "$ENGINE_DIR/engine/gamedll/sys_dll2.cpp"; do
+    if [ -f "$engine_src" ]; then
+      log "  patching: $engine_src"
+      
+      # Add #include <emscripten.h> if not present
+      if ! grep -q 'emscripten.h' "$engine_src"; then
+        sed -i '1s/^/#include <emscripten.h>\n/' "$engine_src"
+      fi
+      
+      # Host_Frame — void Host_Frame(float time)
+      sed -i 's/^void Host_Frame *( *float *)/EMSCRIPTEN_KEEPALIVE void Host_Frame(float)/g' "$engine_src"
+      sed -i 's/^void Host_Frame *( *float *time *)/EMSCRIPTEN_KEEPALIVE void Host_Frame(float time)/g' "$engine_src"
+      
+      # Host_Init — void Host_Init(void) or bool Host_Init(void)
+      sed -i 's/^bool Host_Init *( *void *)/EMSCRIPTEN_KEEPALIVE bool Host_Init(void)/g' "$engine_src"
+      sed -i 's/^bool Host_Init *()/EMSCRIPTEN_KEEPALIVE bool Host_Init()/g' "$engine_src"
+      sed -i 's/^void Host_Init *( *void *)/EMSCRIPTEN_KEEPALIVE void Host_Init(void)/g' "$engine_src"
+      sed -i 's/^void Host_Init *()/EMSCRIPTEN_KEEPALIVE void Host_Init()/g' "$engine_src"
+      
+      # Verify
+      if grep -q 'EMSCRIPTEN_KEEPALIVE.*Host_Frame' "$engine_src"; then
+        log "  ✓ Host_Frame now has EMSCRIPTEN_KEEPALIVE"
+      fi
+      if grep -q 'EMSCRIPTEN_KEEPALIVE.*Host_Init' "$engine_src"; then
+        log "  ✓ Host_Init now has EMSCRIPTEN_KEEPALIVE"
+      fi
+    fi
+  done
+  
+  # Cbuf functions are in cbuf.cpp
+  for cbuf_src in "$ENGINE_DIR/engine/cbuf.cpp" "$ENGINE_DIR/engine/common/cbuf.cpp" "$ENGINE_DIR/common/cbuf.cpp"; do
+    if [ -f "$cbuf_src" ]; then
+      log "  patching: $cbuf_src"
+      
+      if ! grep -q 'emscripten.h' "$cbuf_src"; then
+        sed -i '1s/^/#include <emscripten.h>\n/' "$cbuf_src"
+      fi
+      
+      # Cbuf_AddText — void Cbuf_AddText(const char* text)
+      sed -i 's/^void Cbuf_AddText *( *const char *)/EMSCRIPTEN_KEEPALIVE void Cbuf_AddText(const char*)/g' "$cbuf_src"
+      sed -i 's/^void Cbuf_AddText *( *const char \*[^)]*)/EMSCRIPTEN_KEEPALIVE void Cbuf_AddText(const char* text)/g' "$cbuf_src"
+      
+      # Cbuf_Execute — void Cbuf_Execute(void)
+      sed -i 's/^void Cbuf_Execute *( *void *)/EMSCRIPTEN_KEEPALIVE void Cbuf_Execute(void)/g' "$cbuf_src"
+      sed -i 's/^void Cbuf_Execute *()/EMSCRIPTEN_KEEPALIVE void Cbuf_Execute()/g' "$cbuf_src"
+      
+      if grep -q 'EMSCRIPTEN_KEEPALIVE.*Cbuf_AddText' "$cbuf_src"; then
+        log "  ✓ Cbuf_AddText now has EMSCRIPTEN_KEEPALIVE"
+      fi
+      if grep -q 'EMSCRIPTEN_KEEPALIVE.*Cbuf_Execute' "$cbuf_src"; then
+        log "  ✓ Cbuf_Execute now has EMSCRIPTEN_KEEPALIVE"
+      fi
+      break
+    fi
+  done
+
   checkpoint_mark "source_patches"
 }
 
