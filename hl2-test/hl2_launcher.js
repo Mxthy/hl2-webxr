@@ -468,26 +468,7 @@ assert(!ENVIRONMENT_IS_SHELL, "shell environment detected but not enabled at bui
 // You can also build docs locally as HTML or other formats in site/
 // An online HTML version (which may be of a different version of Emscripten)
 //    is up at http://kripken.github.io/emscripten-site/docs/api_reference/preamble.js.html
-var _soLibs = [
-      'libtier0.so', 'libvstdlib.so', 'libsteam_api.so',
-      'libfilesystem_stdio.so', 'libengine.so',
-      'libinputsystem.so', 'libmaterialsystem.so',
-      'libsoundemittersystem.so', 'libscenefilecache.so',
-      'libvgui2.so', 'libvguimatsurface.so',
-      'libshaderapidx9.so', 'libstdshader_dx9.so',
-      'libstudiorender.so', 'libvtex_dll.so',
-      'libdatacache.so', 'libtogl.so',
-      'libvaudio_minimp3.so', 'libvphysics.so',
-      'libvideo_services.so',
-      'libclient.so', 'libserver.so',
-      'libGameUI.so', 'libServerBrowser.so',
-      'liblauncher.so',
-      'libsourcevr.so', 'libstdshader_dbg.so', 'libstdshader_dx6.so',
-      'libstdshader_dx7.so', 'libstdshader_dx8.so',
-      'libvideo_bink.so', 'libvideo_webm.so', 'libGLESv3.so'
-    ];
-    Module["dynamicLibraries"] = _soLibs;
-    var dynamicLibraries = Module["dynamicLibraries"] || [];
+var dynamicLibraries = Module["dynamicLibraries"] || [];
 
 var wasmBinary = Module["wasmBinary"];
 
@@ -692,8 +673,22 @@ if (ENVIRONMENT_IS_PTHREAD) {
           else { console.error("[POST-UNWIND] Main loop failed: " + mlEx); }
         }
       } else if (ex === "ESCAPE_EXIT") {
-        console.warn("[WORKER] ESCAPE_EXIT caught -- starting main loop");
+        console.warn("[WORKER] ESCAPE_EXIT caught");
         ABORT = false; EXITSTATUS = 0;
+        // Try to complete engine initialization before starting render loop
+        if (!Module._engineInitDone) {
+          Module._engineInitDone = true;
+          try {
+            if (Module.wasmExports && Module.wasmExports.Engine_Init) {
+              console.log("[POST-EXIT] Calling Engine_Init()...");
+              Module.wasmExports.Engine_Init();
+              console.log("[POST-EXIT] Engine_Init completed");
+            }
+          } catch(initEx) {
+            console.warn("[POST-EXIT] Engine_Init threw: " + initEx + " — continuing with render loop");
+            ABORT = false; EXITSTATUS = 0;
+          }
+        }
         try {
           var rFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : __Z17em_loop_iterationv;
           setMainLoop(rFn, 0, true);
@@ -968,7 +963,24 @@ function removeRunDependency(id) {
   // TODO(sbc): Should we remove printing and leave it up to whoever
   // catches the exception?
   err(what);
-  console.error("[ABORT-CAUGHT] " + what);
+  ABORT = true;
+  // Use a wasm runtime error, because a JS error might be seen as a foreign
+  // exception, which means we'd run destructors on it. We need the error to
+  // simply make the program stop.
+  // FIXME This approach does not work in Wasm EH because it currently does not assume
+  // all RuntimeErrors are from traps; it decides whether a RuntimeError is from
+  // a trap or not based on a hidden field within the object. So at the moment
+  // we don't have a way of throwing a wasm trap from JS. TODO Make a JS API that
+  // allows this in the wasm spec.
+  // Suppress closure compiler warning here. Closure compiler's builtin extern
+  // definition for WebAssembly.RuntimeError claims it takes no arguments even
+  // though it can.
+  // TODO(https://github.com/google/closure-compiler/pull/3913): Remove if/when upstream closure gets fixed.
+  /** @suppress {checkTypes} */ var e = new WebAssembly.RuntimeError(what);
+  // Throw the error whether or not MODULARIZE is set because abort is used
+  // in code paths apart from instantiation where an exception is expected
+  // to be thrown when abort is called.
+  console.error('[ABORT-CAUGHT] ' + what);
   ABORT = false;
   EXITSTATUS = 0;
   return;
@@ -1100,18 +1112,8 @@ function createWasm() {
     }
     mergeLibSymbols(wasmExports, "main");
   wasmImports["raise"] = function(sig) {
-    console.error('[RAISE-SIDE] raise(' + sig + ') -- ESCAPE_SIGTRAP');
-    throw "ESCAPE_SIGTRAP";
-  };
-  console.log("[OVERRIDE] wasmImports['raise'] replaced");
-  wasmImports["raise"] = function(sig) {
-    console.error('[RAISE-SIDE] raise(' + sig + ') -- ESCAPE_SIGTRAP');
-    throw "ESCAPE_SIGTRAP";
-  };
-  console.log("[OVERRIDE] wasmImports['raise'] replaced");
-  wasmImports["raise"] = function(sig) {
-    console.error('[RAISE-SIDE] raise(' + sig + ') -- ESCAPE_SIGTRAP');
-    throw "ESCAPE_SIGTRAP";
+    console.warn('[RAISE-SIDE] raise(' + sig + ') — non-fatal, returning 0');
+    return 0;
   };
   console.log("[OVERRIDE] wasmImports['raise'] replaced");
     LDSO.init();
@@ -2306,13 +2308,6 @@ var getDylinkMetadata = binary => {
     if (binary instanceof ArrayBuffer) {
       binary = new Uint8Array(binary);
     }
-    // AUTO-PAD: pad binary to 4-byte boundary for Uint32Array alignment
-    if (binary.byteLength % 4 !== 0) {
-      var padded = new Uint8Array(binary.byteLength + (4 - binary.byteLength % 4));
-      padded.set(binary);
-      binary = padded;
-      console.warn('[DYLINK] Padded binary to ' + binary.byteLength + ' bytes for alignment');
-    }
     var int32View;
     try {
       var sub = binary.subarray(0, 24);
@@ -2408,15 +2403,12 @@ var getDylinkMetadata = binary => {
       }
     }
   }
-  // Fallback: if tableAlign was never set (subsections misparsed), default to 0
   if (customSection.tableAlign === undefined) customSection.tableAlign = 0;
   if (customSection.tableSize === undefined) customSection.tableSize = 0;
   if (customSection.memorySize === undefined) customSection.memorySize = 0;
   if (customSection.memoryAlign === undefined) customSection.memoryAlign = 0;
   var tableAlign = Math.pow(2, customSection.tableAlign);
-  // Don't abort on tableAlign — just warn
   if (tableAlign !== 1) console.warn('[DYLINK] tableAlign=' + tableAlign + ' (expected 1), continuing anyway');
-  // Don't abort on offset mismatch — just warn
   if (offset != end) console.warn('[DYLINK] offset=' + offset + ' end=' + end + ' (mismatch), continuing anyway');
   return customSection;
 };
@@ -3042,11 +3034,7 @@ var resolveGlobalSymbol = (symName, direct = false) => {
       // Only one thread should call __wasm_call_ctors, but all threads need
       // to call _emscripten_tls_init
       if (typeof moduleExports["_emscripten_tls_init"] === "function") {
-        if (typeof moduleExports["_emscripten_tls_init"] === "function") {
-        if (typeof moduleExports["_emscripten_tls_init"] === "function") {
         registerTLSInit(moduleExports["_emscripten_tls_init"], instance.exports, metadata);
-      }
-      }
       }
       if (firstLoad) {
         var applyRelocs = moduleExports["__wasm_apply_data_relocs"];
@@ -3283,11 +3271,9 @@ var reportUndefinedSymbols = () => {
     if (entry.value == 0) {
       var value = resolveGlobalSymbol(symName, true).sym;
       if (!value && !entry.required) {
-        // Ignore undefined symbols that are imported as weak.
         continue;
       }
       if (!value) {
-        // Skip undefined symbols instead of aborting
         console.warn('[DYLINK] Skipping undefined symbol: ' + symName);
         continue;
       }
@@ -12729,12 +12715,7 @@ var findCanvasEventTarget = target => {
 
 var setCanvasElementSizeCallingThread = (target, width, height) => {
   var canvas = findCanvasEventTarget(target);
-  if (!canvas) {
-    if (typeof OffscreenCanvas !== 'undefined') {
-      canvas = new OffscreenCanvas(1280, 800);
-      console.log('[GL] Fallback OffscreenCanvas for setCanvasElementSize');
-    } else { return -4; }
-  }
+  if (!canvas) return -4;
   if (canvas.canvasSharedPtr) {
     // N.B. We hold the canvasSharedPtr info structure as the authoritative source for specifying the size of a canvas
     // since the actual canvas size changes are asynchronous if the canvas is owned by an OffscreenCanvas on another thread.
