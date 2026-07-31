@@ -776,11 +776,34 @@ if (ENVIRONMENT_IS_PTHREAD) {
             realEmLoop = Module.wasmExports.Engine_RenderSingleFrame;
             err("[POST-EXIT] Using Engine_RenderSingleFrame (may be no-op)");
           }
+          // Wrap the real em_loop_iteration with crash protection
+          var safeRenderFn = realEmLoop;
+          if (realEmLoop && realEmLoop !== Module.wasmExports.Engine_RenderSingleFrame) {
+            var crashCount = 0;
+            safeRenderFn = function() {
+              try {
+                realEmLoop();
+              } catch(rEx) {
+                if (rEx === "unwind") throw rEx; // normal Emscripten behavior
+                crashCount++;
+                if (crashCount <= 3) {
+                  err("[POST-EXIT] Render frame crash #" + crashCount + ": " + (rEx.message || rEx));
+                }
+                if (crashCount >= 5) {
+                  err("[POST-EXIT] Too many render crashes — falling back to Engine_RenderSingleFrame");
+                  if (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) {
+                    MainLoop.func = Module.wasmExports.Engine_RenderSingleFrame;
+                  }
+                }
+                ABORT = false; EXITSTATUS = 0;
+              }
+            };
+          }
           // Start render loop
           try {
-            if (realEmLoop) {
-              setMainLoop(realEmLoop, 0, true);
-              err("[POST-EXIT] Render loop started");
+            if (safeRenderFn) {
+              setMainLoop(safeRenderFn, 0, true);
+              err("[POST-EXIT] Render loop started with crash protection");
             } else {
               err("[POST-EXIT] No render function available");
             }
@@ -848,11 +871,34 @@ if (ENVIRONMENT_IS_PTHREAD) {
             realEmLoop = Module.wasmExports.Engine_RenderSingleFrame;
             err("[POST-NULLFN] Using Engine_RenderSingleFrame (may be no-op)");
           }
+          // Wrap with crash protection
+          var safeRenderFn = realEmLoop;
+          if (realEmLoop && realEmLoop !== Module.wasmExports.Engine_RenderSingleFrame) {
+            var crashCount2 = 0;
+            safeRenderFn = function() {
+              try {
+                realEmLoop();
+              } catch(rEx) {
+                if (rEx === "unwind") throw rEx;
+                crashCount2++;
+                if (crashCount2 <= 3) {
+                  err("[POST-NULLFN] Render frame crash #" + crashCount2 + ": " + (rEx.message || rEx));
+                }
+                if (crashCount2 >= 5) {
+                  err("[POST-NULLFN] Too many render crashes — falling back to Engine_RenderSingleFrame");
+                  if (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) {
+                    MainLoop.func = Module.wasmExports.Engine_RenderSingleFrame;
+                  }
+                }
+                ABORT = false; EXITSTATUS = 0;
+              }
+            };
+          }
           // Start render loop
           try {
-            if (realEmLoop) {
-              setMainLoop(realEmLoop, 0, true);
-              err("[POST-NULLFN] Render loop started");
+            if (safeRenderFn) {
+              setMainLoop(safeRenderFn, 0, true);
+              err("[POST-NULLFN] Render loop started with crash protection");
             } else {
               err("[POST-NULLFN] No render function available");
             }
