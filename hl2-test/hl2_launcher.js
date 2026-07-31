@@ -657,38 +657,19 @@ if (ENVIRONMENT_IS_PTHREAD) {
         err("[WORKER] Received startRenderLoop from main thread");
         if (!Module._renderLoopStarted) {
           Module._renderLoopStarted = true;
-          // Try Engine_Init to complete Host_Init (may throw, that's OK)
-          try {
-            if (Module.wasmExports && Module.wasmExports.Engine_Init) {
-              err("[WORKER] Calling Engine_Init()...");
-              Module.wasmExports.Engine_Init();
-              err("[WORKER] Engine_Init completed");
-            }
-          } catch(initEx) {
-            err("[WORKER] Engine_Init threw: " + initEx + " — continuing with render loop");
-            ABORT = false; EXITSTATUS = 0;
+          // Skip Engine_Init/Engine_LoadMap — they call em_loop_iteration which blocks browser
+          err("[WORKER] Skipping Engine_Init/LoadMap (em_loop_iteration blocks)");
+          // Log available exports for debugging
+          if (Module.wasmExports) {
+            var engineExports = Object.keys(Module.wasmExports).filter(k => k.startsWith('Engine_'));
+            err("[WORKER] Engine exports: " + engineExports.join(', '));
           }
-          // Try Engine_LoadMap for background01
+          // Start render loop with JS no-op stub (Engine_RenderSingleFrame calls real em_loop_iteration → blocks)
           try {
-            if (Module.wasmExports && Module.wasmExports.Engine_LoadMap) {
-              err("[WORKER] Loading map background01...");
-              var strPtr = Module.wasmExports.malloc ? Module.wasmExports.malloc(32) : 0;
-              if (strPtr) {
-                Module.stringToUTF8("background01", strPtr, 32);
-                Module.wasmExports.Engine_LoadMap(strPtr);
-                err("[WORKER] Map loaded");
-              }
-            }
-          } catch(mapEx) {
-            err("[WORKER] Engine_LoadMap threw: " + mapEx + " — continuing");
-            ABORT = false; EXITSTATUS = 0;
-          }
-          // Start render loop
-          try {
-            var rFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : __Z17em_loop_iterationv;
+            var rFn = __Z17em_loop_iterationv;
             if (rFn) {
               setMainLoop(rFn, 0, true);
-              err("[WORKER] Render loop started via startRenderLoop message");
+              err("[WORKER] Render loop started with JS no-op stub");
             } else {
               err("[WORKER] No render function available");
             }
@@ -754,82 +735,16 @@ if (ENVIRONMENT_IS_PTHREAD) {
         // Try to complete engine init then start render loop
         if (!Module._renderLoopStarted) {
           Module._renderLoopStarted = true;
-          // First try Engine_Init to complete Host_Init
-          try {
-            if (Module.wasmExports && Module.wasmExports.Engine_Init) {
-              err("[POST-NULLFN] Calling Engine_Init()...");
-              Module.wasmExports.Engine_Init();
-              err("[POST-NULLFN] Engine_Init completed");
-            }
-          } catch(initEx) {
-            console.warn("[POST-NULLFN] Engine_Init threw: " + initEx);
-            ABORT = false; EXITSTATUS = 0;
+          // Skip Engine_Init/LoadMap — they call em_loop_iteration which blocks browser
+          err("[POST-NULLFN] Skipping Engine_Init/LoadMap (em_loop_iteration blocks)");
+          if (Module.wasmExports) {
+            var engineExports = Object.keys(Module.wasmExports).filter(k => k.startsWith('Engine_'));
+            err("[POST-NULLFN] Engine exports: " + engineExports.join(', '));
           }
-          // Then try Engine_LoadMap for background01
-          try {
-            if (Module.wasmExports && Module.wasmExports.Engine_LoadMap) {
-              err("[POST-NULLFN] Loading map background01...");
-              var strPtr = Module.wasmExports.malloc ? Module.wasmExports.malloc(32) : 0;
-              if (strPtr) {
-                Module.stringToUTF8("background01", strPtr, 32);
-                Module.wasmExports.Engine_LoadMap(strPtr);
-                err("[POST-NULLFN] Map loaded");
-              }
-            }
-          } catch(mapEx) {
-            console.warn("[POST-NULLFN] Engine_LoadMap threw: " + mapEx);
-            ABORT = false; EXITSTATUS = 0;
-          }
-          // Resolve the REAL em_loop_iteration from the side module via dlsym
-          var realEmLoop = null;
-          try {
-            if (Module.wasmExports && Module.wasmExports.dlsym && Module.wasmExports.malloc) {
-              var symName = "_Z17em_loop_iterationv";
-              var strPtr = Module.wasmExports.malloc(symName.length + 1);
-              if (strPtr) {
-                Module.stringToUTF8(symName, strPtr, symName.length + 1);
-                var tableIdx = Module.wasmExports.dlsym(0, strPtr);
-                err("[POST-NULLFN] dlsym(0, '" + symName + "') = " + tableIdx);
-                if (tableIdx > 0 && typeof wasmTable !== 'undefined') {
-                  realEmLoop = wasmTable.get(tableIdx);
-                  err("[POST-NULLFN] Got real em_loop_iteration from wasmTable.get(" + tableIdx + ")");
-                }
-              }
-            }
-          } catch(dlsymEx) {
-            err("[POST-NULLFN] dlsym failed: " + dlsymEx);
-          }
-          if (!realEmLoop && Module.wasmExports && Module.wasmExports.Engine_RunFrame) {
-            realEmLoop = Module.wasmExports.Engine_RunFrame;
-            err("[POST-NULLFN] Using Engine_RunFrame as render function");
-          }
-          if (!realEmLoop && Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) {
-            realEmLoop = Module.wasmExports.Engine_RenderSingleFrame;
-            err("[POST-NULLFN] Using Engine_RenderSingleFrame (may be no-op)");
-          }
-          // Wrap with crash protection
-          var safeRenderFn = realEmLoop;
-          if (realEmLoop && realEmLoop !== Module.wasmExports.Engine_RenderSingleFrame) {
-            var crashCount2 = 0;
-            safeRenderFn = function() {
-              try {
-                realEmLoop();
-              } catch(rEx) {
-                if (rEx === "unwind") throw rEx;
-                crashCount2++;
-                if (crashCount2 <= 3) {
-                  err("[POST-NULLFN] Render frame crash #" + crashCount2 + ": " + (rEx.message || rEx));
-                }
-                if (crashCount2 >= 5) {
-                  err("[POST-NULLFN] Too many render crashes — falling back to Engine_RenderSingleFrame");
-                  if (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) {
-                    MainLoop.func = Module.wasmExports.Engine_RenderSingleFrame;
-                  }
-                }
-                ABORT = false; EXITSTATUS = 0;
-              }
-            };
-          }
+          // Use JS no-op stub for render loop
+          var safeRenderFn = __Z17em_loop_iterationv;
+          // No crash protection needed for no-op stub
+
           // Start render loop
           try {
             if (safeRenderFn) {
@@ -2034,7 +1949,10 @@ var convertI32PairToI53Checked = (lo, hi) => {
 };
 
 function _proc_exit(code) {
-  console.warn('[PROC-EXIT] _proc_exit(' + code + ') -- ESCAPE_EXIT (thread: ' + (ENVIRONMENT_IS_PTHREAD ? 'worker' : 'main') + ')');
+  console.warn('[PROC-EXIT] _proc_exit(' + code + ') (thread: ' + (ENVIRONMENT_IS_PTHREAD ? 'worker' : 'main') + ')');
+  // NO proxyToMainThread — throw ESCAPE_EXIT directly in whatever thread we're in
+  // Worker thread: caught by worker's onmessage handler → starts render loop
+  // Main thread: caught by handleException → keeps runtime alive
   EXITSTATUS = 0; ABORT = false;
   throw "ESCAPE_EXIT";
 }
@@ -31653,7 +31571,7 @@ if (!Atomics.waitAsync || (typeof navigator != "undefined" && navigator.userAgen
 // either synchronously or asynchronously from other threads in postMessage()d
 // or internally queued events. This way a pthread in a Worker can synchronously
 // access e.g. the DOM on the main thread.
-var proxiedFunctionTable = [ exitOnMainThread, pthreadCreateProxied, ___syscall__newselect, ___syscall_accept4, ___syscall_bind, ___syscall_chdir, ___syscall_chmod, ___syscall_connect, ___syscall_dup, ___syscall_dup3, ___syscall_faccessat, ___syscall_fallocate, ___syscall_fchdir, ___syscall_fchmod, ___syscall_fchmodat2, ___syscall_fchown32, ___syscall_fchownat, ___syscall_fcntl64, ___syscall_fdatasync, ___syscall_fstat64, ___syscall_fstatfs64, ___syscall_statfs64, ___syscall_ftruncate64, ___syscall_getcwd, ___syscall_getdents64, ___syscall_getpeername, ___syscall_getsockname, ___syscall_getsockopt, ___syscall_ioctl, ___syscall_listen, ___syscall_lstat64, ___syscall_mkdirat, ___syscall_mknodat, ___syscall_newfstatat, ___syscall_openat, ___syscall_pipe, ___syscall_poll, ___syscall_readlinkat, ___syscall_recvfrom, ___syscall_recvmsg, ___syscall_renameat, ___syscall_rmdir, ___syscall_sendmsg, ___syscall_sendto, ___syscall_socket, ___syscall_stat64, ___syscall_symlink, ___syscall_symlinkat, ___syscall_truncate64, ___syscall_unlinkat, ___syscall_utimensat, setCanvasElementSizeMainThread, __mmap_js, __msync_js, __munmap_js, __setitimer_js, _alBuffer3f, _alBuffer3i, _alBufferData, _alBufferf, _alBufferfv, _alBufferi, _alBufferiv, _alDeleteBuffers, _alDeleteSources, _alSourcei, _alDisable, _alDistanceModel, _alDopplerFactor, _alDopplerVelocity, _alEnable, _alGenBuffers, _alGenSources, _alGetBoolean, _alGetBooleanv, _alGetBuffer3f, _alGetBuffer3i, _alGetBufferf, _alGetBufferfv, _alGetBufferi, _alGetBufferiv, _alGetDouble, _alGetDoublev, _alGetEnumValue, _alGetError, _alGetFloat, _alGetFloatv, _alGetInteger, _alGetIntegerv, _alGetListener3f, _alGetListener3i, _alGetListenerf, _alGetListenerfv, _alGetListeneri, _alGetListeneriv, _alGetSource3f, _alGetSource3i, _alGetSourcef, _alGetSourcefv, _alGetSourcei, _alGetSourceiv, _alGetString, _alIsBuffer, _alIsEnabled, _alIsExtensionPresent, _alIsSource, _alListener3f, _alListener3i, _alListenerf, _alListenerfv, _alListeneri, _alListeneriv, _alSource3f, _alSource3i, _alSourcePause, _alSourcePausev, _alSourcePlay, _alSourcePlayv, _alSourceQueueBuffers, _alSourceRewind, _alSourceRewindv, _alSourceStop, _alSourceStopv, _alSourceUnqueueBuffers, _alSourcef, _alSourcefv, _alSourceiv, _alSpeedOfSound, _alcCaptureCloseDevice, _alcCaptureOpenDevice, _alcCaptureSamples, _alcCaptureStart, _alcCaptureStop, _alcCloseDevice, _alcCreateContext, _alcDestroyContext, _alcGetContextsDevice, _alcGetCurrentContext, _alcGetEnumValue, _alcGetError, _alcGetIntegerv, _alcGetString, _alcIsExtensionPresent, _alcMakeContextCurrent, _alcOpenDevice, _eglBindAPI, _eglChooseConfig, _eglCreateContext, _eglCreateWindowSurface, _eglDestroyContext, _eglDestroySurface, _eglGetConfigAttrib, _eglGetDisplay, _eglGetError, _eglInitialize, _eglMakeCurrent, _eglQueryString, _eglSwapBuffers, _eglSwapInterval, _eglTerminate, _eglWaitClient, _eglWaitNative, _emscripten_alcDevicePauseSOFT, _emscripten_alcDeviceResumeSOFT, _emscripten_alcGetStringiSOFT, _emscripten_alcResetDeviceSOFT, _emscripten_exit_fullscreen, getCanvasSizeMainThread, _emscripten_exit_pointerlock, _emscripten_force_exit, _emscripten_get_battery_status, _emscripten_get_device_pixel_ratio, _emscripten_get_element_css_size, _emscripten_get_gamepad_status, _emscripten_get_num_gamepads, _emscripten_get_screen_size, _emscripten_request_fullscreen_strategy, _emscripten_request_pointerlock, _emscripten_sample_gamepad_data, _emscripten_set_beforeunload_callback_on_thread, _emscripten_set_blur_callback_on_thread, _emscripten_set_element_css_size, _emscripten_set_focus_callback_on_thread, _emscripten_set_fullscreenchange_callback_on_thread, _emscripten_set_gamepadconnected_callback_on_thread, _emscripten_set_gamepaddisconnected_callback_on_thread, _emscripten_set_keydown_callback_on_thread, _emscripten_set_keypress_callback_on_thread, _emscripten_set_keyup_callback_on_thread, _emscripten_set_mousedown_callback_on_thread, _emscripten_set_mouseenter_callback_on_thread, _emscripten_set_mouseleave_callback_on_thread, _emscripten_set_mousemove_callback_on_thread, _emscripten_set_mouseup_callback_on_thread, _emscripten_set_pointerlockchange_callback_on_thread, _emscripten_set_resize_callback_on_thread, _emscripten_set_touchcancel_callback_on_thread, _emscripten_set_touchend_callback_on_thread, _emscripten_set_touchmove_callback_on_thread, _emscripten_set_touchstart_callback_on_thread, _emscripten_set_visibilitychange_callback_on_thread, _emscripten_set_wheel_callback_on_thread, _emscripten_set_window_title, _environ_get, _environ_sizes_get, _fd_close, _fd_fdstat_get, _fd_pread, _fd_pwrite, _fd_read, _fd_seek, _fd_sync, _fd_write, _getaddrinfo, _emscripten_set_click_callback_on_thread, _emscripten_set_dblclick_callback_on_thread, _emscripten_set_mouseover_callback_on_thread, _emscripten_set_mouseout_callback_on_thread, _emscripten_get_mouse_status, _emscripten_set_scroll_callback_on_thread, _emscripten_set_focusin_callback_on_thread, _emscripten_set_focusout_callback_on_thread, _emscripten_set_deviceorientation_callback_on_thread, _emscripten_get_deviceorientation_status, _emscripten_set_devicemotion_callback_on_thread, _emscripten_get_devicemotion_status, _emscripten_set_orientationchange_callback_on_thread, _emscripten_get_orientation_status, _emscripten_lock_orientation, _emscripten_unlock_orientation, _emscripten_get_fullscreen_status, _emscripten_request_fullscreen, _emscripten_enter_soft_fullscreen, _emscripten_exit_soft_fullscreen, _emscripten_set_pointerlockerror_callback_on_thread, _emscripten_get_pointerlock_status, _emscripten_vibrate, _emscripten_vibrate_pattern, _emscripten_get_visibility_status, _emscripten_set_batterychargingchange_callback_on_thread, _emscripten_set_batterylevelchange_callback_on_thread, _clock_time_get, _clock_res_get, _emscripten_run_preload_plugins, _emscripten_run_preload_plugins_data, _emscripten_get_window_title, _emscripten_hide_mouse, _emscripten_set_canvas_size, _emscripten_get_canvas_size, _emscripten_create_worker, _emscripten_destroy_worker, _emscripten_call_worker, _emscripten_get_worker_queue_size, _emscripten_get_preloaded_image_data, _emscripten_get_preloaded_image_data_from_FILE, _emscripten_async_wget, _emscripten_async_wget_data, _emscripten_async_wget2, _emscripten_async_wget2_data, _emscripten_async_wget2_abort, ___syscall_shutdown, _emscripten_set_webglcontextlost_callback_on_thread, _emscripten_set_webglcontextrestored_callback_on_thread, _glutPostRedisplay, _glutGetModifiers, _glutInit, _glutInitWindowSize, _glutInitWindowPosition, _glutIdleFunc, _glutTimerFunc, _glutDisplayFunc, _glutKeyboardFunc, _glutKeyboardUpFunc, _glutSpecialFunc, _glutSpecialUpFunc, _glutReshapeFunc, _glutMotionFunc, _glutPassiveMotionFunc, _glutMouseFunc, _glutSetCursor, _glutCreateWindow, _glutDestroyWindow, _glutReshapeWindow, _glutPositionWindow, _glutFullScreen, _glutInitDisplayMode, _glutSwapBuffers, _glutMainLoop, _eglGetConfigs, _eglQuerySurface, _eglQueryContext, _eglQueryAPI, _eglGetCurrentContext, _eglGetCurrentSurface, _eglGetCurrentDisplay, _eglReleaseThread ];
+var proxiedFunctionTable = [ _proc_exit, exitOnMainThread, pthreadCreateProxied, ___syscall__newselect, ___syscall_accept4, ___syscall_bind, ___syscall_chdir, ___syscall_chmod, ___syscall_connect, ___syscall_dup, ___syscall_dup3, ___syscall_faccessat, ___syscall_fallocate, ___syscall_fchdir, ___syscall_fchmod, ___syscall_fchmodat2, ___syscall_fchown32, ___syscall_fchownat, ___syscall_fcntl64, ___syscall_fdatasync, ___syscall_fstat64, ___syscall_fstatfs64, ___syscall_statfs64, ___syscall_ftruncate64, ___syscall_getcwd, ___syscall_getdents64, ___syscall_getpeername, ___syscall_getsockname, ___syscall_getsockopt, ___syscall_ioctl, ___syscall_listen, ___syscall_lstat64, ___syscall_mkdirat, ___syscall_mknodat, ___syscall_newfstatat, ___syscall_openat, ___syscall_pipe, ___syscall_poll, ___syscall_readlinkat, ___syscall_recvfrom, ___syscall_recvmsg, ___syscall_renameat, ___syscall_rmdir, ___syscall_sendmsg, ___syscall_sendto, ___syscall_socket, ___syscall_stat64, ___syscall_symlink, ___syscall_symlinkat, ___syscall_truncate64, ___syscall_unlinkat, ___syscall_utimensat, setCanvasElementSizeMainThread, __mmap_js, __msync_js, __munmap_js, __setitimer_js, _alBuffer3f, _alBuffer3i, _alBufferData, _alBufferf, _alBufferfv, _alBufferi, _alBufferiv, _alDeleteBuffers, _alDeleteSources, _alSourcei, _alDisable, _alDistanceModel, _alDopplerFactor, _alDopplerVelocity, _alEnable, _alGenBuffers, _alGenSources, _alGetBoolean, _alGetBooleanv, _alGetBuffer3f, _alGetBuffer3i, _alGetBufferf, _alGetBufferfv, _alGetBufferi, _alGetBufferiv, _alGetDouble, _alGetDoublev, _alGetEnumValue, _alGetError, _alGetFloat, _alGetFloatv, _alGetInteger, _alGetIntegerv, _alGetListener3f, _alGetListener3i, _alGetListenerf, _alGetListenerfv, _alGetListeneri, _alGetListeneriv, _alGetSource3f, _alGetSource3i, _alGetSourcef, _alGetSourcefv, _alGetSourcei, _alGetSourceiv, _alGetString, _alIsBuffer, _alIsEnabled, _alIsExtensionPresent, _alIsSource, _alListener3f, _alListener3i, _alListenerf, _alListenerfv, _alListeneri, _alListeneriv, _alSource3f, _alSource3i, _alSourcePause, _alSourcePausev, _alSourcePlay, _alSourcePlayv, _alSourceQueueBuffers, _alSourceRewind, _alSourceRewindv, _alSourceStop, _alSourceStopv, _alSourceUnqueueBuffers, _alSourcef, _alSourcefv, _alSourceiv, _alSpeedOfSound, _alcCaptureCloseDevice, _alcCaptureOpenDevice, _alcCaptureSamples, _alcCaptureStart, _alcCaptureStop, _alcCloseDevice, _alcCreateContext, _alcDestroyContext, _alcGetContextsDevice, _alcGetCurrentContext, _alcGetEnumValue, _alcGetError, _alcGetIntegerv, _alcGetString, _alcIsExtensionPresent, _alcMakeContextCurrent, _alcOpenDevice, _eglBindAPI, _eglChooseConfig, _eglCreateContext, _eglCreateWindowSurface, _eglDestroyContext, _eglDestroySurface, _eglGetConfigAttrib, _eglGetDisplay, _eglGetError, _eglInitialize, _eglMakeCurrent, _eglQueryString, _eglSwapBuffers, _eglSwapInterval, _eglTerminate, _eglWaitClient, _eglWaitNative, _emscripten_alcDevicePauseSOFT, _emscripten_alcDeviceResumeSOFT, _emscripten_alcGetStringiSOFT, _emscripten_alcResetDeviceSOFT, _emscripten_exit_fullscreen, getCanvasSizeMainThread, _emscripten_exit_pointerlock, _emscripten_force_exit, _emscripten_get_battery_status, _emscripten_get_device_pixel_ratio, _emscripten_get_element_css_size, _emscripten_get_gamepad_status, _emscripten_get_num_gamepads, _emscripten_get_screen_size, _emscripten_request_fullscreen_strategy, _emscripten_request_pointerlock, _emscripten_sample_gamepad_data, _emscripten_set_beforeunload_callback_on_thread, _emscripten_set_blur_callback_on_thread, _emscripten_set_element_css_size, _emscripten_set_focus_callback_on_thread, _emscripten_set_fullscreenchange_callback_on_thread, _emscripten_set_gamepadconnected_callback_on_thread, _emscripten_set_gamepaddisconnected_callback_on_thread, _emscripten_set_keydown_callback_on_thread, _emscripten_set_keypress_callback_on_thread, _emscripten_set_keyup_callback_on_thread, _emscripten_set_mousedown_callback_on_thread, _emscripten_set_mouseenter_callback_on_thread, _emscripten_set_mouseleave_callback_on_thread, _emscripten_set_mousemove_callback_on_thread, _emscripten_set_mouseup_callback_on_thread, _emscripten_set_pointerlockchange_callback_on_thread, _emscripten_set_resize_callback_on_thread, _emscripten_set_touchcancel_callback_on_thread, _emscripten_set_touchend_callback_on_thread, _emscripten_set_touchmove_callback_on_thread, _emscripten_set_touchstart_callback_on_thread, _emscripten_set_visibilitychange_callback_on_thread, _emscripten_set_wheel_callback_on_thread, _emscripten_set_window_title, _environ_get, _environ_sizes_get, _fd_close, _fd_fdstat_get, _fd_pread, _fd_pwrite, _fd_read, _fd_seek, _fd_sync, _fd_write, _getaddrinfo, _emscripten_set_click_callback_on_thread, _emscripten_set_dblclick_callback_on_thread, _emscripten_set_mouseover_callback_on_thread, _emscripten_set_mouseout_callback_on_thread, _emscripten_get_mouse_status, _emscripten_set_scroll_callback_on_thread, _emscripten_set_focusin_callback_on_thread, _emscripten_set_focusout_callback_on_thread, _emscripten_set_deviceorientation_callback_on_thread, _emscripten_get_deviceorientation_status, _emscripten_set_devicemotion_callback_on_thread, _emscripten_get_devicemotion_status, _emscripten_set_orientationchange_callback_on_thread, _emscripten_get_orientation_status, _emscripten_lock_orientation, _emscripten_unlock_orientation, _emscripten_get_fullscreen_status, _emscripten_request_fullscreen, _emscripten_enter_soft_fullscreen, _emscripten_exit_soft_fullscreen, _emscripten_set_pointerlockerror_callback_on_thread, _emscripten_get_pointerlock_status, _emscripten_vibrate, _emscripten_vibrate_pattern, _emscripten_get_visibility_status, _emscripten_set_batterychargingchange_callback_on_thread, _emscripten_set_batterylevelchange_callback_on_thread, _clock_time_get, _clock_res_get, _emscripten_run_preload_plugins, _emscripten_run_preload_plugins_data, _emscripten_get_window_title, _emscripten_hide_mouse, _emscripten_set_canvas_size, _emscripten_get_canvas_size, _emscripten_create_worker, _emscripten_destroy_worker, _emscripten_call_worker, _emscripten_get_worker_queue_size, _emscripten_get_preloaded_image_data, _emscripten_get_preloaded_image_data_from_FILE, _emscripten_async_wget, _emscripten_async_wget_data, _emscripten_async_wget2, _emscripten_async_wget2_data, _emscripten_async_wget2_abort, ___syscall_shutdown, _emscripten_set_webglcontextlost_callback_on_thread, _emscripten_set_webglcontextrestored_callback_on_thread, _glutPostRedisplay, _glutGetModifiers, _glutInit, _glutInitWindowSize, _glutInitWindowPosition, _glutIdleFunc, _glutTimerFunc, _glutDisplayFunc, _glutKeyboardFunc, _glutKeyboardUpFunc, _glutSpecialFunc, _glutSpecialUpFunc, _glutReshapeFunc, _glutMotionFunc, _glutPassiveMotionFunc, _glutMouseFunc, _glutSetCursor, _glutCreateWindow, _glutDestroyWindow, _glutReshapeWindow, _glutPositionWindow, _glutFullScreen, _glutInitDisplayMode, _glutSwapBuffers, _glutMainLoop, _eglGetConfigs, _eglQuerySurface, _eglQueryContext, _eglQueryAPI, _eglGetCurrentContext, _eglGetCurrentSurface, _eglGetCurrentDisplay, _eglReleaseThread ];
 
 function checkIncomingModuleAPI() {
   ignoredModuleProp("fetchSettings");
