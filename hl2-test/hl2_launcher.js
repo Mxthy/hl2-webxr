@@ -761,11 +761,41 @@ if (ENVIRONMENT_IS_PTHREAD) {
             console.warn("[POST-NULLFN] Engine_LoadMap threw: " + mapEx);
             ABORT = false; EXITSTATUS = 0;
           }
+          // Resolve the REAL em_loop_iteration from the side module via dlsym
+          var realEmLoop = null;
+          try {
+            if (Module.wasmExports && Module.wasmExports.dlsym && Module.wasmExports.malloc) {
+              var symName = "_Z17em_loop_iterationv";
+              var strPtr = Module.wasmExports.malloc(symName.length + 1);
+              if (strPtr) {
+                Module.stringToUTF8(symName, strPtr, symName.length + 1);
+                var tableIdx = Module.wasmExports.dlsym(0, strPtr);
+                err("[POST-NULLFN] dlsym(0, '" + symName + "') = " + tableIdx);
+                if (tableIdx > 0 && typeof wasmTable !== 'undefined') {
+                  realEmLoop = wasmTable.get(tableIdx);
+                  err("[POST-NULLFN] Got real em_loop_iteration from wasmTable.get(" + tableIdx + ")");
+                }
+              }
+            }
+          } catch(dlsymEx) {
+            err("[POST-NULLFN] dlsym failed: " + dlsymEx);
+          }
+          if (!realEmLoop && Module.wasmExports && Module.wasmExports.Engine_RunFrame) {
+            realEmLoop = Module.wasmExports.Engine_RunFrame;
+            err("[POST-NULLFN] Using Engine_RunFrame as render function");
+          }
+          if (!realEmLoop && Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) {
+            realEmLoop = Module.wasmExports.Engine_RenderSingleFrame;
+            err("[POST-NULLFN] Using Engine_RenderSingleFrame (may be no-op)");
+          }
           // Start render loop
           try {
-            var rFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : __Z17em_loop_iterationv;
-            setMainLoop(rFn, 0, true);
-            err("[POST-NULLFN] Render loop started");
+            if (realEmLoop) {
+              setMainLoop(realEmLoop, 0, true);
+              err("[POST-NULLFN] Render loop started");
+            } else {
+              err("[POST-NULLFN] No render function available");
+            }
           } catch(mlEx) {
             if (mlEx === "unwind") { err("[POST-NULLFN] Main loop started"); }
             else { console.error("[POST-NULLFN] Main loop failed: " + mlEx); }
