@@ -749,7 +749,7 @@ if (ENVIRONMENT_IS_PTHREAD) {
             console.warn("[POST-EXIT] Engine_LoadMap threw: " + mapEx);
             ABORT = false; EXITSTATUS = 0;
           }
-          // Resolve the REAL em_loop_iteration from the side module via dlsym
+          // Resolve the real em_loop_iteration via dlsym (for testing)
           var realEmLoop = null;
           try {
             if (Module.wasmExports && Module.wasmExports.dlsym && Module.wasmExports.malloc) {
@@ -768,37 +768,14 @@ if (ENVIRONMENT_IS_PTHREAD) {
           } catch(dlsymEx) {
             err("[POST-EXIT] dlsym failed: " + dlsymEx);
           }
-          if (!realEmLoop && Module.wasmExports && Module.wasmExports.Engine_RunFrame) {
-            realEmLoop = Module.wasmExports.Engine_RunFrame;
-            err("[POST-EXIT] Using Engine_RunFrame as render function");
+          // Log the real function info but DON'T call it (it blocks the browser)
+          if (realEmLoop) {
+            err("[POST-EXIT] Real em_loop_iteration available at table index but NOT calling (blocks browser)");
           }
-          if (!realEmLoop && Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) {
-            realEmLoop = Module.wasmExports.Engine_RenderSingleFrame;
-            err("[POST-EXIT] Using Engine_RenderSingleFrame (may be no-op)");
-          }
-          // Wrap the real em_loop_iteration with crash protection
-          var safeRenderFn = realEmLoop;
-          if (realEmLoop && realEmLoop !== Module.wasmExports.Engine_RenderSingleFrame) {
-            var crashCount = 0;
-            safeRenderFn = function() {
-              try {
-                realEmLoop();
-              } catch(rEx) {
-                if (rEx === "unwind") throw rEx; // normal Emscripten behavior
-                crashCount++;
-                if (crashCount <= 3) {
-                  err("[POST-EXIT] Render frame crash #" + crashCount + ": " + (rEx.message || rEx));
-                }
-                if (crashCount >= 5) {
-                  err("[POST-EXIT] Too many render crashes — falling back to Engine_RenderSingleFrame");
-                  if (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) {
-                    MainLoop.func = Module.wasmExports.Engine_RenderSingleFrame;
-                  }
-                }
-                ABORT = false; EXITSTATUS = 0;
-              }
-            };
-          }
+          // Use Engine_RenderSingleFrame (no-op) for the render loop — keeps browser responsive
+          var safeRenderFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame)
+            ? Module.wasmExports.Engine_RenderSingleFrame : __Z17em_loop_iterationv;
+          err("[POST-EXIT] Using Engine_RenderSingleFrame for render loop (keeps browser responsive)");
           // Start render loop
           try {
             if (safeRenderFn) {
