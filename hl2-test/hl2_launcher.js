@@ -680,9 +680,9 @@ if (ENVIRONMENT_IS_PTHREAD) {
           Module._engineInitDone = true;
           try {
             if (Module.wasmExports && Module.wasmExports.Engine_Init) {
-              console.log("[POST-EXIT] Calling Engine_Init()...");
+              err("[POST-EXIT] Calling Engine_Init()...");
               Module.wasmExports.Engine_Init();
-              console.log("[POST-EXIT] Engine_Init completed");
+              err("[POST-EXIT] Engine_Init completed");
             }
           } catch(initEx) {
             console.warn("[POST-EXIT] Engine_Init threw: " + initEx + " — continuing with render loop");
@@ -706,9 +706,9 @@ if (ENVIRONMENT_IS_PTHREAD) {
           // First try Engine_Init to complete Host_Init
           try {
             if (Module.wasmExports && Module.wasmExports.Engine_Init) {
-              console.log("[POST-NULLFN] Calling Engine_Init()...");
+              err("[POST-NULLFN] Calling Engine_Init()...");
               Module.wasmExports.Engine_Init();
-              console.log("[POST-NULLFN] Engine_Init completed");
+              err("[POST-NULLFN] Engine_Init completed");
             }
           } catch(initEx) {
             console.warn("[POST-NULLFN] Engine_Init threw: " + initEx);
@@ -717,12 +717,12 @@ if (ENVIRONMENT_IS_PTHREAD) {
           // Then try Engine_LoadMap for background01
           try {
             if (Module.wasmExports && Module.wasmExports.Engine_LoadMap) {
-              console.log("[POST-NULLFN] Loading map background01...");
+              err("[POST-NULLFN] Loading map background01...");
               var strPtr = Module.wasmExports.malloc ? Module.wasmExports.malloc(32) : 0;
               if (strPtr) {
                 Module.stringToUTF8("background01", strPtr, 32);
                 Module.wasmExports.Engine_LoadMap(strPtr);
-                console.log("[POST-NULLFN] Map loaded");
+                err("[POST-NULLFN] Map loaded");
               }
             }
           } catch(mapEx) {
@@ -733,9 +733,9 @@ if (ENVIRONMENT_IS_PTHREAD) {
           try {
             var rFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : __Z17em_loop_iterationv;
             setMainLoop(rFn, 0, true);
-            console.log("[POST-NULLFN] Render loop started");
+            err("[POST-NULLFN] Render loop started");
           } catch(mlEx) {
-            if (mlEx === "unwind") { console.log("[POST-NULLFN] Main loop started"); }
+            if (mlEx === "unwind") { err("[POST-NULLFN] Main loop started"); }
             else { console.error("[POST-NULLFN] Main loop failed: " + mlEx); }
           }
         }

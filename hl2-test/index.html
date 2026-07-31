@@ -8,7 +8,7 @@ body { margin: 0; background: #0a0a0a; color: #fff; font-family: monospace; over
 #game-canvas { width: 1280px; height: 800px; display: block; margin: 0 auto; background: #000; }
 #spinner { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 16px; }
 #error-box {
-  position: fixed; top: 0; left: 0; right: 0; max-height: 60vh; overflow: auto;
+  position: fixed; top: 0; left: 0; right: 0; max-height: 50vh; overflow: auto;
   background: #1a1a2e; color: #e94560; font-family: monospace; font-size: 11px;
   padding: 10px; z-index: 9999; white-space: pre-wrap; display: none;
 }
@@ -24,45 +24,37 @@ body { margin: 0; background: #0a0a0a; color: #fff; font-family: monospace; over
 <div id="spinner">Initializing HL2 WebXR Engine...</div>
 
 <script>
-// === ERROR CAPTURE ===
 window._errors = [];
 window._consoleErrors = [];
 window._consoleLogs = [];
 
 window.addEventListener('error', function(e) {
-  window._errors.push({
-    msg: e.message,
-    file: (e.filename || '').split('/').pop(),
-    line: e.lineno,
-    stack: e.error ? e.error.stack : null
-  });
+  window._errors.push({ msg: e.message, file: (e.filename||'').split('/').pop(), line: e.lineno, stack: e.error ? e.error.stack : null });
   showErrorBox();
 });
-
 window.addEventListener('unhandledrejection', function(e) {
-  window._errors.push({
-    msg: 'Rejection: ' + (e.reason && e.reason.message ? e.reason.message : String(e.reason)),
-    stack: e.reason && e.reason.stack ? e.reason.stack : null
-  });
+  window._errors.push({ msg: 'Rejection: ' + (e.reason && e.reason.message ? e.reason.message : String(e.reason)), stack: e.reason && e.reason.stack ? e.reason.stack : null });
   showErrorBox();
 });
-
 var origError = console.error;
 console.error = function() {
-  var msg = Array.from(arguments).map(function(a) {
-    if (a && a.message) return a.message;
-    return String(a);
-  }).join(' ');
+  var msg = Array.from(arguments).map(function(a) { if (a && a.message) return a.message; return String(a); }).join(' ');
   window._consoleErrors.push(msg);
   origError.apply(console, arguments);
   showErrorBox();
 };
-
 var origLog = console.log;
 console.log = function() {
   var msg = Array.from(arguments).map(function(a) { return String(a); }).join(' ');
   window._consoleLogs.push(msg);
   origLog.apply(console, arguments);
+};
+var origWarn = console.warn;
+console.warn = function() {
+  var msg = Array.from(arguments).map(function(a) { return String(a); }).join(' ');
+  window._consoleErrors.push('[WARN] ' + msg);
+  origWarn.apply(console, arguments);
+  showErrorBox();
 };
 
 function showErrorBox() {
@@ -79,19 +71,18 @@ function showErrorBox() {
     });
   }
   if (window._consoleErrors.length) {
-    content += '\n=== CONSOLE.ERRORS (last 30) ===\n';
-    window._consoleErrors.slice(-30).forEach(function(e) { content += e.substring(0, 200) + '\n'; });
+    content += '\n=== CONSOLE.ERRORS/WARN (last 60) ===\n';
+    window._consoleErrors.slice(-60).forEach(function(e) { content += e.substring(0, 200) + '\n'; });
   }
   if (window._consoleLogs.length) {
-    content += '\n=== CONSOLE.LOGS (last 15) ===\n';
-    window._consoleLogs.slice(-15).forEach(function(e) { content += e.substring(0, 200) + '\n'; });
+    content += '\n=== CONSOLE.LOGS (last 50) ===\n';
+    window._consoleLogs.slice(-50).forEach(function(e) { content += e.substring(0, 200) + '\n'; });
   }
   box.textContent = content;
 }
 </script>
 
 <script>
-// === MODULE CONFIG ===
 var Module = {
   canvas: document.getElementById('game-canvas'),
   print: function(text) { console.log(text); },
@@ -103,7 +94,7 @@ var Module = {
   onRuntimeInitialized: function() {
     console.log('[INIT] Runtime initialized!');
     document.getElementById('spinner').style.display = 'none';
-    document.getElementById('status').textContent = 'Engine Ready';
+    document.getElementById('status').textContent = 'Runtime Ready';
   },
   arguments: [
     '-game', 'hl2', '-windowed', '-w', '1280', '-h', '800',
@@ -113,10 +104,8 @@ var Module = {
   ]
 };
 
-// === ASSET CONFIG ===
 Module.locateFile = function(path, prefix) {
-  console.log('[locateFile] ' + path);
-  return 'https://hl2-assets-proxy.hl2-webxr.workers.dev/web/' + path;
+  return ASSET_ORIGIN + '/web/' + path;
 };
 
 Module.dynamicLibraries = [
@@ -139,20 +128,21 @@ Module.dynamicLibraries = [
 <script async type="text/javascript" src="https://hl2-assets-proxy.hl2-webxr.workers.dev/web/hl2_launcher.js"></script>
 
 <script>
-// Check every 2s for engine readiness
+// Status checker every 3s
 setTimeout(function check() {
-  if (typeof Module !== 'undefined' && Module && Module.calledMain) {
-    console.log('[INIT] main() called!');
+  var statusEl = document.getElementById('status');
+  if (typeof Module !== 'undefined' && Module) {
+    if (Module.calledMain && statusEl) statusEl.textContent = 'Main called';
+    if (Module._renderLoopStarted && statusEl) statusEl.textContent = 'Render loop active';
     if (Module.wasmExports) {
       var exports = Object.keys(Module.wasmExports).filter(function(k) {
         return k.indexOf('Engine') >= 0 || k.indexOf('Host') >= 0 || k.indexOf('Cbuf') >= 0;
       });
-      console.log('[INIT] Engine exports: ' + exports.join(', '));
+      if (exports.length) console.log('[CHECK] Engine exports: ' + exports.join(', '));
     }
-  } else {
-    setTimeout(check, 2000);
   }
-}, 2000);
+  setTimeout(check, 3000);
+}, 3000);
 </script>
 </body>
 </html>
