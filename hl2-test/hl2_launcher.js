@@ -3265,7 +3265,7 @@ var registerDynCallSymbols = exports => {
   }
   moduleLoaded(getExports());
   return true;
-
+}
 
 var reportUndefinedSymbols = () => {
   for (var [symName, entry] of Object.entries(GOT)) {

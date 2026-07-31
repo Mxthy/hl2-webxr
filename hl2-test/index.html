@@ -114,12 +114,9 @@ var Module = {
 };
 
 // === ASSET CONFIG ===
-var ASSET_ORIGIN = 'https://hl2-assets-proxy.hl2-webxr.workers.dev';
-var CHUNK_PREFIX = ASSET_ORIGIN + '/chunks';
-
 Module.locateFile = function(path, prefix) {
   console.log('[locateFile] ' + path);
-  return ASSET_ORIGIN + '/web/' + path;
+  return 'https://hl2-assets-proxy.hl2-webxr.workers.dev/web/' + path;
 };
 
 Module.dynamicLibraries = [
