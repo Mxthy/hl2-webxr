@@ -34591,6 +34591,14 @@ if (Module["noInitialRun"]) shouldRunNow = false;
 
 run();
 
+// Heartbeat to detect browser freeze
+if (typeof window !== "undefined") {
+  var _hbCount = 0;
+  setInterval(function() {
+    _hbCount++;
+    if (_hbCount % 10 === 0) console.log('[HEARTBEAT] ' + _hbCount + 's — browser responsive');
+  }, 1000);
+}
 (() => {
   if (typeof window === "undefined") return;
   window.addEventListener("beforeunload", function(event) {
