@@ -1,254 +1,164 @@
-<!DOCTYPE HTML>
-<html lang="en-us">
-  <head>
-    <meta charset="utf-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>yikes!</title>
-    <style>body {
-  font-family: arial;
-  margin: 0;
-  padding: none;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>HL2 WebXR — Engine Test</title>
+<style>
+body { margin: 0; background: #0a0a0a; color: #fff; font-family: monospace; overflow: hidden; }
+#game-canvas { width: 1280px; height: 800px; display: block; margin: 0 auto; background: #000; }
+#spinner { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 16px; }
+#error-box {
+  position: fixed; top: 0; left: 0; right: 0; max-height: 60vh; overflow: auto;
+  background: #1a1a2e; color: #e94560; font-family: monospace; font-size: 11px;
+  padding: 10px; z-index: 9999; white-space: pre-wrap; display: none;
 }
-
-.emscripten { padding-right: 0; margin-left: auto; margin-right: auto; display: block; }
-div.emscripten { text-align: center; }
-div.emscripten_border { border: 1px solid black; }
-/* the canvas *must not* have any border or padding, or mouse coords will be wrong */
-canvas.emscripten { border: 0px none; background-color: black; }
-
-#emscripten_logo {
-  display: inline-block;
-  margin: 0;
-  padding: 6px;
-  width: 265px;
-}
-
-.spinner {
-  height: 30px;
-  width: 30px;
-  margin: 0;
-  margin-top: 20px;
-  margin-left: 20px;
-  display: inline-block;
-  vertical-align: top;
-
-  -webkit-animation: rotation .8s linear infinite;
-  -moz-animation: rotation .8s linear infinite;
-  -o-animation: rotation .8s linear infinite;
-  animation: rotation 0.8s linear infinite;
-
-  border-left: 5px solid rgb(235, 235, 235);
-  border-right: 5px solid rgb(235, 235, 235);
-  border-bottom: 5px solid rgb(235, 235, 235);
-  border-top: 5px solid rgb(120, 120, 120);
-
-  border-radius: 100%;
-  background-color: rgb(189, 215, 46);
-}
-
-@-webkit-keyframes rotation {
-  from {-webkit-transform: rotate(0deg);}
-  to {-webkit-transform: rotate(360deg);}
-}
-@-moz-keyframes rotation {
-  from {-moz-transform: rotate(0deg);}
-  to {-moz-transform: rotate(360deg);}
-}
-@-o-keyframes rotation {
-  from {-o-transform: rotate(0deg);}
-  to {-o-transform: rotate(360deg);}
-}
-@keyframes rotation {
-  from {transform: rotate(0deg);}
-  to {transform: rotate(360deg);}
-}
-
-#status {
-  display: inline-block;
-  vertical-align: top;
-  margin-top: 30px;
-  margin-left: 20px;
-  font-weight: bold;
-  color: rgb(120, 120, 120);
-}
-
-#progress {
-  height: 20px;
-  width: 300px;
-}
-
-#controls {
-  display: inline-block;
-  float: right;
-  vertical-align: top;
-  margin-top: 30px;
-  margin-right: 20px;
-}
-
-#output {
-  width: 100%;
-  height: 200px;
-  margin: 0 auto;
-  margin-top: 10px;
-  border-left: 0px;
-  border-right: 0px;
-  padding-left: 0px;
-  padding-right: 0px;
-  display: block;
-  background-color: black;
-  color: white;
-  font-family: 'Lucida Console', Monaco, monospace;
-  outline: none;
-}
+#status { position: fixed; top: 5px; right: 80px; font-size: 12px; color: #aaa; z-index: 100; }
+#fullscreen-btn { position: fixed; top: 5px; right: 5px; z-index: 100; cursor: pointer; }
 </style>
-	<style>
-		body {
-			background: #111;
-			color: #fff;
-		}
+</head>
+<body>
+<div id="error-box"></div>
+<div id="status">Loading...</div>
+<button id="fullscreen-btn" onclick="document.getElementById('game-canvas').requestFullscreen()">Fullscreen</button>
+<canvas id="game-canvas" width="1280" height="800"></canvas>
+<div id="spinner">Initializing HL2 WebXR Engine...</div>
 
-		body #emscripten_logo {
-			width: 200px;
-		}
-	</style>
-  </head>
-  <body>
-    <a href="http://emscripten.org"><img id="emscripten_logo" src="assets/portal.svg"></a>
-
-    <div class="spinner" id='spinner'></div>
-    <div class="emscripten" id="status">Downloading...</div>
-
-    <span id='controls'>
-      <span><input type="button" value="Fullscreen" onclick="Module.requestFullscreen(document.getElementById('pointerLock').checked, 
-                                                                                document.getElementById('resize').checked)">
-      </span>
-    </span>
-
-    <div class="emscripten">
-      <progress value="0" max="100" id="progress" hidden=1></progress>
-    </div>
-
-    <div class="emscripten_border">
-      <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex=-1></canvas>
-    </div>
-    <textarea id="output" rows="8"></textarea>
-
-    <script type='text/javascript'>
-      var statusElement = document.getElementById('status');
-      var progressElement = document.getElementById('progress');
-      var spinnerElement = document.getElementById('spinner');
-      var canvasElement = document.getElementById('canvas');
-      var outputElement = document.getElementById('output');
-      if (outputElement) outputElement.value = ''; // clear browser cache
-
-      // As a default initial behavior, pop up an alert when webgl context is lost. To make your
-      // application robust, you may want to override this behavior before shipping!
-      // See http://www.khronos.org/registry/webgl/specs/latest/1.0/#5.15.2
-      canvasElement.addEventListener('webglcontextlost', (e) => {
-        alert('WebGL context lost. You will need to reload the page.');
-        e.preventDefault();
-      }, false);
-
-	  canvasElement.widthNative = screen.availWidth
-	  canvasElement.heightNative = screen.availHeight
-
-      var Module = {
-        print(...args) {
-          console.log(...args);
-          // These replacements are necessary if you render to raw HTML
-          //text = text.replace(/&/g, "&amp;");
-          //text = text.replace(/</g, "&lt;");
-          //text = text.replace(/>/g, "&gt;");
-          //text = text.replace('\n', '<br>', 'g');
-          if (outputElement) {
-            var text = args.join(' ');
-            outputElement.value += text + "\n";
-            outputElement.scrollTop = outputElement.scrollHeight; // focus on bottom
-          }
-        },
-        canvas: canvasElement,
-        setStatus(text) {
-          Module.setStatus.last ??= { time: Date.now(), text: '' };
-          if (text === Module.setStatus.last.text) return;
-          var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
-          var now = Date.now();
-          // if this is a progress update, skip it if too soon
-          if (m && now - Module.setStatus.last.time < 30) return;
-          Module.setStatus.last.time = now;
-          Module.setStatus.last.text = text;
-          if (m) {
-            text = m[1];
-            progressElement.value = parseInt(m[2])*100;
-            progressElement.max = parseInt(m[4])*100;
-            progressElement.hidden = false;
-            spinnerElement.hidden = false;
-          } else {
-            progressElement.value = null;
-            progressElement.max = null;
-            progressElement.hidden = true;
-            if (!text) spinnerElement.style.display = 'none';
-          }
-          statusElement.innerHTML = text;
-        },
-        totalDependencies: 0,
-        monitorRunDependencies(left) {
-          this.totalDependencies = Math.max(this.totalDependencies, left);
-          Module.setStatus(left ? 'Preparing... (' + (this.totalDependencies-left) + '/' + this.totalDependencies + ')' : 'All downloads complete.');
-        }
-      };
-      Module.setStatus('Downloading...');
-      window.onerror = (event) => {
-        // TODO: do not warn on ok events like simulating an infinite loop or exitStatus
-        Module.setStatus('Exception thrown, see JavaScript console');
-        spinnerElement.style.display = 'none';
-        Module.setStatus = (text) => {
-          if (text) console.error('[post-exception status] ' + text);
-        };
-      };
-    </script>
-    <script async type="text/javascript" src="hl2_launcher.js"></script>
-  
 <script>
-// Wait for WASM module to be ready, then call Engine_Init + Engine_LoadMap
-var initCheckCount = 0;
-var initInterval = setInterval(function() {
-  initCheckCount++;
-  if (initCheckCount > 300) { // 30 seconds timeout
-    clearInterval(initInterval);
-    console.error('[INIT] Timeout waiting for Module to be ready');
-    return;
+// === ERROR CAPTURE ===
+window._errors = [];
+window._consoleErrors = [];
+window._consoleLogs = [];
+
+window.addEventListener('error', function(e) {
+  window._errors.push({
+    msg: e.message,
+    file: (e.filename || '').split('/').pop(),
+    line: e.lineno,
+    stack: e.error ? e.error.stack : null
+  });
+  showErrorBox();
+});
+
+window.addEventListener('unhandledrejection', function(e) {
+  window._errors.push({
+    msg: 'Rejection: ' + (e.reason && e.reason.message ? e.reason.message : String(e.reason)),
+    stack: e.reason && e.reason.stack ? e.reason.stack : null
+  });
+  showErrorBox();
+});
+
+var origError = console.error;
+console.error = function() {
+  var msg = Array.from(arguments).map(function(a) {
+    if (a && a.message) return a.message;
+    return String(a);
+  }).join(' ');
+  window._consoleErrors.push(msg);
+  origError.apply(console, arguments);
+  showErrorBox();
+};
+
+var origLog = console.log;
+console.log = function() {
+  var msg = Array.from(arguments).map(function(a) { return String(a); }).join(' ');
+  window._consoleLogs.push(msg);
+  origLog.apply(console, arguments);
+};
+
+function showErrorBox() {
+  var box = document.getElementById('error-box');
+  box.style.display = 'block';
+  var content = '';
+  if (window._errors.length) {
+    content += '=== ERRORS (' + window._errors.length + ') ===\n';
+    window._errors.forEach(function(e, i) {
+      content += '[' + i + '] ' + e.msg;
+      if (e.file) content += ' (' + e.file + ':' + e.line + ')';
+      content += '\n';
+      if (e.stack) content += '  ' + e.stack.split('\n').slice(0, 5).join('\n  ') + '\n';
+    });
   }
-  
-  if (typeof Module !== 'undefined' && Module && Module.calledMain && 
-      Module.wasmExports && Module.wasmExports.Engine_Init) {
-    clearInterval(initInterval);
-    console.log('[INIT] Module ready, calling Engine_Init()...');
-    
-    try {
-      Module._Engine_Init();
-      console.log('[INIT] Engine_Init done');
-    } catch(e) {
-      console.error('[INIT] Engine_Init failed: ' + e);
-    }
-    
-    // Wait a bit then load map
-    setTimeout(function() {
-      console.log('[INIT] Calling Engine_LoadMap("background01")...');
-      try {
-        var mapName = "background01";
-        var len = Module.lengthBytesUTF8(mapName) + 1;
-        var ptr = Module._malloc(len);
-        Module.stringToUTF8(mapName, ptr, len);
-        Module._Engine_LoadMap(ptr);
-        Module._free(ptr);
-        console.log('[INIT] Engine_LoadMap done');
-      } catch(e) {
-        console.error('[INIT] Engine_LoadMap failed: ' + e);
-      }
-    }, 2000);
+  if (window._consoleErrors.length) {
+    content += '\n=== CONSOLE.ERRORS (last 30) ===\n';
+    window._consoleErrors.slice(-30).forEach(function(e) { content += e.substring(0, 200) + '\n'; });
   }
-}, 100);
+  if (window._consoleLogs.length) {
+    content += '\n=== CONSOLE.LOGS (last 15) ===\n';
+    window._consoleLogs.slice(-15).forEach(function(e) { content += e.substring(0, 200) + '\n'; });
+  }
+  box.textContent = content;
+}
 </script>
 
+<script>
+// === MODULE CONFIG ===
+var Module = {
+  canvas: document.getElementById('game-canvas'),
+  print: function(text) { console.log(text); },
+  printErr: function(text) { console.error(text); },
+  onAbort: function(what) {
+    window._errors.push({ msg: 'ABORT: ' + what });
+    showErrorBox();
+  },
+  onRuntimeInitialized: function() {
+    console.log('[INIT] Runtime initialized!');
+    document.getElementById('spinner').style.display = 'none';
+    document.getElementById('status').textContent = 'Engine Ready';
+  },
+  arguments: [
+    '-game', 'hl2', '-windowed', '-w', '1280', '-h', '800',
+    '-novid', '-noip', '-nosteam', '-console',
+    '+map_background', 'background01',
+    '+mat_hdr_level', '0', '+mat_colorcorrection', '0', '+mat_picmip', '2'
+  ]
+};
+
+// === ASSET CONFIG ===
+var ASSET_ORIGIN = 'https://hl2-assets-proxy.hl2-webxr.workers.dev';
+var CHUNK_PREFIX = ASSET_ORIGIN + '/chunks';
+
+Module.locateFile = function(path, prefix) {
+  console.log('[locateFile] ' + path);
+  return ASSET_ORIGIN + '/web/' + path;
+};
+
+Module.dynamicLibraries = [
+  'libtier0.so', 'libvstdlib.so', 'libsteam_api.so',
+  'libfilesystem_stdio.so', 'libengine.so',
+  'libinputsystem.so', 'libmaterialsystem.so',
+  'libsoundemittersystem.so', 'libscenefilecache.so',
+  'libvgui2.so', 'libvguimatsurface.so',
+  'libshaderapidx9.so', 'libstdshader_dx9.so',
+  'libstudiorender.so', 'libvtex_dll.so',
+  'libdatacache.so', 'libtogl.so',
+  'libvaudio_minimp3.so', 'libvphysics.so',
+  'libvideo_services.so',
+  'libclient.so', 'libserver.so',
+  'libGameUI.so', 'libServerBrowser.so',
+  'liblauncher.so',
+  'libsourcevr.so', 'libstdshader_dbg.so', 'libstdshader_dx6.so',
+  'libstdshader_dx7.so', 'libstdshader_dx8.so',
+  'libvideo_bink.so', 'libvideo_webm.so', 'libGLESv3.so'
+];
+</script>
+
+<script async type="text/javascript" src="https://hl2-assets-proxy.hl2-webxr.workers.dev/web/hl2_launcher.js"></script>
+
+<script>
+// Check every 2s for engine readiness
+setTimeout(function check() {
+  if (typeof Module !== 'undefined' && Module && Module.calledMain) {
+    console.log('[INIT] main() called!');
+    if (Module.wasmExports) {
+      var exports = Object.keys(Module.wasmExports).filter(function(k) {
+        return k.indexOf('Engine') >= 0 || k.indexOf('Host') >= 0 || k.indexOf('Cbuf') >= 0;
+      });
+      console.log('[INIT] Engine exports: ' + exports.join(', '));
+    }
+  } else {
+    setTimeout(check, 2000);
+  }
+}, 2000);
+</script>
 </body>
 </html>
