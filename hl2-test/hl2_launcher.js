@@ -207,7 +207,7 @@ async function fetchChunk(mapName) {
 var _orig_locateFile = Module.locateFile;
 Module.locateFile = function(path, prefix) {
   if (path.endsWith('.wasm') || path.endsWith('.data')) {
-    return ASSET_ORIGIN + '/hl2-runtime/' + path;
+    return ASSET_ORIGIN + '/web/' + path;
   }
   if (_orig_locateFile) return _orig_locateFile(path, prefix);
   return prefix + path;
@@ -468,7 +468,26 @@ assert(!ENVIRONMENT_IS_SHELL, "shell environment detected but not enabled at bui
 // You can also build docs locally as HTML or other formats in site/
 // An online HTML version (which may be of a different version of Emscripten)
 //    is up at http://kripken.github.io/emscripten-site/docs/api_reference/preamble.js.html
-var dynamicLibraries = Module["dynamicLibraries"] || [];
+var _soLibs = [
+      'libtier0.so', 'libvstdlib.so', 'libsteam_api.so',
+      'libfilesystem_stdio.so', 'libengine.so',
+      'libinputsystem.so', 'libmaterialsystem.so',
+      'libsoundemittersystem.so', 'libscenefilecache.so',
+      'libvgui2.so', 'libvguimatsurface.so',
+      'libshaderapidx9.so', 'libstdshader_dx9.so',
+      'libstudiorender.so', 'libvtex_dll.so',
+      'libdatacache.so', 'libtogl.so',
+      'libvaudio_minimp3.so', 'libvphysics.so',
+      'libvideo_services.so',
+      'libclient.so', 'libserver.so',
+      'libGameUI.so', 'libServerBrowser.so',
+      'liblauncher.so',
+      'libsourcevr.so', 'libstdshader_dbg.so', 'libstdshader_dx6.so',
+      'libstdshader_dx7.so', 'libstdshader_dx8.so',
+      'libvideo_bink.so', 'libvideo_webm.so', 'libGLESv3.so'
+    ];
+    Module["dynamicLibraries"] = _soLibs;
+    var dynamicLibraries = Module["dynamicLibraries"] || [];
 
 var wasmBinary = Module["wasmBinary"];
 
