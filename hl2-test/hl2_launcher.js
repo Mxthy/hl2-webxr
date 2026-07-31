@@ -697,9 +697,48 @@ if (ENVIRONMENT_IS_PTHREAD) {
           if (mlEx === "unwind") { console.log("[POST-EXIT] Main loop started"); }
           else { console.error("[POST-EXIT] Main loop failed: " + mlEx); }
         }
-      } else if (ex instanceof WebAssembly.RuntimeError && (ex.message?.includes('unreachable') || ex.message?.includes('Aborted'))) {
+      } else if (ex instanceof WebAssembly.RuntimeError && (ex.message?.includes('unreachable') || ex.message?.includes('Aborted') || ex.message?.includes('null function'))) {
         err(`worker: non-fatal RuntimeError: ${ex.message?.substring(0, 80)}`);
         ABORT = false; EXITSTATUS = 0;
+        // Try to complete engine init then start render loop
+        if (!Module._renderLoopStarted) {
+          Module._renderLoopStarted = true;
+          // First try Engine_Init to complete Host_Init
+          try {
+            if (Module.wasmExports && Module.wasmExports.Engine_Init) {
+              console.log("[POST-NULLFN] Calling Engine_Init()...");
+              Module.wasmExports.Engine_Init();
+              console.log("[POST-NULLFN] Engine_Init completed");
+            }
+          } catch(initEx) {
+            console.warn("[POST-NULLFN] Engine_Init threw: " + initEx);
+            ABORT = false; EXITSTATUS = 0;
+          }
+          // Then try Engine_LoadMap for background01
+          try {
+            if (Module.wasmExports && Module.wasmExports.Engine_LoadMap) {
+              console.log("[POST-NULLFN] Loading map background01...");
+              var strPtr = Module.wasmExports.malloc ? Module.wasmExports.malloc(32) : 0;
+              if (strPtr) {
+                Module.stringToUTF8("background01", strPtr, 32);
+                Module.wasmExports.Engine_LoadMap(strPtr);
+                console.log("[POST-NULLFN] Map loaded");
+              }
+            }
+          } catch(mapEx) {
+            console.warn("[POST-NULLFN] Engine_LoadMap threw: " + mapEx);
+            ABORT = false; EXITSTATUS = 0;
+          }
+          // Start render loop
+          try {
+            var rFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : __Z17em_loop_iterationv;
+            setMainLoop(rFn, 0, true);
+            console.log("[POST-NULLFN] Render loop started");
+          } catch(mlEx) {
+            if (mlEx === "unwind") { console.log("[POST-NULLFN] Main loop started"); }
+            else { console.error("[POST-NULLFN] Main loop failed: " + mlEx); }
+          }
+        }
       } else {
         err(`worker: uncaught exception: ${ex}`);
         if (ex?.stack) err(ex.stack);
@@ -1112,7 +1151,11 @@ function createWasm() {
     }
     mergeLibSymbols(wasmExports, "main");
   wasmImports["raise"] = function(sig) {
-    console.warn('[RAISE-SIDE] raise(' + sig + ') — non-fatal, returning 0');
+    if (sig === 5) {
+      console.warn('[RAISE-SIDE] raise(' + sig + ') — returning 0 (non-fatal, lets Host_Init continue)');
+      return 0;
+    }
+    console.warn('[RAISE-SIDE] raise(' + sig + ') — non-fatal');
     return 0;
   };
   console.log("[OVERRIDE] wasmImports['raise'] replaced");
