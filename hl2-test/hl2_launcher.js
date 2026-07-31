@@ -653,6 +653,52 @@ if (ENVIRONMENT_IS_PTHREAD) {
         if (initializedJS) {
           checkMailbox();
         }
+      } else if (cmd === "startRenderLoop") {
+        err("[WORKER] Received startRenderLoop from main thread");
+        if (!Module._renderLoopStarted) {
+          Module._renderLoopStarted = true;
+          // Try Engine_Init to complete Host_Init (may throw, that's OK)
+          try {
+            if (Module.wasmExports && Module.wasmExports.Engine_Init) {
+              err("[WORKER] Calling Engine_Init()...");
+              Module.wasmExports.Engine_Init();
+              err("[WORKER] Engine_Init completed");
+            }
+          } catch(initEx) {
+            err("[WORKER] Engine_Init threw: " + initEx + " — continuing with render loop");
+            ABORT = false; EXITSTATUS = 0;
+          }
+          // Try Engine_LoadMap for background01
+          try {
+            if (Module.wasmExports && Module.wasmExports.Engine_LoadMap) {
+              err("[WORKER] Loading map background01...");
+              var strPtr = Module.wasmExports.malloc ? Module.wasmExports.malloc(32) : 0;
+              if (strPtr) {
+                Module.stringToUTF8("background01", strPtr, 32);
+                Module.wasmExports.Engine_LoadMap(strPtr);
+                err("[WORKER] Map loaded");
+              }
+            }
+          } catch(mapEx) {
+            err("[WORKER] Engine_LoadMap threw: " + mapEx + " — continuing");
+            ABORT = false; EXITSTATUS = 0;
+          }
+          // Start render loop
+          try {
+            var rFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : __Z17em_loop_iterationv;
+            if (rFn) {
+              setMainLoop(rFn, 0, true);
+              err("[WORKER] Render loop started via startRenderLoop message");
+            } else {
+              err("[WORKER] No render function available");
+            }
+          } catch(mlEx) {
+            if (mlEx === "unwind") { err("[WORKER] Main loop started (unwind)"); }
+            else { err("[WORKER] Main loop failed: " + mlEx); }
+          }
+        } else {
+          err("[WORKER] Render loop already started");
+        }
       } else if (cmd) {
         // The received message looks like something that should be handled by this message
         // handler, (since there is a cmd field present), but is not one of the
@@ -1938,18 +1984,30 @@ var handleException = e => {
     if (msg.includes('unreachable') || msg.includes('Aborted')) {
       console.error('[HANDLE-EXC] RuntimeError: ' + msg.substring(0, 100) + ' -- continuing (isWorker=' + ENVIRONMENT_IS_PTHREAD + ')');
       ABORT = false; EXITSTATUS = 0;
-      // Start render loop if not already started
-      if (ENVIRONMENT_IS_PTHREAD && !Module._renderLoopStarted) {
+      // Main thread: send startRenderLoop message to worker
+      if (!ENVIRONMENT_IS_PTHREAD && !Module._renderLoopStarted) {
         Module._renderLoopStarted = true;
         try {
-          var rFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : __Z17em_loop_iterationv;
-          if (rFn) {
-            setMainLoop(rFn, 0, true);
-            err("[HANDLE-EXC] Render loop started from handleException");
+          if (typeof PThread !== 'undefined' && PThread.runningWorkers && PThread.runningWorkers.length > 0) {
+            var worker = PThread.runningWorkers[0];
+            // Delay to let worker settle after proxy abort
+            setTimeout(function() {
+              try {
+                worker.postMessage({ cmd: "startRenderLoop" });
+                err("[HANDLE-EXC] Sent startRenderLoop to worker (delayed)");
+              } catch(e) {
+                err("[HANDLE-EXC] Failed to send startRenderLoop: " + e);
+              }
+            }, 2000);
+            err("[HANDLE-EXC] Queued startRenderLoop for worker (2s delay)");
+          } else {
+            err("[HANDLE-EXC] No running workers found — checking unused workers");
+            if (typeof PThread !== 'undefined' && PThread.unusedWorkers && PThread.unusedWorkers.length > 0) {
+              err("[HANDLE-EXC] Found " + PThread.unusedWorkers.length + " unused workers");
+            }
           }
-        } catch(mlEx) {
-          if (mlEx === "unwind") { err("[HANDLE-EXC] Main loop started"); }
-          else { err("[HANDLE-EXC] Main loop failed: " + mlEx); }
+        } catch(sendEx) {
+          err("[HANDLE-EXC] Failed to send startRenderLoop: " + sendEx);
         }
       }
       return 0;
