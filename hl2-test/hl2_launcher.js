@@ -689,15 +689,20 @@ if (ENVIRONMENT_IS_PTHREAD) {
       }
     } catch (ex) {
       if (ex === "ESCAPE_SIGTRAP") {
-        console.warn("[WORKER] ESCAPE_SIGTRAP caught -- starting main loop");
+        console.warn("[WORKER] ESCAPE_SIGTRAP caught -- starting render loop with JS no-op stub");
         ABORT = false; EXITSTATUS = 0;
-        try {
-          var rFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : __Z17em_loop_iterationv;
-          setMainLoop(rFn, 0, true);
-          console.log("[POST-UNWIND] Main loop started with Engine_RenderSingleFrame");
-        } catch(mlEx) {
-          if (mlEx === "unwind") { console.log("[POST-UNWIND] Main loop started"); }
-          else { console.error("[POST-UNWIND] Main loop failed: " + mlEx); }
+        if (!Module._renderLoopStarted) {
+          Module._renderLoopStarted = true;
+          // Use JS no-op stub (not Engine_RenderSingleFrame which calls real em_loop_iteration → recursion)
+          try {
+            setMainLoop(__Z17em_loop_iterationv, 0, true);
+            console.log("[POST-SIGTRAP] Render loop started with JS no-op stub");
+          } catch(mlEx) {
+            if (mlEx === "unwind") { console.log("[POST-SIGTRAP] Main loop started"); }
+            else { console.error("[POST-SIGTRAP] Main loop failed: " + mlEx); }
+          }
+        } else {
+          console.warn("[POST-SIGTRAP] Render loop already started");
         }
       } else if (ex === "ESCAPE_EXIT") {
         console.warn("[WORKER] ESCAPE_EXIT caught -- starting render loop");
@@ -1192,36 +1197,13 @@ function createWasm() {
     mergeLibSymbols(wasmExports, "main");
   wasmImports["raise"] = function(sig) {
     if (sig === 5) {
-      console.warn('[RAISE-SIDE] raise(' + sig + ') — returning 0 (non-fatal, lets Host_Init continue)');
-      return 0;
+      console.warn('[RAISE-SIDE] raise(' + sig + ') — throwing ESCAPE_SIGTRAP to break main() while loop');
+      throw "ESCAPE_SIGTRAP";
     }
-    console.warn('[RAISE-SIDE] raise(' + sig + ') — non-fatal');
+    console.warn('[RAISE-SIDE] raise(' + sig + ') — returning 0');
     return 0;
   };
   console.log("[OVERRIDE] wasmImports['raise'] replaced");
-  // Override em_loop_iteration in wasmTable — replace real C++ function with JS stub
-  // The real em_loop_iteration in libengine.so blocks the browser when called from main()'s while loop
-  // The JS stub throws ESCAPE_EXIT on first call to break out of the loop
-  try {
-    if (wasmExports && wasmExports.dlsym && wasmExports.malloc) {
-      var symName = "_Z17em_loop_iterationv";
-      var strPtr = wasmExports.malloc(symName.length + 1);
-      if (strPtr) {
-        Module.stringToUTF8(symName, strPtr, symName.length + 1);
-        var tableIdx = wasmExports.dlsym(0, strPtr);
-        if (tableIdx > 0 && typeof wasmTable !== 'undefined') {
-          var realFn = wasmTable.get(tableIdx);
-          console.warn('[TABLE-OVERRIDE] em_loop_iteration at table[' + tableIdx + '] — replacing with JS stub');
-          wasmTable.set(tableIdx, __Z17em_loop_iterationv);
-          console.warn('[TABLE-OVERRIDE] Replaced real em_loop_iteration with JS stub (throws ESCAPE_EXIT on first call)');
-        } else {
-          console.warn('[TABLE-OVERRIDE] dlsym returned ' + tableIdx + ' — cannot override em_loop_iteration');
-        }
-      }
-    }
-  } catch(tableEx) {
-    console.warn('[TABLE-OVERRIDE] Failed to override em_loop_iteration: ' + tableEx);
-  }
     LDSO.init();
     loadDylibs();
     wasmExports = applySignatureConversions(wasmExports);
@@ -4395,16 +4377,9 @@ function __Z15Studio_MaxFramePK10CStudioHdriPKf(...args) {
 
 __Z15Studio_MaxFramePK10CStudioHdriPKf.stub = true;
 
-var __em_loop_first_call = true;
 function __Z17em_loop_iterationv(...args) {
-  // First call: throw ESCAPE_EXIT to break out of main()'s blocking while loop
-  // The worker's onmessage catch handler will start setMainLoop with this stub
-  // Subsequent calls (via setMainLoop/requestAnimationFrame): no-op, return 0
-  if (__em_loop_first_call) {
-    __em_loop_first_call = false;
-    console.warn('[EM-LOOP] First call — throwing ESCAPE_EXIT to break main() blocking loop');
-    throw "ESCAPE_EXIT";
-  }
+  // ALWAYS no-op — real C++ function crashes because Host_Init not completed
+  // The render loop uses this stub at ~40fps via requestAnimationFrame
   return 0;
 }
 
