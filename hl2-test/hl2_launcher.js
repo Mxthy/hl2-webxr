@@ -1199,6 +1199,29 @@ function createWasm() {
     return 0;
   };
   console.log("[OVERRIDE] wasmImports['raise'] replaced");
+  // Override em_loop_iteration in wasmTable — replace real C++ function with JS stub
+  // The real em_loop_iteration in libengine.so blocks the browser when called from main()'s while loop
+  // The JS stub throws ESCAPE_EXIT on first call to break out of the loop
+  try {
+    if (wasmExports && wasmExports.dlsym && wasmExports.malloc) {
+      var symName = "_Z17em_loop_iterationv";
+      var strPtr = wasmExports.malloc(symName.length + 1);
+      if (strPtr) {
+        Module.stringToUTF8(symName, strPtr, symName.length + 1);
+        var tableIdx = wasmExports.dlsym(0, strPtr);
+        if (tableIdx > 0 && typeof wasmTable !== 'undefined') {
+          var realFn = wasmTable.get(tableIdx);
+          console.warn('[TABLE-OVERRIDE] em_loop_iteration at table[' + tableIdx + '] — replacing with JS stub');
+          wasmTable.set(tableIdx, __Z17em_loop_iterationv);
+          console.warn('[TABLE-OVERRIDE] Replaced real em_loop_iteration with JS stub (throws ESCAPE_EXIT on first call)');
+        } else {
+          console.warn('[TABLE-OVERRIDE] dlsym returned ' + tableIdx + ' — cannot override em_loop_iteration');
+        }
+      }
+    }
+  } catch(tableEx) {
+    console.warn('[TABLE-OVERRIDE] Failed to override em_loop_iteration: ' + tableEx);
+  }
     LDSO.init();
     loadDylibs();
     wasmExports = applySignatureConversions(wasmExports);
@@ -1964,9 +1987,31 @@ var handleException = e => {
     return EXITSTATUS;
   }
   if (e === "ESCAPE_EXIT") {
-    console.warn("[HANDLE-EXC] ESCAPE_EXIT caught in main thread -- keeping runtime alive (worker handles render loop)");
+    console.warn("[HANDLE-EXC] ESCAPE_EXIT caught in " + (ENVIRONMENT_IS_PTHREAD ? "worker" : "main thread") + " -- keeping runtime alive");
     ABORT = false;
     EXITSTATUS = 0;
+    // If on main thread, queue startRenderLoop for when worker is available
+    if (!ENVIRONMENT_IS_PTHREAD && !Module._renderLoopStarted) {
+      Module._renderLoopStarted = true;
+      console.warn("[HANDLE-EXC] Queuing startRenderLoop for worker (polling)");
+      var pollCount = 0;
+      var pollInterval = setInterval(function() {
+        pollCount++;
+        if (typeof PThread !== 'undefined' && PThread.runningWorkers && PThread.runningWorkers.length > 0) {
+          clearInterval(pollInterval);
+          try {
+            PThread.runningWorkers[0].postMessage({ cmd: "startRenderLoop" });
+            console.warn("[HANDLE-EXC] Sent startRenderLoop to worker (after " + pollCount + " polls)");
+          } catch(e) {
+            console.error("[HANDLE-EXC] Failed to send startRenderLoop: " + e);
+          }
+        }
+        if (pollCount > 100) { // 10 seconds max
+          clearInterval(pollInterval);
+          console.warn("[HANDLE-EXC] Polling timeout — worker may handle render loop itself via em_loop_iteration");
+        }
+      }, 100);
+    }
     return 0;
   }
   if (e instanceof WebAssembly.RuntimeError) {
@@ -4350,9 +4395,16 @@ function __Z15Studio_MaxFramePK10CStudioHdriPKf(...args) {
 
 __Z15Studio_MaxFramePK10CStudioHdriPKf.stub = true;
 
+var __em_loop_first_call = true;
 function __Z17em_loop_iterationv(...args) {
-  // ALWAYS no-op — real C++ function crashes because Host_Init not completed
-  // This keeps the render loop alive at ~40fps without crashing
+  // First call: throw ESCAPE_EXIT to break out of main()'s blocking while loop
+  // The worker's onmessage catch handler will start setMainLoop with this stub
+  // Subsequent calls (via setMainLoop/requestAnimationFrame): no-op, return 0
+  if (__em_loop_first_call) {
+    __em_loop_first_call = false;
+    console.warn('[EM-LOOP] First call — throwing ESCAPE_EXIT to break main() blocking loop');
+    throw "ESCAPE_EXIT";
+  }
   return 0;
 }
 
