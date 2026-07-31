@@ -721,13 +721,73 @@ if (ENVIRONMENT_IS_PTHREAD) {
       } else if (ex === "ESCAPE_EXIT") {
         console.warn("[WORKER] ESCAPE_EXIT caught -- starting render loop");
         ABORT = false; EXITSTATUS = 0;
-        try {
-          var rFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : __Z17em_loop_iterationv;
-          setMainLoop(rFn, 0, true);
-          console.log("[POST-EXIT] Main loop started with Engine_RenderSingleFrame");
-        } catch(mlEx) {
-          if (mlEx === "unwind") { console.log("[POST-EXIT] Main loop started"); }
-          else { console.error("[POST-EXIT] Main loop failed: " + mlEx); }
+        if (!Module._renderLoopStarted) {
+          Module._renderLoopStarted = true;
+          // Try Engine_Init to complete Host_Init
+          try {
+            if (Module.wasmExports && Module.wasmExports.Engine_Init) {
+              err("[POST-EXIT] Calling Engine_Init()...");
+              Module.wasmExports.Engine_Init();
+              err("[POST-EXIT] Engine_Init completed");
+            }
+          } catch(initEx) {
+            console.warn("[POST-EXIT] Engine_Init threw: " + initEx);
+            ABORT = false; EXITSTATUS = 0;
+          }
+          // Try Engine_LoadMap for background01
+          try {
+            if (Module.wasmExports && Module.wasmExports.Engine_LoadMap) {
+              err("[POST-EXIT] Loading map background01...");
+              var strPtr = Module.wasmExports.malloc ? Module.wasmExports.malloc(32) : 0;
+              if (strPtr) {
+                Module.stringToUTF8("background01", strPtr, 32);
+                Module.wasmExports.Engine_LoadMap(strPtr);
+                err("[POST-EXIT] Map loaded");
+              }
+            }
+          } catch(mapEx) {
+            console.warn("[POST-EXIT] Engine_LoadMap threw: " + mapEx);
+            ABORT = false; EXITSTATUS = 0;
+          }
+          // Resolve the REAL em_loop_iteration from the side module via dlsym
+          var realEmLoop = null;
+          try {
+            if (Module.wasmExports && Module.wasmExports.dlsym && Module.wasmExports.malloc) {
+              var symName = "_Z17em_loop_iterationv";
+              var strPtr = Module.wasmExports.malloc(symName.length + 1);
+              if (strPtr) {
+                Module.stringToUTF8(symName, strPtr, symName.length + 1);
+                var tableIdx = Module.wasmExports.dlsym(0, strPtr);
+                err("[POST-EXIT] dlsym(0, '" + symName + "') = " + tableIdx);
+                if (tableIdx > 0 && typeof wasmTable !== 'undefined') {
+                  realEmLoop = wasmTable.get(tableIdx);
+                  err("[POST-EXIT] Got real em_loop_iteration from wasmTable.get(" + tableIdx + ")");
+                }
+              }
+            }
+          } catch(dlsymEx) {
+            err("[POST-EXIT] dlsym failed: " + dlsymEx);
+          }
+          if (!realEmLoop && Module.wasmExports && Module.wasmExports.Engine_RunFrame) {
+            realEmLoop = Module.wasmExports.Engine_RunFrame;
+            err("[POST-EXIT] Using Engine_RunFrame as render function");
+          }
+          if (!realEmLoop && Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) {
+            realEmLoop = Module.wasmExports.Engine_RenderSingleFrame;
+            err("[POST-EXIT] Using Engine_RenderSingleFrame (may be no-op)");
+          }
+          // Start render loop
+          try {
+            if (realEmLoop) {
+              setMainLoop(realEmLoop, 0, true);
+              err("[POST-EXIT] Render loop started");
+            } else {
+              err("[POST-EXIT] No render function available");
+            }
+          } catch(mlEx) {
+            if (mlEx === "unwind") { err("[POST-EXIT] Main loop started"); }
+            else { console.error("[POST-EXIT] Main loop failed: " + mlEx); }
+          }
         }
       } else if (ex instanceof WebAssembly.RuntimeError && (ex.message?.includes('unreachable') || ex.message?.includes('Aborted') || ex.message?.includes('null function'))) {
         err(`worker: non-fatal RuntimeError: ${ex.message?.substring(0, 80)}`);
@@ -34639,6 +34699,23 @@ run();
     console.log("[hl2] /MOD/ write path initialized");
   } catch (e) {
     console.warn("[hl2] /MOD/ setup error:", e);
+  }
+  // ---- gameinfo.txt (CRITICAL — engine can't start without it) ----
+  // Create unconditionally, before data loading, so engine always finds it
+  try {
+    FS.mkdirTree("/hl2");
+    var gameinfoContent = '"GameInfo"\n{\n  game  "HL2"\n  title  "Half-Life 2"\n  type  singleplayer_only\n  developer  "Valve"\n  icon  "hl2"\n  FileSystem\n  {\n    SteamAppId  2153\n    ToolsAppId  211\n    SearchPaths\n    {\n      Game  |gameinfo_path|.\n      Game  hl2\n      Platform  platform\n    }\n  }\n}';
+    FS.writeFile("/hl2/gameinfo.txt", gameinfoContent);
+    // Also create steam.inf (engine checks this)
+    FS.writeFile("/hl2/steam.inf", "2153\n");
+    // Create necessary subdirectories
+    var dirs = ["/hl2/maps", "/hl2/materials", "/hl2/models", "/hl2/sound", "/hl2/shaders", "/hl2/cfg", "/hl2/scripts", "/hl2/resource"];
+    for (var di = 0; di < dirs.length; di++) {
+      try { FS.mkdirTree(dirs[di]); } catch(e2) {}
+    }
+    console.log("[hl2] gameinfo.txt + steam.inf + dirs created in MEMFS (unconditional)");
+  } catch (e) {
+    console.warn("[hl2] gameinfo.txt creation error:", e);
   }
   // ---- Shader + Asset chunk loading ----
   // Load order: shaders → background1 + materials → engine start
