@@ -726,10 +726,23 @@ if (ENVIRONMENT_IS_PTHREAD) {
           }
         }
       } else {
-        err(`worker: uncaught exception: ${ex}`);
+        // Catch-all: start render loop for any uncaught exception
+        err(`worker: uncaught exception (starting render loop): ${ex}`);
         if (ex?.stack) err(ex.stack);
-        __emscripten_thread_crashed();
-        throw ex;
+        ABORT = false; EXITSTATUS = 0;
+        if (!Module._renderLoopStarted) {
+          Module._renderLoopStarted = true;
+          try {
+            var rFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : __Z17em_loop_iterationv;
+            if (rFn) {
+              setMainLoop(rFn, 0, true);
+              err("[POST-CATCHALL] Render loop started");
+            }
+          } catch(mlEx) {
+            if (mlEx === "unwind") { err("[POST-CATCHALL] Main loop started"); }
+            else { err("[POST-CATCHALL] Main loop failed: " + mlEx); }
+          }
+        }
       }
     }
   }
@@ -1005,10 +1018,18 @@ function removeRunDependency(id) {
   // Throw the error whether or not MODULARIZE is set because abort is used
   // in code paths apart from instantiation where an exception is expected
   // to be thrown when abort is called.
-  console.error('[ABORT-CAUGHT] ' + what);
+  console.error('[ABORT-CAUGHT] ' + what + ' (isWorker=' + ENVIRONMENT_IS_PTHREAD + ')');
   ABORT = false;
   EXITSTATUS = 0;
-  return;
+  if (ENVIRONMENT_IS_PTHREAD) {
+    // Worker: throw so handleMessage catch handler can start render loop
+    throw e;
+  } else {
+    // Main thread (proxied call): return, let proxy send success back to worker
+    // Worker continues to Sys_Error -> _exit -> ESCAPE_EXIT -> render loop
+    console.warn('[ABORT-CAUGHT] Main thread abort — returning (proxy will send success to worker)');
+    return;
+  }
 }
 
 // include: memoryprofiler.js
@@ -1915,8 +1936,23 @@ var handleException = e => {
   if (e instanceof WebAssembly.RuntimeError) {
     var msg = e.message || '';
     if (msg.includes('unreachable') || msg.includes('Aborted')) {
-      console.error('[HANDLE-EXC] RuntimeError: ' + msg.substring(0, 100) + ' -- continuing');
-      ABORT = false; EXITSTATUS = 0; return 0;
+      console.error('[HANDLE-EXC] RuntimeError: ' + msg.substring(0, 100) + ' -- continuing (isWorker=' + ENVIRONMENT_IS_PTHREAD + ')');
+      ABORT = false; EXITSTATUS = 0;
+      // Start render loop if not already started
+      if (ENVIRONMENT_IS_PTHREAD && !Module._renderLoopStarted) {
+        Module._renderLoopStarted = true;
+        try {
+          var rFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : __Z17em_loop_iterationv;
+          if (rFn) {
+            setMainLoop(rFn, 0, true);
+            err("[HANDLE-EXC] Render loop started from handleException");
+          }
+        } catch(mlEx) {
+          if (mlEx === "unwind") { err("[HANDLE-EXC] Main loop started"); }
+          else { err("[HANDLE-EXC] Main loop failed: " + mlEx); }
+        }
+      }
+      return 0;
     }
     if (_emscripten_stack_get_current() <= 0) {
       err("Stack overflow detected.");
