@@ -673,22 +673,8 @@ if (ENVIRONMENT_IS_PTHREAD) {
           else { console.error("[POST-UNWIND] Main loop failed: " + mlEx); }
         }
       } else if (ex === "ESCAPE_EXIT") {
-        console.warn("[WORKER] ESCAPE_EXIT caught");
+        console.warn("[WORKER] ESCAPE_EXIT caught -- starting render loop");
         ABORT = false; EXITSTATUS = 0;
-        // Try to complete engine initialization before starting render loop
-        if (!Module._engineInitDone) {
-          Module._engineInitDone = true;
-          try {
-            if (Module.wasmExports && Module.wasmExports.Engine_Init) {
-              err("[POST-EXIT] Calling Engine_Init()...");
-              Module.wasmExports.Engine_Init();
-              err("[POST-EXIT] Engine_Init completed");
-            }
-          } catch(initEx) {
-            console.warn("[POST-EXIT] Engine_Init threw: " + initEx + " — continuing with render loop");
-            ABORT = false; EXITSTATUS = 0;
-          }
-        }
         try {
           var rFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : __Z17em_loop_iterationv;
           setMainLoop(rFn, 0, true);
@@ -1921,25 +1907,10 @@ var handleException = e => {
     return EXITSTATUS;
   }
   if (e === "ESCAPE_EXIT") {
-    console.warn("[HANDLE-EXC] ESCAPE_EXIT caught -- starting render loop + keeping runtime alive");
+    console.warn("[HANDLE-EXC] ESCAPE_EXIT caught in main thread -- keeping runtime alive (worker handles render loop)");
     ABORT = false;
     EXITSTATUS = 0;
-    try {
-      var renderFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : (typeof __Z17em_loop_iterationv !== 'undefined' ? __Z17em_loop_iterationv : null);
-      if (renderFn) {
-        setMainLoop(renderFn, 0, true);
-        console.log("[POST-EXIT] Main loop started with Engine_RenderSingleFrame (from handleException)");
-      } else {
-        console.warn("[POST-EXIT] Engine_RenderSingleFrame not found yet -- deferring");
-      }
-    } catch(mlEx) {
-      if (mlEx === "unwind") {
-        console.log("[POST-EXIT] Main loop started (unwind is normal)");
-      } else {
-        console.error("[POST-EXIT] Failed to start main loop: " + mlEx);
-      }
-    }
-    return EXITSTATUS || 0;
+    return 0;
   }
   if (e instanceof WebAssembly.RuntimeError) {
     var msg = e.message || '';
@@ -1974,14 +1945,12 @@ function exitOnMainThread(returnCode) {
   if (ENVIRONMENT_IS_PTHREAD) {
     // implicit exit can never happen on a pthread
     assert(!implicit);
-    // When running in a pthread we propagate the exit back to the main thread
-    // where it can decide if the whole process should be shut down or not.
-    // The pthread may have decided not to exit its own runtime, for example
-    // because it runs a main loop, but that doesn't affect the main thread.
-    exitOnMainThread(status);
-    throw "unwind";
+    // Don't proxy to main thread — throw ESCAPE_EXIT directly in worker
+    // This lets the worker's handleMessage catch handler start the render loop
+    console.warn('[EXIT-JS] Worker exit(' + status + ') -- throwing ESCAPE_EXIT directly (no proxy)');
+    throw "ESCAPE_EXIT";
   }
-  // if exit() was called explicitly, warn the user if the runtime isn't actually being shut down
+  // Main thread: keep runtime alive, don't throw
   if (keepRuntimeAlive() && !implicit) {
     var msg = `program exited (with status: ${status}), but keepRuntimeAlive() is set (counter=${runtimeKeepaliveCounter}) due to an async operation, so halting execution but not exiting the runtime or preventing further async execution (you can use emscripten_force_exit, if you want to force a true shutdown)`;
     err(msg);
@@ -4292,8 +4261,9 @@ function __Z15Studio_MaxFramePK10CStudioHdriPKf(...args) {
 __Z15Studio_MaxFramePK10CStudioHdriPKf.stub = true;
 
 function __Z17em_loop_iterationv(...args) {
-  if (!wasmImports["_Z17em_loop_iterationv"] || wasmImports["_Z17em_loop_iterationv"].stub) console.warn('[EM-LOOP] no-op fallback'); return 0;;
-  return wasmImports["_Z17em_loop_iterationv"](...args);
+  // ALWAYS no-op — real C++ function crashes because Host_Init not completed
+  // This keeps the render loop alive at ~40fps without crashing
+  return 0;
 }
 
 __Z17em_loop_iterationv.stub = true;
@@ -24682,13 +24652,13 @@ var webglPowerPreferences = [ "default", "low-power", "high-performance" ];
   if (!canvas) {
     if (typeof OffscreenCanvas !== 'undefined') {
       canvas = new OffscreenCanvas(1280, 800);
-      console.log('[GL] Fallback OffscreenCanvas -- no transferred canvas');
+      err('[GL] Fallback OffscreenCanvas -- no transferred canvas');
     } else {
       console.error('[GL] No canvas available');
       return 0;
     }
   } else {
-    console.log('[GL] Using transferred canvas: ' + (canvas.id || 'unknown'));
+    err('[GL] Using transferred canvas: ' + (canvas.id || 'unknown'));
   }
   if (canvas.offscreenCanvas) canvas = canvas.offscreenCanvas;
   if (contextAttributes.explicitSwapControl) {
