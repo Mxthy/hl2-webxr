@@ -3123,6 +3123,7 @@ var mergeLibSymbols = (exports, libName) => {
     onload(new Uint8Array(arrayBuffer));
     if (dep) removeRunDependency(dep);
   }, err => {
+    if (dep) removeRunDependency(dep);
     if (onerror) {
       onerror();
     } else {
@@ -3202,6 +3203,11 @@ var registerDynCallSymbols = exports => {
       LDSO.loadedLibsByHandle[handle] = dso;
     }
     return flags.loadAsync ? Promise.resolve(true) : true;
+  }
+  // Skip empty library names — return main program handle
+  if (!libName || libName.trim() === '') {
+    err('[DYLIB] Empty library name — skipping load');
+    return true;
   }
   // allocate new DSO
   console.log('[DYLIB] Loading: ' + libName);
@@ -11801,6 +11807,11 @@ var dlopenInternal = (handle, jsflags) => {
   // void *dlopen(const char *file, int mode);
   // http://pubs.opengroup.org/onlinepubs/009695399/functions/dlopen.html
   var filename = UTF8ToString(handle + 36);
+  // Empty filename — return handle to main program (RTLD_DEFAULT behavior)
+  if (!filename || filename.trim() === '') {
+    err('[DLOPEN] Empty filename — returning main program handle');
+    return handle || 1;
+  }
   var flags = GROWABLE_HEAP_I32()[(((handle) + (4)) >>> 2) >>> 0];
   filename = PATH.normalize(filename);
   var searchpaths = [];
