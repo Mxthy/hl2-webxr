@@ -27,9 +27,7 @@ patches_applied = 0
 # PATCH 1: Fallback OffscreenCanvas in setCanvasElementSizeCallingThread
 # ============================================================
 old_1 = """  var canvas = findCanvasEventTarget(target);
-  if (!canvas) {
-    return -4;
-  }"""
+  if (!canvas) return -4;"""
 new_1 = """  var canvas = findCanvasEventTarget(target);
   if (!canvas) {
     if (typeof OffscreenCanvas !== 'undefined') {

@@ -13,7 +13,7 @@
   "memory_config": {
     "enabled": true,
     "scope": "both",
-    "include_other_conversation_context": false,
+    "include_other_conversation_context": true,
     "instructions": null
   },
   "voice_config": {

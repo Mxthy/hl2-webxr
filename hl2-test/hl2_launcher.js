@@ -162,7 +162,7 @@ var CONTROLLER_ACTIVE_OFFSET = 416;
 // end include: /home/runner/work/hl2-webxr/hl2-webxr/engine/portal-port/emscripten/pre.js
 
 // === ASSET CONFIG: Single immutable source for chunk URLs ===
-const ASSET_ORIGIN = '';  // Local testing
+const ASSET_ORIGIN = 'https://hl2-assets-proxy.hl2-webxr.workers.dev';
 const CHUNK_PREFIX = ASSET_ORIGIN + '/chunks';
 
 function chunkUrl(mapName) {
@@ -662,46 +662,32 @@ if (ENVIRONMENT_IS_PTHREAD) {
       }
     } catch (ex) {
       if (ex === "ESCAPE_SIGTRAP") {
-        console.warn("[WORKER] ESCAPE_SIGTRAP caught — stack unwound, starting main loop");
-        ABORT = false;
-        EXITSTATUS = 0;
+        console.warn("[WORKER] ESCAPE_SIGTRAP caught -- starting main loop");
+        ABORT = false; EXITSTATUS = 0;
         try {
-          var renderFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : __Z17em_loop_iterationv;
-          setMainLoop(renderFn, 0, true);
+          var rFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : __Z17em_loop_iterationv;
+          setMainLoop(rFn, 0, true);
           console.log("[POST-UNWIND] Main loop started with Engine_RenderSingleFrame");
         } catch(mlEx) {
-          if (mlEx === "unwind") {
-            console.log("[POST-UNWIND] Main loop started (unwind exception is normal)");
-          } else {
-            console.error("[POST-UNWIND] Failed to start main loop: " + mlEx);
-          }
+          if (mlEx === "unwind") { console.log("[POST-UNWIND] Main loop started"); }
+          else { console.error("[POST-UNWIND] Main loop failed: " + mlEx); }
         }
       } else if (ex === "ESCAPE_EXIT") {
-        console.warn("[WORKER] ESCAPE_EXIT caught — updating wasmTable + starting render loop");
-        ABORT = false;
-        EXITSTATUS = 0;
+        console.warn("[WORKER] ESCAPE_EXIT caught -- starting main loop");
+        ABORT = false; EXITSTATUS = 0;
         try {
-          // Real function available but crashes — needs CI build
-          var realEmLoop = wasmImports && wasmImports["_Z17em_loop_iterationv"];
-          if (realEmLoop && typeof realEmLoop === "function" && !realEmLoop.stub) {
-            console.log("[WORKER-EXIT] Real em_loop_iteration available but needs CI build with Host_Init hook");
-          }
-          var renderFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : __Z17em_loop_iterationv;
-          setMainLoop(renderFn, 0, true);
+          var rFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : __Z17em_loop_iterationv;
+          setMainLoop(rFn, 0, true);
           console.log("[POST-EXIT] Main loop started with Engine_RenderSingleFrame");
         } catch(mlEx) {
-          if (mlEx === "unwind") {
-            console.log("[POST-EXIT] Main loop started (unwind exception is normal)");
-          } else {
-            console.error("[POST-EXIT] Failed to start main loop: " + mlEx);
-          }
+          if (mlEx === "unwind") { console.log("[POST-EXIT] Main loop started"); }
+          else { console.error("[POST-EXIT] Main loop failed: " + mlEx); }
         }
       } else if (ex instanceof WebAssembly.RuntimeError && (ex.message?.includes('unreachable') || ex.message?.includes('Aborted'))) {
-        err(`worker: caught non-fatal RuntimeError (continuing): ${ex.message?.substring(0, 80)}`);
-        ABORT = false;
-        EXITSTATUS = 0;
+        err(`worker: non-fatal RuntimeError: ${ex.message?.substring(0, 80)}`);
+        ABORT = false; EXITSTATUS = 0;
       } else {
-        err(`worker: onmessage() captured an uncaught exception: ${ex}`);
+        err(`worker: uncaught exception: ${ex}`);
         if (ex?.stack) err(ex.stack);
         __emscripten_thread_crashed();
         throw ex;
@@ -963,8 +949,13 @@ function removeRunDependency(id) {
   // TODO(sbc): Should we remove printing and leave it up to whoever
   // catches the exception?
   err(what);
-  ABORT = true;
-  // Use a wasm runtime error, because a JS error might be seen as a foreign
+  console.error("[ABORT-CAUGHT] " + what);
+  ABORT = false;
+  EXITSTATUS = 0;
+  return;
+}
+
+// Use a wasm runtime error, because a JS error might be seen as a foreign
   // exception, which means we'd run destructors on it. We need the error to
   // simply make the program stop.
   // FIXME This approach does not work in Wasm EH because it currently does not assume
@@ -980,7 +971,6 @@ function removeRunDependency(id) {
   // Throw the error whether or not MODULARIZE is set because abort is used
   // in code paths apart from instantiation where an exception is expected
   // to be thrown when abort is called.
-  // Non-fatal abort: log and continue
   console.error('[ABORT-CAUGHT] ' + what);
   ABORT = false;
   EXITSTATUS = 0;
@@ -1122,30 +1112,16 @@ function createWasm() {
     throw "ESCAPE_SIGTRAP";
   };
   console.log("[OVERRIDE] wasmImports['raise'] replaced");
-  // Override raise for side modules -- throw ESCAPE_SIGTRAP to unwind stack
   wasmImports["raise"] = function(sig) {
-    console.error('[RAISE-SIDE] raise(' + sig + ') from side module -- throwing ESCAPE_SIGTRAP');
+    console.error('[RAISE-SIDE] raise(' + sig + ') -- ESCAPE_SIGTRAP');
     throw "ESCAPE_SIGTRAP";
   };
-  console.log("[OVERRIDE] wasmImports['raise'] replaced with ESCAPE_SIGTRAP throw");
-  // Override raise for side modules — throw ESCAPE_SIGTRAP to unwind stack
-  wasmImports["raise"] = function(sig) {
-    console.error('[RAISE-SIDE] raise(' + sig + ') from side module — throwing ESCAPE_SIGTRAP');
-    throw "ESCAPE_SIGTRAP";
-  };
-  console.log("[OVERRIDE] wasmImports['raise'] replaced with ESCAPE_SIGTRAP throw");
+  console.log("[OVERRIDE] wasmImports['raise'] replaced");
     LDSO.init();
     loadDylibs();
     wasmExports = applySignatureConversions(wasmExports);
     Module["wasmExports"] = wasmExports;
-    var tlsInit = wasmExports["_emscripten_tls_init"];
-    console.log("[MAIN-TLS] _emscripten_tls_init type: " + typeof tlsInit);
-    if (typeof tlsInit === "function") {
-      registerTLSInit(tlsInit, instance.exports, metadata);
-      console.log("[MAIN-TLS] registerTLSInit called for main module");
-    } else {
-      console.error("[MAIN-TLS] WARNING: _emscripten_tls_init not a function! TLS init skipped");
-    }
+    registerTLSInit(wasmExports["_emscripten_tls_init"], instance.exports, metadata);
     addOnInit(wasmExports["__wasm_call_ctors"]);
     __RELOC_FUNCS__.push(wasmExports["__wasm_apply_data_relocs"]);
     // We now have the Wasm module loaded up, keep a reference to the compiled module so we can post it to the workers.
@@ -1324,7 +1300,22 @@ var ASM_CONSTS = {
   635480: () => {
     console.log("[WebXR] Engine_DisableAutoRender — main loop cancelled, manual mode active");
   },
-  635577: $0 => {
+  635577: () => {
+    console.log("[Engine_Init] Calling Host_Init(false)...");
+  },
+  635639: () => {
+    console.log("[Engine_Init] Host_Init returned");
+  },
+  635692: $0 => {
+    console.log("[Engine_LoadMap] Queuing: " + UTF8ToString($0));
+  },
+  635758: () => {
+    console.log("[Engine_LoadMap] Done");
+  },
+  635800: $0 => {
+    console.log("[Engine_QueueCommand] " + UTF8ToString($0));
+  },
+  635862: $0 => {
     var str = UTF8ToString($0) + "\n\n" + "Abort/Retry/Ignore/AlwaysIgnore? [ariA] :";
     var reply = window.prompt(str, "i");
     if (reply === null) {
@@ -1332,7 +1323,7 @@ var ASM_CONSTS = {
     }
     return allocate(intArrayFromString(reply), "i8", ALLOC_NORMAL);
   },
-  635802: () => {
+  636087: () => {
     if (typeof (AudioContext) !== "undefined") {
       return true;
     } else if (typeof (webkitAudioContext) !== "undefined") {
@@ -1340,7 +1331,7 @@ var ASM_CONSTS = {
     }
     return false;
   },
-  635949: () => {
+  636234: () => {
     if ((typeof (navigator.mediaDevices) !== "undefined") && (typeof (navigator.mediaDevices.getUserMedia) !== "undefined")) {
       return true;
     } else if (typeof (navigator.webkitGetUserMedia) !== "undefined") {
@@ -1348,7 +1339,7 @@ var ASM_CONSTS = {
     }
     return false;
   },
-  636183: $0 => {
+  636468: $0 => {
     if (typeof (Module["SDL2"]) === "undefined") {
       Module["SDL2"] = {};
     }
@@ -1372,11 +1363,11 @@ var ASM_CONSTS = {
     }
     return SDL2.audioContext === undefined ? -1 : 0;
   },
-  636735: () => {
+  637020: () => {
     var SDL2 = Module["SDL2"];
     return SDL2.audioContext.sampleRate;
   },
-  636803: ($0, $1, $2, $3) => {
+  637088: ($0, $1, $2, $3) => {
     var SDL2 = Module["SDL2"];
     var have_microphone = function(stream) {
       if (SDL2.capture.silenceTimer !== undefined) {
@@ -1418,7 +1409,7 @@ var ASM_CONSTS = {
       }, have_microphone, no_microphone);
     }
   },
-  638496: ($0, $1, $2, $3) => {
+  638781: ($0, $1, $2, $3) => {
     var SDL2 = Module["SDL2"];
     SDL2.audio.scriptProcessorNode = SDL2.audioContext["createScriptProcessor"]($1, 0, $0);
     SDL2.audio.scriptProcessorNode["onaudioprocess"] = function(e) {
@@ -1450,7 +1441,7 @@ var ASM_CONSTS = {
       SDL2.audio.silenceTimer = setInterval(silence_callback, ($1 / SDL2.audioContext.sampleRate) * 1e3);
     }
   },
-  639671: ($0, $1) => {
+  639956: ($0, $1) => {
     var SDL2 = Module["SDL2"];
     var numChannels = SDL2.capture.currentCaptureBuffer.numberOfChannels;
     for (var c = 0; c < numChannels; ++c) {
@@ -1469,7 +1460,7 @@ var ASM_CONSTS = {
       }
     }
   },
-  640276: ($0, $1) => {
+  640561: ($0, $1) => {
     var SDL2 = Module["SDL2"];
     var buf = $0 >>> 2;
     var numChannels = SDL2.audio.currentOutputBuffer["numberOfChannels"];
@@ -1483,7 +1474,7 @@ var ASM_CONSTS = {
       }
     }
   },
-  640765: $0 => {
+  641050: $0 => {
     var SDL2 = Module["SDL2"];
     if ($0) {
       if (SDL2.capture.silenceTimer !== undefined) {
@@ -1517,7 +1508,7 @@ var ASM_CONSTS = {
       SDL2.audioContext = undefined;
     }
   },
-  641771: ($0, $1, $2) => {
+  642056: ($0, $1, $2) => {
     var w = $0;
     var h = $1;
     var pixels = $2;
@@ -1588,7 +1579,7 @@ var ASM_CONSTS = {
     }
     SDL2.ctx.putImageData(SDL2.image, 0, 0);
   },
-  643239: ($0, $1, $2, $3, $4) => {
+  643524: ($0, $1, $2, $3, $4) => {
     var w = $0;
     var h = $1;
     var hot_x = $2;
@@ -1625,19 +1616,19 @@ var ASM_CONSTS = {
     stringToUTF8(url, urlBuf, url.length + 1);
     return urlBuf;
   },
-  644227: $0 => {
+  644512: $0 => {
     if (Module["canvas"]) {
       Module["canvas"].style["cursor"] = UTF8ToString($0);
     }
   },
-  644310: () => {
+  644595: () => {
     if (Module["canvas"]) {
       Module["canvas"].style["cursor"] = "none";
     }
   },
-  644379: () => window.innerWidth,
-  644409: () => window.innerHeight,
-  644440: ($0, $1) => {
+  644664: () => window.innerWidth,
+  644694: () => window.innerHeight,
+  644725: ($0, $1) => {
     var buf = $0;
     var buflen = $1;
     var list = undefined;
@@ -1671,19 +1662,19 @@ var ASM_CONSTS = {
       setValue(buf + i, str.charCodeAt(i), "i8");
     }
   },
-  645148: $0 => {
+  645433: $0 => {
     window.open(UTF8ToString($0), "_blank");
   },
-  645188: ($0, $1) => {
+  645473: ($0, $1) => {
     alert(UTF8ToString($0) + "\n\n" + UTF8ToString($1));
   },
-  645245: $0 => {
+  645530: $0 => {
     if (!$0) {
       AL.alcErr = 40964;
       return 1;
     }
   },
-  645293: $0 => {
+  645578: $0 => {
     if (!AL.currentCtx) {
       err("alGetProcAddress() called without a valid context");
       return 1;
@@ -1693,37 +1684,37 @@ var ASM_CONSTS = {
       return 1;
     }
   },
-  645441: () => {
+  645726: () => {
     out("All memory regions:");
   },
-  645468: ($0, $1, $2) => {
+  645753: ($0, $1, $2) => {
     out("Region block " + ptrToString($0) + " - " + ptrToString($1) + " (" + toString(Number($2)) + " bytes):");
   },
-  645565: ($0, $1, $2) => {
+  645850: ($0, $1, $2) => {
     out("Region " + ptrToString($0) + ", size: " + toString(Number($1)) + " (" + ($2 ? "used" : "--FREE--") + ")");
   },
-  645660: () => {
+  645945: () => {
     out("");
   },
-  645668: () => {
+  645953: () => {
     out("Free regions:");
   },
-  645689: ($0, $1, $2, $3, $4, $5) => {
+  645974: ($0, $1, $2, $3, $4, $5) => {
     out("In bucket " + $0 + ", free region " + ptrToString($1) + ", size: " + toString(Number($2)) + " (size at ceiling: " + toString(Number($3)) + "), prev: " + ptrToString($4) + ", next: " + ptrToString($5));
   },
-  645883: ($0, $1) => {
+  646168: ($0, $1) => {
     out("Free bucket index map: " + toString(Number($0)).toString(2) + " " + toString(Number($1)).toString(2));
   },
-  645990: () => {
+  646275: () => {
     out("");
   },
-  645998: ($0, $1, $2) => {
+  646283: ($0, $1, $2) => {
     err("Used region " + ptrToString($0) + ", size: " + toString(Number($1)) + " (" + ($2 ? "used" : "--FREE--") + ") is corrupt (size markers in the beginning and at the end of the region do not match!)");
   },
-  646184: ($0, $1, $2) => {
+  646469: ($0, $1, $2) => {
     err("Used region " + ptrToString($0) + ", size: " + toString(Number($1)) + " (" + ($2 ? "used" : "--FREE--") + ") is corrupt (size markers in the beginning and at the end of the region do not match!)");
   },
-  646370: ($0, $1, $2, $3, $4, $5) => {
+  646655: ($0, $1, $2, $3, $4, $5) => {
     out("In bucket " + $0 + ", free region " + ptrToString($1) + ", size: " + toString(Number($2)) + " (size at ceiling: " + toString(Number($3)) + "), prev: " + ptrToString($4) + ", next: 0x" + ptrToString($5) + " is corrupt!");
   }
 };
@@ -1876,11 +1867,8 @@ var convertI32PairToI53Checked = (lo, hi) => {
 };
 
 function _proc_exit(code) {
-  // PATCH: Don't proxy to main thread — throw ESCAPE_EXIT directly in the current thread
-  // This ensures the pthread's onmessage catch handler can catch it and start the main loop
-  console.warn('[PROC-EXIT] _proc_exit(' + code + ') — throwing ESCAPE_EXIT (thread: ' + (ENVIRONMENT_IS_PTHREAD ? 'worker' : 'main') + ')');
-  EXITSTATUS = 0;
-  ABORT = false;
+  console.warn('[PROC-EXIT] _proc_exit(' + code + ') -- ESCAPE_EXIT (thread: ' + (ENVIRONMENT_IS_PTHREAD ? 'worker' : 'main') + ')');
+  EXITSTATUS = 0; ABORT = false;
   throw "ESCAPE_EXIT";
 }
 
@@ -1891,35 +1879,22 @@ var handleException = e => {
     return EXITSTATUS;
   }
   if (e === "ESCAPE_EXIT") {
-    console.warn("[HANDLE-EXC] ESCAPE_EXIT caught — updating wasmTable + starting render loop");
+    console.warn("[HANDLE-EXC] ESCAPE_EXIT caught -- starting render loop + keeping runtime alive");
     ABORT = false;
     EXITSTATUS = 0;
     try {
-      // CRITICAL: Update the wasmTable entry for _Z17em_loop_iterationv
-      // mergeLibSymbols has updated wasmImports but NOT the wasmTable
-      // The main module calls em_loop_iteration via the wasmTable, so we MUST update it
-      var realEmLoop = wasmImports && wasmImports["_Z17em_loop_iterationv"];
-      if (realEmLoop && typeof realEmLoop === "function" && !realEmLoop.stub) {
-        console.log("[POST-EXIT] Real em_loop_iteration found in wasmImports — updating wasmTable...");
-        // Real em_loop_iteration found but calling it crashes because engine
-        // state is not fully initialized (main() exits before Host_Init completes).
-        // Need CI build with Engine_Init + Engine_LoadMap hooks.
-        console.log("[POST-EXIT] Real em_loop_iteration available but engine not initialized — needs CI build with Host_Init hook");
-      } else {
-        console.warn("[POST-EXIT] Real em_loop_iteration NOT in wasmImports — using no-op stub");
-      }
-      
-      // Engine doesn't set up its own main loop — we must start one
-      var renderFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : null;
+      var renderFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : (typeof __Z17em_loop_iterationv !== 'undefined' ? __Z17em_loop_iterationv : null);
       if (renderFn) {
         setMainLoop(renderFn, 0, true);
-        console.log("[POST-EXIT] Render loop started with Engine_RenderSingleFrame");
+        console.log("[POST-EXIT] Main loop started with Engine_RenderSingleFrame (from handleException)");
+      } else {
+        console.warn("[POST-EXIT] Engine_RenderSingleFrame not found yet -- deferring");
       }
     } catch(mlEx) {
       if (mlEx === "unwind") {
         console.log("[POST-EXIT] Main loop started (unwind is normal)");
       } else {
-        console.error("[POST-EXIT] Failed: " + mlEx);
+        console.error("[POST-EXIT] Failed to start main loop: " + mlEx);
       }
     }
     return EXITSTATUS || 0;
@@ -1927,13 +1902,11 @@ var handleException = e => {
   if (e instanceof WebAssembly.RuntimeError) {
     var msg = e.message || '';
     if (msg.includes('unreachable') || msg.includes('Aborted')) {
-      console.error('[HANDLE-EXC] Caught RuntimeError: ' + msg.substring(0, 100) + ' — continuing');
-      ABORT = false;
-      EXITSTATUS = 0;
-      return 0;
+      console.error('[HANDLE-EXC] RuntimeError: ' + msg.substring(0, 100) + ' -- continuing');
+      ABORT = false; EXITSTATUS = 0; return 0;
     }
     if (_emscripten_stack_get_current() <= 0) {
-      err("Stack overflow detected.  You can try increasing -sSTACK_SIZE (currently set to 67108864)");
+      err("Stack overflow detected.");
     }
   }
   checkStackCookie();
@@ -2297,6 +2270,13 @@ var UTF8Decoder = typeof TextDecoder != "undefined" ? new TextDecoder : undefine
 };
 
 var getDylinkMetadata = binary => {
+  // AUTO-PAD: pad binary to 4-byte boundary for Uint32Array alignment
+  if (binary.byteLength % 4 !== 0) {
+    var padded = new Uint8Array(binary.byteLength + (4 - binary.byteLength % 4));
+    padded.set(new Uint8Array(binary));
+    binary = padded.buffer;
+    console.warn('[DYLINK] Padded binary to ' + binary.byteLength + ' bytes for alignment');
+  }
   var offset = 0;
   var end = 0;
   function getU8() {
@@ -2336,9 +2316,8 @@ var getDylinkMetadata = binary => {
     try {
       var sub = binary.subarray(0, 24);
       var copy = new Uint8Array(sub);
-      console.log('[DYLINK] binary.length=' + binary.length + ' subarray.length=' + sub.length + ' copy.buffer.byteLength=' + copy.buffer.byteLength);
       if (copy.buffer.byteLength % 4 !== 0) {
-        console.error('[DYLINK-ERR] Buffer not 4-byte aligned! byteLength=' + copy.buffer.byteLength + ' — padding to next multiple of 4');
+        console.error('[DYLINK-ALIGN] Padding ' + copy.buffer.byteLength + ' bytes to 4-byte boundary');
         var padded = new Uint8Array(Math.ceil(copy.buffer.byteLength / 4) * 4);
         padded.set(copy);
         int32View = new Uint32Array(padded.buffer);
@@ -2346,8 +2325,7 @@ var getDylinkMetadata = binary => {
         int32View = new Uint32Array(copy.buffer);
       }
     } catch(e) {
-      console.error('[DYLINK-ERR] Uint32Array creation failed: ' + e.message + ' binary.length=' + binary.length);
-      // Fallback: read magic number byte by byte
+      console.error('[DYLINK-ERR] Uint32Array failed: ' + e.message + ' binary.length=' + binary.length);
       var magic = binary[0] | (binary[1] << 8) | (binary[2] << 16) | (binary[3] << 24);
       int32View = [magic];
     }
@@ -2549,7 +2527,7 @@ var LDSO = {
   }
 };
 
-var ___heap_base = 67843200;
+var ___heap_base = 67843456;
 
 var alignMemory = (size, alignment) => {
   assert(alignment, "alignment argument is required");
@@ -2891,13 +2869,7 @@ var resolveGlobalSymbol = (symName, direct = false) => {
       * @param {Object=} localScope
       * @param {number=} handle
       */ var loadWebAssemblyModule = (binary, flags, libName, localScope, handle) => {
-  var metadata;
-  try {
-    metadata = getDylinkMetadata(binary);
-  } catch(e) {
-    console.error('[DYLINK-ERR] getDylinkMetadata failed for binary (' + (binary ? binary.length : 'null') + ' bytes): ' + e.message);
-    throw e;
-  }
+  var metadata = getDylinkMetadata(binary);
   currentModuleWeakSymbols = metadata.weakImports;
   var originalTable = wasmTable;
   // loadModule loads the wasm module after all its dependencies have been loaded.
@@ -3062,10 +3034,12 @@ var resolveGlobalSymbol = (symName, direct = false) => {
       // Only one thread should call __wasm_call_ctors, but all threads need
       // to call _emscripten_tls_init
       if (typeof moduleExports["_emscripten_tls_init"] === "function") {
-    registerTLSInit(moduleExports["_emscripten_tls_init"], instance.exports, metadata);
-  } else {
-    console.log("[TLS-SKIP] No _emscripten_tls_init export (stub module) — skipping TLS init");
-  }
+        if (typeof moduleExports["_emscripten_tls_init"] === "function") {
+        if (typeof moduleExports["_emscripten_tls_init"] === "function") {
+        registerTLSInit(moduleExports["_emscripten_tls_init"], instance.exports, metadata);
+      }
+      }
+      }
       if (firstLoad) {
         var applyRelocs = moduleExports["__wasm_apply_data_relocs"];
         if (applyRelocs) {
@@ -3118,10 +3092,6 @@ var mergeLibSymbols = (exports, libName) => {
     const setImport = target => {
       if (!isSymbolDefined(target)) {
         wasmImports[target] = exp;
-        // Log when engine symbols are merged
-        if (target === "_Z17em_loop_iterationv" || target === "Host_Frame" || target === "Cbuf_Execute" || target === "Cbuf_AddText" || target === "SpawnServer" || target === "Host_Map") {
-          console.log("[MERGE-LIB] " + libName + " -> " + target + " = " + (typeof exp === 'function' ? 'function' : typeof exp));
-        }
       }
     };
     setImport(sym);
@@ -3226,7 +3196,7 @@ var registerDynCallSymbols = exports => {
     return flags.loadAsync ? Promise.resolve(true) : true;
   }
   // allocate new DSO
-  console.log('[DYLIB] Loading side module: ' + libName);
+  console.log('[DYLIB] Loading: ' + libName);
   dso = newDSO(libName, handle, "loading");
   dso.refcount = flags.nodelete ? Infinity : 1;
   dso.global = flags.global;
@@ -3247,10 +3217,7 @@ var registerDynCallSymbols = exports => {
     }
     var libFile = locateFile(libName);
     if (flags.loadAsync) {
-      return new Promise((resolve, reject) => asyncLoad(libFile, (data) => {
-        console.log('[DYLIB] ' + libName + ' loaded: ' + (data ? data.length : 'null') + ' bytes');
-        resolve(data);
-      }, reject));
+      return new Promise((resolve, reject) => asyncLoad(libFile, resolve, reject));
     }
     // load the binary synchronously
     if (!readBinary) {
@@ -3260,6 +3227,8 @@ var registerDynCallSymbols = exports => {
   }
   // libName -> exports
   function getExports() {
+    try {
+  try {
     // lookup preloaded cache first
     var preloaded = preloadedWasm[libName];
     if (preloaded) {
@@ -3272,7 +3241,6 @@ var registerDynCallSymbols = exports => {
           return loadWebAssemblyModule(libData, flags, libName, localScope, handle);
         } catch(e) {
           console.error('[DYLIB-ERR] loadWebAssemblyModule FAILED for ' + libName + ': ' + e.message + ' (data length: ' + (libData ? libData.length : 'null') + ')');
-          // Return empty exports to skip this module
           return {};
         }
       });
@@ -3280,7 +3248,7 @@ var registerDynCallSymbols = exports => {
     try {
       return loadWebAssemblyModule(loadLibData(), flags, libName, localScope, handle);
     } catch(e) {
-      console.error('[DYLIB-ERR] loadWebAssemblyModule FAILED for ' + libName + ': ' + e.message + ' (data length: ' + (loadLibData() ? loadLibData().length : 'null') + ')');
+      console.error('[DYLIB-ERR] loadWebAssemblyModule FAILED for ' + libName + ': ' + e.message);
       return {};
     }
   }
@@ -3302,7 +3270,7 @@ var registerDynCallSymbols = exports => {
   }
   moduleLoaded(getExports());
   return true;
-}
+    } catch(e) { console.warn('[GET-EXPORTS] Failed: ' + e.message); return {}; }}
 
 var reportUndefinedSymbols = () => {
   for (var [symName, entry] of Object.entries(GOT)) {
@@ -4262,6 +4230,20 @@ function __Z11ivp_messagePKcz(...args) {
 
 __Z11ivp_messagePKcz.stub = true;
 
+function __Z12Cbuf_AddTextPKc(...args) {
+  if (!wasmImports["_Z12Cbuf_AddTextPKc"] || wasmImports["_Z12Cbuf_AddTextPKc"].stub) abort("external symbol '_Z12Cbuf_AddTextPKc' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_Z12Cbuf_AddTextPKc"](...args);
+}
+
+__Z12Cbuf_AddTextPKc.stub = true;
+
+function __Z12Cbuf_Executev(...args) {
+  if (!wasmImports["_Z12Cbuf_Executev"] || wasmImports["_Z12Cbuf_Executev"].stub) abort("external symbol '_Z12Cbuf_Executev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_Z12Cbuf_Executev"](...args);
+}
+
+__Z12Cbuf_Executev.stub = true;
+
 function __Z15Studio_MaxFramePK10CStudioHdriPKf(...args) {
   if (!wasmImports["_Z15Studio_MaxFramePK10CStudioHdriPKf"] || wasmImports["_Z15Studio_MaxFramePK10CStudioHdriPKf"].stub) abort("external symbol '_Z15Studio_MaxFramePK10CStudioHdriPKf' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
   return wasmImports["_Z15Studio_MaxFramePK10CStudioHdriPKf"](...args);
@@ -4269,14 +4251,9 @@ function __Z15Studio_MaxFramePK10CStudioHdriPKf(...args) {
 
 __Z15Studio_MaxFramePK10CStudioHdriPKf.stub = true;
 
-var __emLoopCount = 0;
-
 function __Z17em_loop_iterationv(...args) {
-  __emLoopCount++;
-  if (__emLoopCount <= 5 || __emLoopCount % 100 === 0) {
-    console.log('[EM-LOOP] iteration #' + __emLoopCount + ' called');
-  }
-  return 0;
+  if (!wasmImports["_Z17em_loop_iterationv"] || wasmImports["_Z17em_loop_iterationv"].stub) console.warn('[EM-LOOP] no-op fallback'); return 0;;
+  return wasmImports["_Z17em_loop_iterationv"](...args);
 }
 
 __Z17em_loop_iterationv.stub = true;
@@ -4329,6 +4306,13 @@ function __Z8p_mallocj(...args) {
 }
 
 __Z8p_mallocj.stub = true;
+
+function __Z9Host_Initb(...args) {
+  if (!wasmImports["_Z9Host_Initb"] || wasmImports["_Z9Host_Initb"].stub) abort("external symbol '_Z9Host_Initb' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_Z9Host_Initb"](...args);
+}
+
+__Z9Host_Initb.stub = true;
 
 function __ZN10CStudioHdr12RunFlexRulesEPKfPf(...args) {
   if (!wasmImports["_ZN10CStudioHdr12RunFlexRulesEPKfPf"] || wasmImports["_ZN10CStudioHdr12RunFlexRulesEPKfPf"].stub) abort("external symbol '_ZN10CStudioHdr12RunFlexRulesEPKfPf' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
@@ -4540,40 +4524,54 @@ function __ZN11ID3DXBuffer16GetBufferPointerEv(...args) {
 
 __ZN11ID3DXBuffer16GetBufferPointerEv.stub = true;
 
-function __ZN11IVP_Mindist32try_to_generate_managed_frictionEPP19IVP_Friction_SystemP8IVP_BOOLP19IVP_Simulation_UnitS3_(...args) { return 0; }
+function __ZN11IVP_Mindist32try_to_generate_managed_frictionEPP19IVP_Friction_SystemP8IVP_BOOLP19IVP_Simulation_UnitS3_(...args) {
+  if (!wasmImports["_ZN11IVP_Mindist32try_to_generate_managed_frictionEPP19IVP_Friction_SystemP8IVP_BOOLP19IVP_Simulation_UnitS3_"] || wasmImports["_ZN11IVP_Mindist32try_to_generate_managed_frictionEPP19IVP_Friction_SystemP8IVP_BOOLP19IVP_Simulation_UnitS3_"].stub) abort("external symbol '_ZN11IVP_Mindist32try_to_generate_managed_frictionEPP19IVP_Friction_SystemP8IVP_BOOLP19IVP_Simulation_UnitS3_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN11IVP_Mindist32try_to_generate_managed_frictionEPP19IVP_Friction_SystemP8IVP_BOOLP19IVP_Simulation_UnitS3_"](...args);
+}
 
-__ZN11IVP_Mindist32try_to_generate_managed_frictionEPP19IVP_Friction_SystemP8IVP_BOOLP19IVP_Simulation_UnitS3_.stub = false;
-__ZN11IVP_Mindist32try_to_generate_managed_frictionEPP19IVP_Friction_SystemP8IVP_BOOLP19IVP_Simulation_UnitS3_.sig = 'v';
+__ZN11IVP_Mindist32try_to_generate_managed_frictionEPP19IVP_Friction_SystemP8IVP_BOOLP19IVP_Simulation_UnitS3_.stub = true;
 
-function __ZN11IVP_Mindist9do_impactEv(...args) { return 0; }
+function __ZN11IVP_Mindist9do_impactEv(...args) {
+  if (!wasmImports["_ZN11IVP_Mindist9do_impactEv"] || wasmImports["_ZN11IVP_Mindist9do_impactEv"].stub) abort("external symbol '_ZN11IVP_Mindist9do_impactEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN11IVP_Mindist9do_impactEv"](...args);
+}
 
-__ZN11IVP_Mindist9do_impactEv.stub = false;
-__ZN11IVP_Mindist9do_impactEv.sig = 'v';
+__ZN11IVP_Mindist9do_impactEv.stub = true;
 
-function __ZN11IVP_U_Point12fast_normizeEv(...args) { return 0; }
+function __ZN11IVP_U_Point12fast_normizeEv(...args) {
+  if (!wasmImports["_ZN11IVP_U_Point12fast_normizeEv"] || wasmImports["_ZN11IVP_U_Point12fast_normizeEv"].stub) abort("external symbol '_ZN11IVP_U_Point12fast_normizeEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN11IVP_U_Point12fast_normizeEv"](...args);
+}
 
-__ZN11IVP_U_Point12fast_normizeEv.stub = false;
-__ZN11IVP_U_Point12fast_normizeEv.sig = 'v';
+__ZN11IVP_U_Point12fast_normizeEv.stub = true;
 
-function __ZN11IVP_U_Point15set_interpolateEPKS_S1_d(...args) { return 0; }
+function __ZN11IVP_U_Point15set_interpolateEPKS_S1_d(...args) {
+  if (!wasmImports["_ZN11IVP_U_Point15set_interpolateEPKS_S1_d"] || wasmImports["_ZN11IVP_U_Point15set_interpolateEPKS_S1_d"].stub) abort("external symbol '_ZN11IVP_U_Point15set_interpolateEPKS_S1_d' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN11IVP_U_Point15set_interpolateEPKS_S1_d"](...args);
+}
 
-__ZN11IVP_U_Point15set_interpolateEPKS_S1_d.stub = false;
-__ZN11IVP_U_Point15set_interpolateEPKS_S1_d.sig = 'v';
+__ZN11IVP_U_Point15set_interpolateEPKS_S1_d.stub = true;
 
-function __ZN11IVP_U_Point18calc_cross_productEPKS_S1_(...args) { return 0; }
+function __ZN11IVP_U_Point18calc_cross_productEPKS_S1_(...args) {
+  if (!wasmImports["_ZN11IVP_U_Point18calc_cross_productEPKS_S1_"] || wasmImports["_ZN11IVP_U_Point18calc_cross_productEPKS_S1_"].stub) abort("external symbol '_ZN11IVP_U_Point18calc_cross_productEPKS_S1_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN11IVP_U_Point18calc_cross_productEPKS_S1_"](...args);
+}
 
-__ZN11IVP_U_Point18calc_cross_productEPKS_S1_.stub = false;
-__ZN11IVP_U_Point18calc_cross_productEPKS_S1_.sig = 'v';
+__ZN11IVP_U_Point18calc_cross_productEPKS_S1_.stub = true;
 
-function __ZN11IVP_U_Point24real_length_plus_normizeEv(...args) { return 0; }
+function __ZN11IVP_U_Point24real_length_plus_normizeEv(...args) {
+  if (!wasmImports["_ZN11IVP_U_Point24real_length_plus_normizeEv"] || wasmImports["_ZN11IVP_U_Point24real_length_plus_normizeEv"].stub) abort("external symbol '_ZN11IVP_U_Point24real_length_plus_normizeEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN11IVP_U_Point24real_length_plus_normizeEv"](...args);
+}
 
-__ZN11IVP_U_Point24real_length_plus_normizeEv.stub = false;
-__ZN11IVP_U_Point24real_length_plus_normizeEv.sig = 'v';
+__ZN11IVP_U_Point24real_length_plus_normizeEv.stub = true;
 
-function __ZN11IVP_U_Point7normizeEv(...args) { return 0; }
+function __ZN11IVP_U_Point7normizeEv(...args) {
+  if (!wasmImports["_ZN11IVP_U_Point7normizeEv"] || wasmImports["_ZN11IVP_U_Point7normizeEv"].stub) abort("external symbol '_ZN11IVP_U_Point7normizeEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN11IVP_U_Point7normizeEv"](...args);
+}
 
-__ZN11IVP_U_Point7normizeEv.stub = false;
-__ZN11IVP_U_Point7normizeEv.sig = 'v';
+__ZN11IVP_U_Point7normizeEv.stub = true;
 
 function __ZN12CThreadEvent15WaitForMultipleEiPPS_bj(...args) {
   if (!wasmImports["_ZN12CThreadEvent15WaitForMultipleEiPPS_bj"] || wasmImports["_ZN12CThreadEvent15WaitForMultipleEiPPS_bj"].stub) abort("external symbol '_ZN12CThreadEvent15WaitForMultipleEiPPS_bj' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
@@ -4631,25 +4629,33 @@ function __ZN12CThreadMutex7TryLockEv(...args) {
 
 __ZN12CThreadMutex7TryLockEv.stub = true;
 
-function __ZN12IVP_KK_Input28calc_quad_distance_edge_edgeEv(...args) { return 0; }
+function __ZN12IVP_KK_Input28calc_quad_distance_edge_edgeEv(...args) {
+  if (!wasmImports["_ZN12IVP_KK_Input28calc_quad_distance_edge_edgeEv"] || wasmImports["_ZN12IVP_KK_Input28calc_quad_distance_edge_edgeEv"].stub) abort("external symbol '_ZN12IVP_KK_Input28calc_quad_distance_edge_edgeEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN12IVP_KK_Input28calc_quad_distance_edge_edgeEv"](...args);
+}
 
-__ZN12IVP_KK_Input28calc_quad_distance_edge_edgeEv.stub = false;
-__ZN12IVP_KK_Input28calc_quad_distance_edge_edgeEv.sig = 'v';
+__ZN12IVP_KK_Input28calc_quad_distance_edge_edgeEv.stub = true;
 
-function __ZN12IVP_KK_InputC1EPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_(...args) { return 0; }
+function __ZN12IVP_KK_InputC1EPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_(...args) {
+  if (!wasmImports["_ZN12IVP_KK_InputC1EPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_"] || wasmImports["_ZN12IVP_KK_InputC1EPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_"].stub) abort("external symbol '_ZN12IVP_KK_InputC1EPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN12IVP_KK_InputC1EPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_"](...args);
+}
 
-__ZN12IVP_KK_InputC1EPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_.stub = false;
-__ZN12IVP_KK_InputC1EPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_.sig = 'v';
+__ZN12IVP_KK_InputC1EPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_.stub = true;
 
-function __ZN12IVP_U_Memory14neuer_sp_blockEj(...args) { return 0; }
+function __ZN12IVP_U_Memory14neuer_sp_blockEj(...args) {
+  if (!wasmImports["_ZN12IVP_U_Memory14neuer_sp_blockEj"] || wasmImports["_ZN12IVP_U_Memory14neuer_sp_blockEj"].stub) abort("external symbol '_ZN12IVP_U_Memory14neuer_sp_blockEj' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN12IVP_U_Memory14neuer_sp_blockEj"](...args);
+}
 
-__ZN12IVP_U_Memory14neuer_sp_blockEj.stub = false;
-__ZN12IVP_U_Memory14neuer_sp_blockEj.sig = 'v';
+__ZN12IVP_U_Memory14neuer_sp_blockEj.stub = true;
 
-function __ZN12IVP_U_Memory20free_mem_transactionEv(...args) { return 0; }
+function __ZN12IVP_U_Memory20free_mem_transactionEv(...args) {
+  if (!wasmImports["_ZN12IVP_U_Memory20free_mem_transactionEv"] || wasmImports["_ZN12IVP_U_Memory20free_mem_transactionEv"].stub) abort("external symbol '_ZN12IVP_U_Memory20free_mem_transactionEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN12IVP_U_Memory20free_mem_transactionEv"](...args);
+}
 
-__ZN12IVP_U_Memory20free_mem_transactionEv.stub = false;
-__ZN12IVP_U_Memory20free_mem_transactionEv.sig = 'v';
+__ZN12IVP_U_Memory20free_mem_transactionEv.stub = true;
 
 function __ZN13CThreadRWLock11UnlockWriteEv(...args) {
   if (!wasmImports["_ZN13CThreadRWLock11UnlockWriteEv"] || wasmImports["_ZN13CThreadRWLock11UnlockWriteEv"].stub) abort("external symbol '_ZN13CThreadRWLock11UnlockWriteEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
@@ -4735,35 +4741,47 @@ function __ZN13CWorkerThreadD2Ev(...args) {
 
 __ZN13CWorkerThreadD2Ev.stub = true;
 
-function __ZN13IVP_3D_Solver27find_first_t_for_value_collEdd8IVP_TimeS0_P18IVP_U_Matrix_CacheS2_PdPS0_(...args) { return 0; }
+function __ZN13IVP_3D_Solver27find_first_t_for_value_collEdd8IVP_TimeS0_P18IVP_U_Matrix_CacheS2_PdPS0_(...args) {
+  if (!wasmImports["_ZN13IVP_3D_Solver27find_first_t_for_value_collEdd8IVP_TimeS0_P18IVP_U_Matrix_CacheS2_PdPS0_"] || wasmImports["_ZN13IVP_3D_Solver27find_first_t_for_value_collEdd8IVP_TimeS0_P18IVP_U_Matrix_CacheS2_PdPS0_"].stub) abort("external symbol '_ZN13IVP_3D_Solver27find_first_t_for_value_collEdd8IVP_TimeS0_P18IVP_U_Matrix_CacheS2_PdPS0_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN13IVP_3D_Solver27find_first_t_for_value_collEdd8IVP_TimeS0_P18IVP_U_Matrix_CacheS2_PdPS0_"](...args);
+}
 
-__ZN13IVP_3D_Solver27find_first_t_for_value_collEdd8IVP_TimeS0_P18IVP_U_Matrix_CacheS2_PdPS0_.stub = false;
-__ZN13IVP_3D_Solver27find_first_t_for_value_collEdd8IVP_TimeS0_P18IVP_U_Matrix_CacheS2_PdPS0_.sig = 'v';
+__ZN13IVP_3D_Solver27find_first_t_for_value_collEdd8IVP_TimeS0_P18IVP_U_Matrix_CacheS2_PdPS0_.stub = true;
 
-function __ZN13IVP_3D_Solver30find_first_t_for_value_max_devEd8IVP_TimeS0_iP18IVP_U_Matrix_CacheS2_PdPS0_(...args) { return 0; }
+function __ZN13IVP_3D_Solver30find_first_t_for_value_max_devEd8IVP_TimeS0_iP18IVP_U_Matrix_CacheS2_PdPS0_(...args) {
+  if (!wasmImports["_ZN13IVP_3D_Solver30find_first_t_for_value_max_devEd8IVP_TimeS0_iP18IVP_U_Matrix_CacheS2_PdPS0_"] || wasmImports["_ZN13IVP_3D_Solver30find_first_t_for_value_max_devEd8IVP_TimeS0_iP18IVP_U_Matrix_CacheS2_PdPS0_"].stub) abort("external symbol '_ZN13IVP_3D_Solver30find_first_t_for_value_max_devEd8IVP_TimeS0_iP18IVP_U_Matrix_CacheS2_PdPS0_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN13IVP_3D_Solver30find_first_t_for_value_max_devEd8IVP_TimeS0_iP18IVP_U_Matrix_CacheS2_PdPS0_"](...args);
+}
 
-__ZN13IVP_3D_Solver30find_first_t_for_value_max_devEd8IVP_TimeS0_iP18IVP_U_Matrix_CacheS2_PdPS0_.stub = false;
-__ZN13IVP_3D_Solver30find_first_t_for_value_max_devEd8IVP_TimeS0_iP18IVP_U_Matrix_CacheS2_PdPS0_.sig = 'v';
+__ZN13IVP_3D_Solver30find_first_t_for_value_max_devEd8IVP_TimeS0_iP18IVP_U_Matrix_CacheS2_PdPS0_.stub = true;
 
-function __ZN14IVP_OV_Element19add_to_hull_managerEP16IVP_Hull_Managerd(...args) { return 0; }
+function __ZN14IVP_OV_Element19add_to_hull_managerEP16IVP_Hull_Managerd(...args) {
+  if (!wasmImports["_ZN14IVP_OV_Element19add_to_hull_managerEP16IVP_Hull_Managerd"] || wasmImports["_ZN14IVP_OV_Element19add_to_hull_managerEP16IVP_Hull_Managerd"].stub) abort("external symbol '_ZN14IVP_OV_Element19add_to_hull_managerEP16IVP_Hull_Managerd' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN14IVP_OV_Element19add_to_hull_managerEP16IVP_Hull_Managerd"](...args);
+}
 
-__ZN14IVP_OV_Element19add_to_hull_managerEP16IVP_Hull_Managerd.stub = false;
-__ZN14IVP_OV_Element19add_to_hull_managerEP16IVP_Hull_Managerd.sig = 'v';
+__ZN14IVP_OV_Element19add_to_hull_managerEP16IVP_Hull_Managerd.stub = true;
 
-function __ZN14IVP_OV_ElementC1EP15IVP_Real_Object(...args) { return 0; }
+function __ZN14IVP_OV_ElementC1EP15IVP_Real_Object(...args) {
+  if (!wasmImports["_ZN14IVP_OV_ElementC1EP15IVP_Real_Object"] || wasmImports["_ZN14IVP_OV_ElementC1EP15IVP_Real_Object"].stub) abort("external symbol '_ZN14IVP_OV_ElementC1EP15IVP_Real_Object' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN14IVP_OV_ElementC1EP15IVP_Real_Object"](...args);
+}
 
-__ZN14IVP_OV_ElementC1EP15IVP_Real_Object.stub = false;
-__ZN14IVP_OV_ElementC1EP15IVP_Real_Object.sig = 'v';
+__ZN14IVP_OV_ElementC1EP15IVP_Real_Object.stub = true;
 
-function __ZN14IVP_U_Min_List19remove_minlist_elemEj(...args) { return 0; }
+function __ZN14IVP_U_Min_List19remove_minlist_elemEj(...args) {
+  if (!wasmImports["_ZN14IVP_U_Min_List19remove_minlist_elemEj"] || wasmImports["_ZN14IVP_U_Min_List19remove_minlist_elemEj"].stub) abort("external symbol '_ZN14IVP_U_Min_List19remove_minlist_elemEj' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN14IVP_U_Min_List19remove_minlist_elemEj"](...args);
+}
 
-__ZN14IVP_U_Min_List19remove_minlist_elemEj.stub = false;
-__ZN14IVP_U_Min_List19remove_minlist_elemEj.sig = 'v';
+__ZN14IVP_U_Min_List19remove_minlist_elemEj.stub = true;
 
-function __ZN14IVP_U_Min_List3addEPvf(...args) { return 0; }
+function __ZN14IVP_U_Min_List3addEPvf(...args) {
+  if (!wasmImports["_ZN14IVP_U_Min_List3addEPvf"] || wasmImports["_ZN14IVP_U_Min_List3addEPvf"].stub) abort("external symbol '_ZN14IVP_U_Min_List3addEPvf' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN14IVP_U_Min_List3addEPvf"](...args);
+}
 
-__ZN14IVP_U_Min_List3addEPvf.stub = false;
-__ZN14IVP_U_Min_List3addEPvf.sig = 'v';
+__ZN14IVP_U_Min_List3addEPvf.stub = true;
 
 function __ZN15CClockSpeedInit4InitEv(...args) {
   if (!wasmImports["_ZN15CClockSpeedInit4InitEv"] || wasmImports["_ZN15CClockSpeedInit4InitEv"].stub) abort("external symbol '_ZN15CClockSpeedInit4InitEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
@@ -4800,15 +4818,19 @@ function __ZN15IDirect3DQuery9D1Ev(...args) {
 
 __ZN15IDirect3DQuery9D1Ev.stub = true;
 
-function __ZN15IVP_Inline_Math11isqrt_floatEf(...args) { return 0; }
+function __ZN15IVP_Inline_Math11isqrt_floatEf(...args) {
+  if (!wasmImports["_ZN15IVP_Inline_Math11isqrt_floatEf"] || wasmImports["_ZN15IVP_Inline_Math11isqrt_floatEf"].stub) abort("external symbol '_ZN15IVP_Inline_Math11isqrt_floatEf' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN15IVP_Inline_Math11isqrt_floatEf"](...args);
+}
 
-__ZN15IVP_Inline_Math11isqrt_floatEf.stub = false;
-__ZN15IVP_Inline_Math11isqrt_floatEf.sig = 'v';
+__ZN15IVP_Inline_Math11isqrt_floatEf.stub = true;
 
-function __ZN15IVP_Inline_Math12isqrt_doubleEd(...args) { return 0; }
+function __ZN15IVP_Inline_Math12isqrt_doubleEd(...args) {
+  if (!wasmImports["_ZN15IVP_Inline_Math12isqrt_doubleEd"] || wasmImports["_ZN15IVP_Inline_Math12isqrt_doubleEd"].stub) abort("external symbol '_ZN15IVP_Inline_Math12isqrt_doubleEd' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN15IVP_Inline_Math12isqrt_doubleEd"](...args);
+}
 
-__ZN15IVP_Inline_Math12isqrt_doubleEd.stub = false;
-__ZN15IVP_Inline_Math12isqrt_doubleEd.sig = 'v';
+__ZN15IVP_Inline_Math12isqrt_doubleEd.stub = true;
 
 function __ZN16ID3DXMatrixStack10LoadMatrixEPK10D3DXMATRIX(...args) {
   if (!wasmImports["_ZN16ID3DXMatrixStack10LoadMatrixEPK10D3DXMATRIX"] || wasmImports["_ZN16ID3DXMatrixStack10LoadMatrixEPK10D3DXMATRIX"].stub) abort("external symbol '_ZN16ID3DXMatrixStack10LoadMatrixEPK10D3DXMATRIX' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
@@ -5216,25 +5238,33 @@ function __ZN16IDirect3DDevice9D1Ev(...args) {
 
 __ZN16IDirect3DDevice9D1Ev.stub = true;
 
-function __ZN16IVP_Cache_Object19update_cache_objectEv(...args) { return 0; }
+function __ZN16IVP_Cache_Object19update_cache_objectEv(...args) {
+  if (!wasmImports["_ZN16IVP_Cache_Object19update_cache_objectEv"] || wasmImports["_ZN16IVP_Cache_Object19update_cache_objectEv"].stub) abort("external symbol '_ZN16IVP_Cache_Object19update_cache_objectEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN16IVP_Cache_Object19update_cache_objectEv"](...args);
+}
 
-__ZN16IVP_Cache_Object19update_cache_objectEv.stub = false;
-__ZN16IVP_Cache_Object19update_cache_objectEv.sig = 'v';
+__ZN16IVP_Cache_Object19update_cache_objectEv.stub = true;
 
-function __ZN16IVP_Compact_Edge10next_tableE(...args) { return 0; }
+function __ZN16IVP_Compact_Edge10next_tableE(...args) {
+  if (!wasmImports["_ZN16IVP_Compact_Edge10next_tableE"] || wasmImports["_ZN16IVP_Compact_Edge10next_tableE"].stub) abort("external symbol '_ZN16IVP_Compact_Edge10next_tableE' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN16IVP_Compact_Edge10next_tableE"](...args);
+}
 
-__ZN16IVP_Compact_Edge10next_tableE.stub = false;
-__ZN16IVP_Compact_Edge10next_tableE.sig = 'v';
+__ZN16IVP_Compact_Edge10next_tableE.stub = true;
 
-function __ZN16IVP_Compact_Edge10prev_tableE(...args) { return 0; }
+function __ZN16IVP_Compact_Edge10prev_tableE(...args) {
+  if (!wasmImports["_ZN16IVP_Compact_Edge10prev_tableE"] || wasmImports["_ZN16IVP_Compact_Edge10prev_tableE"].stub) abort("external symbol '_ZN16IVP_Compact_Edge10prev_tableE' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN16IVP_Compact_Edge10prev_tableE"](...args);
+}
 
-__ZN16IVP_Compact_Edge10prev_tableE.stub = false;
-__ZN16IVP_Compact_Edge10prev_tableE.sig = 'v';
+__ZN16IVP_Compact_Edge10prev_tableE.stub = true;
 
-function __ZN16IVP_Time_Manager12remove_eventEP14IVP_Time_Event(...args) { return 0; }
+function __ZN16IVP_Time_Manager12remove_eventEP14IVP_Time_Event(...args) {
+  if (!wasmImports["_ZN16IVP_Time_Manager12remove_eventEP14IVP_Time_Event"] || wasmImports["_ZN16IVP_Time_Manager12remove_eventEP14IVP_Time_Event"].stub) abort("external symbol '_ZN16IVP_Time_Manager12remove_eventEP14IVP_Time_Event' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN16IVP_Time_Manager12remove_eventEP14IVP_Time_Event"](...args);
+}
 
-__ZN16IVP_Time_Manager12remove_eventEP14IVP_Time_Event.stub = false;
-__ZN16IVP_Time_Manager12remove_eventEP14IVP_Time_Event.sig = 'v';
+__ZN16IVP_Time_Manager12remove_eventEP14IVP_Time_Event.stub = true;
 
 function __ZN17CThreadSpinRWLock15SpinLockForReadEv(...args) {
   if (!wasmImports["_ZN17CThreadSpinRWLock15SpinLockForReadEv"] || wasmImports["_ZN17CThreadSpinRWLock15SpinLockForReadEv"].stub) abort("external symbol '_ZN17CThreadSpinRWLock15SpinLockForReadEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
@@ -5313,25 +5343,33 @@ function __ZN17IDirect3DTexture9D1Ev(...args) {
 
 __ZN17IDirect3DTexture9D1Ev.stub = true;
 
-function __ZN17IVP_Contact_PointC1EP11IVP_Mindist(...args) { return 0; }
+function __ZN17IVP_Contact_PointC1EP11IVP_Mindist(...args) {
+  if (!wasmImports["_ZN17IVP_Contact_PointC1EP11IVP_Mindist"] || wasmImports["_ZN17IVP_Contact_PointC1EP11IVP_Mindist"].stub) abort("external symbol '_ZN17IVP_Contact_PointC1EP11IVP_Mindist' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN17IVP_Contact_PointC1EP11IVP_Mindist"](...args);
+}
 
-__ZN17IVP_Contact_PointC1EP11IVP_Mindist.stub = false;
-__ZN17IVP_Contact_PointC1EP11IVP_Mindist.sig = 'v';
+__ZN17IVP_Contact_PointC1EP11IVP_Mindist.stub = true;
 
-function __ZN17IVP_Contact_PointD1Ev(...args) { return 0; }
+function __ZN17IVP_Contact_PointD1Ev(...args) {
+  if (!wasmImports["_ZN17IVP_Contact_PointD1Ev"] || wasmImports["_ZN17IVP_Contact_PointD1Ev"].stub) abort("external symbol '_ZN17IVP_Contact_PointD1Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN17IVP_Contact_PointD1Ev"](...args);
+}
 
-__ZN17IVP_Contact_PointD1Ev.stub = false;
-__ZN17IVP_Contact_PointD1Ev.sig = 'v';
+__ZN17IVP_Contact_PointD1Ev.stub = true;
 
-function __ZN17IVP_U_Float_Point7normizeEv(...args) { return 0; }
+function __ZN17IVP_U_Float_Point7normizeEv(...args) {
+  if (!wasmImports["_ZN17IVP_U_Float_Point7normizeEv"] || wasmImports["_ZN17IVP_U_Float_Point7normizeEv"].stub) abort("external symbol '_ZN17IVP_U_Float_Point7normizeEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN17IVP_U_Float_Point7normizeEv"](...args);
+}
 
-__ZN17IVP_U_Float_Point7normizeEv.stub = false;
-__ZN17IVP_U_Float_Point7normizeEv.sig = 'v';
+__ZN17IVP_U_Float_Point7normizeEv.stub = true;
 
-function __ZN17IVP_U_Vector_Base13increment_memEv(...args) { return 0; }
+function __ZN17IVP_U_Vector_Base13increment_memEv(...args) {
+  if (!wasmImports["_ZN17IVP_U_Vector_Base13increment_memEv"] || wasmImports["_ZN17IVP_U_Vector_Base13increment_memEv"].stub) abort("external symbol '_ZN17IVP_U_Vector_Base13increment_memEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN17IVP_U_Vector_Base13increment_memEv"](...args);
+}
 
-__ZN17IVP_U_Vector_Base13increment_memEv.stub = false;
-__ZN17IVP_U_Vector_Base13increment_memEv.sig = 'v';
+__ZN17IVP_U_Vector_Base13increment_memEv.stub = true;
 
 function __ZN18IDirect3DResource911SetPriorityEj(...args) {
   if (!wasmImports["_ZN18IDirect3DResource911SetPriorityEj"] || wasmImports["_ZN18IDirect3DResource911SetPriorityEj"].stub) abort("external symbol '_ZN18IDirect3DResource911SetPriorityEj' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
@@ -5361,15 +5399,19 @@ function __ZN19GenericThreadLocals16CThreadLocalBaseD2Ev(...args) {
 
 __ZN19GenericThreadLocals16CThreadLocalBaseD2Ev.stub = true;
 
-function __ZN19IVP_OV_Tree_Manager17insert_ov_elementEP14IVP_OV_ElementddP12IVP_U_VectorIS0_E(...args) { return 0; }
+function __ZN19IVP_OV_Tree_Manager17insert_ov_elementEP14IVP_OV_ElementddP12IVP_U_VectorIS0_E(...args) {
+  if (!wasmImports["_ZN19IVP_OV_Tree_Manager17insert_ov_elementEP14IVP_OV_ElementddP12IVP_U_VectorIS0_E"] || wasmImports["_ZN19IVP_OV_Tree_Manager17insert_ov_elementEP14IVP_OV_ElementddP12IVP_U_VectorIS0_E"].stub) abort("external symbol '_ZN19IVP_OV_Tree_Manager17insert_ov_elementEP14IVP_OV_ElementddP12IVP_U_VectorIS0_E' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN19IVP_OV_Tree_Manager17insert_ov_elementEP14IVP_OV_ElementddP12IVP_U_VectorIS0_E"](...args);
+}
 
-__ZN19IVP_OV_Tree_Manager17insert_ov_elementEP14IVP_OV_ElementddP12IVP_U_VectorIS0_E.stub = false;
-__ZN19IVP_OV_Tree_Manager17insert_ov_elementEP14IVP_OV_ElementddP12IVP_U_VectorIS0_E.sig = 'v';
+__ZN19IVP_OV_Tree_Manager17insert_ov_elementEP14IVP_OV_ElementddP12IVP_U_VectorIS0_E.stub = true;
 
-function __ZN19IVP_OV_Tree_Manager17remove_ov_elementEP14IVP_OV_Element(...args) { return 0; }
+function __ZN19IVP_OV_Tree_Manager17remove_ov_elementEP14IVP_OV_Element(...args) {
+  if (!wasmImports["_ZN19IVP_OV_Tree_Manager17remove_ov_elementEP14IVP_OV_Element"] || wasmImports["_ZN19IVP_OV_Tree_Manager17remove_ov_elementEP14IVP_OV_Element"].stub) abort("external symbol '_ZN19IVP_OV_Tree_Manager17remove_ov_elementEP14IVP_OV_Element' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN19IVP_OV_Tree_Manager17remove_ov_elementEP14IVP_OV_Element"](...args);
+}
 
-__ZN19IVP_OV_Tree_Manager17remove_ov_elementEP14IVP_OV_Element.stub = false;
-__ZN19IVP_OV_Tree_Manager17remove_ov_elementEP14IVP_OV_Element.sig = 'v';
+__ZN19IVP_OV_Tree_Manager17remove_ov_elementEP14IVP_OV_Element.stub = true;
 
 function __ZN20CUniformRandomStream11RandomFloatEff(...args) {
   if (!wasmImports["_ZN20CUniformRandomStream11RandomFloatEff"] || wasmImports["_ZN20CUniformRandomStream11RandomFloatEff"].stub) abort("external symbol '_ZN20CUniformRandomStream11RandomFloatEff' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
@@ -5406,10 +5448,12 @@ function __ZN20CUniformRandomStreamC1Ev(...args) {
 
 __ZN20CUniformRandomStreamC1Ev.stub = true;
 
-function __ZN20IVP_U_BigVector_Base13increment_memEv(...args) { return 0; }
+function __ZN20IVP_U_BigVector_Base13increment_memEv(...args) {
+  if (!wasmImports["_ZN20IVP_U_BigVector_Base13increment_memEv"] || wasmImports["_ZN20IVP_U_BigVector_Base13increment_memEv"].stub) abort("external symbol '_ZN20IVP_U_BigVector_Base13increment_memEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN20IVP_U_BigVector_Base13increment_memEv"](...args);
+}
 
-__ZN20IVP_U_BigVector_Base13increment_memEv.stub = false;
-__ZN20IVP_U_BigVector_Base13increment_memEv.sig = 'v';
+__ZN20IVP_U_BigVector_Base13increment_memEv.stub = true;
 
 function __ZN21CGaussianRandomStream11RandomFloatEff(...args) {
   if (!wasmImports["_ZN21CGaussianRandomStream11RandomFloatEff"] || wasmImports["_ZN21CGaussianRandomStream11RandomFloatEff"].stub) abort("external symbol '_ZN21CGaussianRandomStream11RandomFloatEff' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
@@ -5593,15 +5637,19 @@ function __ZN22IDirect3DVertexShader9D1Ev(...args) {
 
 __ZN22IDirect3DVertexShader9D1Ev.stub = true;
 
-function __ZN22IVP_Controller_Phantom19mindist_left_volumeEP11IVP_Mindist(...args) { return 0; }
+function __ZN22IVP_Controller_Phantom19mindist_left_volumeEP11IVP_Mindist(...args) {
+  if (!wasmImports["_ZN22IVP_Controller_Phantom19mindist_left_volumeEP11IVP_Mindist"] || wasmImports["_ZN22IVP_Controller_Phantom19mindist_left_volumeEP11IVP_Mindist"].stub) abort("external symbol '_ZN22IVP_Controller_Phantom19mindist_left_volumeEP11IVP_Mindist' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN22IVP_Controller_Phantom19mindist_left_volumeEP11IVP_Mindist"](...args);
+}
 
-__ZN22IVP_Controller_Phantom19mindist_left_volumeEP11IVP_Mindist.stub = false;
-__ZN22IVP_Controller_Phantom19mindist_left_volumeEP11IVP_Mindist.sig = 'v';
+__ZN22IVP_Controller_Phantom19mindist_left_volumeEP11IVP_Mindist.stub = true;
 
-function __ZN22IVP_Controller_Phantom22mindist_entered_volumeEP11IVP_Mindist(...args) { return 0; }
+function __ZN22IVP_Controller_Phantom22mindist_entered_volumeEP11IVP_Mindist(...args) {
+  if (!wasmImports["_ZN22IVP_Controller_Phantom22mindist_entered_volumeEP11IVP_Mindist"] || wasmImports["_ZN22IVP_Controller_Phantom22mindist_entered_volumeEP11IVP_Mindist"].stub) abort("external symbol '_ZN22IVP_Controller_Phantom22mindist_entered_volumeEP11IVP_Mindist' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN22IVP_Controller_Phantom22mindist_entered_volumeEP11IVP_Mindist"](...args);
+}
 
-__ZN22IVP_Controller_Phantom22mindist_entered_volumeEP11IVP_Mindist.stub = false;
-__ZN22IVP_Controller_Phantom22mindist_entered_volumeEP11IVP_Mindist.sig = 'v';
+__ZN22IVP_Controller_Phantom22mindist_entered_volumeEP11IVP_Mindist.stub = true;
 
 function __ZN23IDirect3DVolumeTexture912GetLevelDescEjP15_D3DVOLUME_DESC(...args) {
   if (!wasmImports["_ZN23IDirect3DVolumeTexture912GetLevelDescEjP15_D3DVOLUME_DESC"] || wasmImports["_ZN23IDirect3DVolumeTexture912GetLevelDescEjP15_D3DVOLUME_DESC"].stub) abort("external symbol '_ZN23IDirect3DVolumeTexture912GetLevelDescEjP15_D3DVOLUME_DESC' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
@@ -5638,50 +5686,68 @@ function __ZN23IDirect3DVolumeTexture9D1Ev(...args) {
 
 __ZN23IDirect3DVolumeTexture9D1Ev.stub = true;
 
-function __ZN24IVP_Cache_Object_Manager16get_cache_objectEP15IVP_Real_Object(...args) { return 0; }
+function __ZN24IVP_Cache_Object_Manager16get_cache_objectEP15IVP_Real_Object(...args) {
+  if (!wasmImports["_ZN24IVP_Cache_Object_Manager16get_cache_objectEP15IVP_Real_Object"] || wasmImports["_ZN24IVP_Cache_Object_Manager16get_cache_objectEP15IVP_Real_Object"].stub) abort("external symbol '_ZN24IVP_Cache_Object_Manager16get_cache_objectEP15IVP_Real_Object' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN24IVP_Cache_Object_Manager16get_cache_objectEP15IVP_Real_Object"](...args);
+}
 
-__ZN24IVP_Cache_Object_Manager16get_cache_objectEP15IVP_Real_Object.stub = false;
-__ZN24IVP_Cache_Object_Manager16get_cache_objectEP15IVP_Real_Object.sig = 'v';
+__ZN24IVP_Cache_Object_Manager16get_cache_objectEP15IVP_Real_Object.stub = true;
 
-function __ZN24IVP_Compact_Ledge_Solver17calc_hesse_objectEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Hesse(...args) { return 0; }
+function __ZN24IVP_Compact_Ledge_Solver17calc_hesse_objectEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Hesse(...args) {
+  if (!wasmImports["_ZN24IVP_Compact_Ledge_Solver17calc_hesse_objectEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Hesse"] || wasmImports["_ZN24IVP_Compact_Ledge_Solver17calc_hesse_objectEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Hesse"].stub) abort("external symbol '_ZN24IVP_Compact_Ledge_Solver17calc_hesse_objectEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Hesse' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN24IVP_Compact_Ledge_Solver17calc_hesse_objectEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Hesse"](...args);
+}
 
-__ZN24IVP_Compact_Ledge_Solver17calc_hesse_objectEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Hesse.stub = false;
-__ZN24IVP_Compact_Ledge_Solver17calc_hesse_objectEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Hesse.sig = 'v';
+__ZN24IVP_Compact_Ledge_Solver17calc_hesse_objectEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Hesse.stub = true;
 
-function __ZN24IVP_Compact_Ledge_Solver20calc_pos_other_spaceEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointS4_P11IVP_U_Point(...args) { return 0; }
+function __ZN24IVP_Compact_Ledge_Solver20calc_pos_other_spaceEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointS4_P11IVP_U_Point(...args) {
+  if (!wasmImports["_ZN24IVP_Compact_Ledge_Solver20calc_pos_other_spaceEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointS4_P11IVP_U_Point"] || wasmImports["_ZN24IVP_Compact_Ledge_Solver20calc_pos_other_spaceEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointS4_P11IVP_U_Point"].stub) abort("external symbol '_ZN24IVP_Compact_Ledge_Solver20calc_pos_other_spaceEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointS4_P11IVP_U_Point' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN24IVP_Compact_Ledge_Solver20calc_pos_other_spaceEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointS4_P11IVP_U_Point"](...args);
+}
 
-__ZN24IVP_Compact_Ledge_Solver20calc_pos_other_spaceEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointS4_P11IVP_U_Point.stub = false;
-__ZN24IVP_Compact_Ledge_Solver20calc_pos_other_spaceEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointS4_P11IVP_U_Point.sig = 'v';
+__ZN24IVP_Compact_Ledge_Solver20calc_pos_other_spaceEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointS4_P11IVP_U_Point.stub = true;
 
-function __ZN24IVP_Compact_Ledge_Solver20give_world_coords_ATEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointP11IVP_U_Point(...args) { return 0; }
+function __ZN24IVP_Compact_Ledge_Solver20give_world_coords_ATEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointP11IVP_U_Point(...args) {
+  if (!wasmImports["_ZN24IVP_Compact_Ledge_Solver20give_world_coords_ATEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointP11IVP_U_Point"] || wasmImports["_ZN24IVP_Compact_Ledge_Solver20give_world_coords_ATEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointP11IVP_U_Point"].stub) abort("external symbol '_ZN24IVP_Compact_Ledge_Solver20give_world_coords_ATEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointP11IVP_U_Point' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN24IVP_Compact_Ledge_Solver20give_world_coords_ATEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointP11IVP_U_Point"](...args);
+}
 
-__ZN24IVP_Compact_Ledge_Solver20give_world_coords_ATEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointP11IVP_U_Point.stub = false;
-__ZN24IVP_Compact_Ledge_Solver20give_world_coords_ATEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointP11IVP_U_Point.sig = 'v';
+__ZN24IVP_Compact_Ledge_Solver20give_world_coords_ATEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointP11IVP_U_Point.stub = true;
 
-function __ZN24IVP_Compact_Ledge_Solver21calc_unscaled_KK_valsERK12IVP_KK_InputP22IVP_Unscaled_KK_Result(...args) { return 0; }
+function __ZN24IVP_Compact_Ledge_Solver21calc_unscaled_KK_valsERK12IVP_KK_InputP22IVP_Unscaled_KK_Result(...args) {
+  if (!wasmImports["_ZN24IVP_Compact_Ledge_Solver21calc_unscaled_KK_valsERK12IVP_KK_InputP22IVP_Unscaled_KK_Result"] || wasmImports["_ZN24IVP_Compact_Ledge_Solver21calc_unscaled_KK_valsERK12IVP_KK_InputP22IVP_Unscaled_KK_Result"].stub) abort("external symbol '_ZN24IVP_Compact_Ledge_Solver21calc_unscaled_KK_valsERK12IVP_KK_InputP22IVP_Unscaled_KK_Result' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN24IVP_Compact_Ledge_Solver21calc_unscaled_KK_valsERK12IVP_KK_InputP22IVP_Unscaled_KK_Result"](...args);
+}
 
-__ZN24IVP_Compact_Ledge_Solver21calc_unscaled_KK_valsERK12IVP_KK_InputP22IVP_Unscaled_KK_Result.stub = false;
-__ZN24IVP_Compact_Ledge_Solver21calc_unscaled_KK_valsERK12IVP_KK_InputP22IVP_Unscaled_KK_Result.sig = 'v';
+__ZN24IVP_Compact_Ledge_Solver21calc_unscaled_KK_valsERK12IVP_KK_InputP22IVP_Unscaled_KK_Result.stub = true;
 
-function __ZN24IVP_Compact_Ledge_Solver27calc_unscaled_s_val_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP21IVP_Unscaled_S_Result(...args) { return 0; }
+function __ZN24IVP_Compact_Ledge_Solver27calc_unscaled_s_val_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP21IVP_Unscaled_S_Result(...args) {
+  if (!wasmImports["_ZN24IVP_Compact_Ledge_Solver27calc_unscaled_s_val_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP21IVP_Unscaled_S_Result"] || wasmImports["_ZN24IVP_Compact_Ledge_Solver27calc_unscaled_s_val_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP21IVP_Unscaled_S_Result"].stub) abort("external symbol '_ZN24IVP_Compact_Ledge_Solver27calc_unscaled_s_val_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP21IVP_Unscaled_S_Result' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN24IVP_Compact_Ledge_Solver27calc_unscaled_s_val_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP21IVP_Unscaled_S_Result"](...args);
+}
 
-__ZN24IVP_Compact_Ledge_Solver27calc_unscaled_s_val_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP21IVP_Unscaled_S_Result.stub = false;
-__ZN24IVP_Compact_Ledge_Solver27calc_unscaled_s_val_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP21IVP_Unscaled_S_Result.sig = 'v';
+__ZN24IVP_Compact_Ledge_Solver27calc_unscaled_s_val_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP21IVP_Unscaled_S_Result.stub = true;
 
-function __ZN24IVP_Compact_Ledge_Solver29calc_unscaled_qr_vals_F_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP22IVP_Unscaled_QR_Result(...args) { return 0; }
+function __ZN24IVP_Compact_Ledge_Solver29calc_unscaled_qr_vals_F_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP22IVP_Unscaled_QR_Result(...args) {
+  if (!wasmImports["_ZN24IVP_Compact_Ledge_Solver29calc_unscaled_qr_vals_F_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP22IVP_Unscaled_QR_Result"] || wasmImports["_ZN24IVP_Compact_Ledge_Solver29calc_unscaled_qr_vals_F_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP22IVP_Unscaled_QR_Result"].stub) abort("external symbol '_ZN24IVP_Compact_Ledge_Solver29calc_unscaled_qr_vals_F_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP22IVP_Unscaled_QR_Result' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN24IVP_Compact_Ledge_Solver29calc_unscaled_qr_vals_F_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP22IVP_Unscaled_QR_Result"](...args);
+}
 
-__ZN24IVP_Compact_Ledge_Solver29calc_unscaled_qr_vals_F_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP22IVP_Unscaled_QR_Result.stub = false;
-__ZN24IVP_Compact_Ledge_Solver29calc_unscaled_qr_vals_F_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP22IVP_Unscaled_QR_Result.sig = 'v';
+__ZN24IVP_Compact_Ledge_Solver29calc_unscaled_qr_vals_F_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP22IVP_Unscaled_QR_Result.stub = true;
 
-function __ZN24IVP_Compact_Ledge_Solver31quad_dist_edge_to_point_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_Point(...args) { return 0; }
+function __ZN24IVP_Compact_Ledge_Solver31quad_dist_edge_to_point_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_Point(...args) {
+  if (!wasmImports["_ZN24IVP_Compact_Ledge_Solver31quad_dist_edge_to_point_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_Point"] || wasmImports["_ZN24IVP_Compact_Ledge_Solver31quad_dist_edge_to_point_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_Point"].stub) abort("external symbol '_ZN24IVP_Compact_Ledge_Solver31quad_dist_edge_to_point_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_Point' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN24IVP_Compact_Ledge_Solver31quad_dist_edge_to_point_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_Point"](...args);
+}
 
-__ZN24IVP_Compact_Ledge_Solver31quad_dist_edge_to_point_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_Point.stub = false;
-__ZN24IVP_Compact_Ledge_Solver31quad_dist_edge_to_point_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_Point.sig = 'v';
+__ZN24IVP_Compact_Ledge_Solver31quad_dist_edge_to_point_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_Point.stub = true;
 
-function __ZN24IVP_Compact_Ledge_Solver34calc_hesse_vec_object_not_normizedEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Point(...args) { return 0; }
+function __ZN24IVP_Compact_Ledge_Solver34calc_hesse_vec_object_not_normizedEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Point(...args) {
+  if (!wasmImports["_ZN24IVP_Compact_Ledge_Solver34calc_hesse_vec_object_not_normizedEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Point"] || wasmImports["_ZN24IVP_Compact_Ledge_Solver34calc_hesse_vec_object_not_normizedEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Point"].stub) abort("external symbol '_ZN24IVP_Compact_Ledge_Solver34calc_hesse_vec_object_not_normizedEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Point' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN24IVP_Compact_Ledge_Solver34calc_hesse_vec_object_not_normizedEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Point"](...args);
+}
 
-__ZN24IVP_Compact_Ledge_Solver34calc_hesse_vec_object_not_normizedEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Point.stub = false;
-__ZN24IVP_Compact_Ledge_Solver34calc_hesse_vec_object_not_normizedEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Point.sig = 'v';
+__ZN24IVP_Compact_Ledge_Solver34calc_hesse_vec_object_not_normizedEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Point.stub = true;
 
 function __ZN27IDirect3DVertexDeclaration9D0Ev(...args) {
   if (!wasmImports["_ZN27IDirect3DVertexDeclaration9D0Ev"] || wasmImports["_ZN27IDirect3DVertexDeclaration9D0Ev"].stub) abort("external symbol '_ZN27IDirect3DVertexDeclaration9D0Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
@@ -5697,40 +5763,54 @@ function __ZN27IDirect3DVertexDeclaration9D1Ev(...args) {
 
 __ZN27IDirect3DVertexDeclaration9D1Ev.stub = true;
 
-function __ZN27IVP_Mindist_Minimize_Solver13p_minimize_BFEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point(...args) { return 0; }
+function __ZN27IVP_Mindist_Minimize_Solver13p_minimize_BFEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point(...args) {
+  if (!wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_BFEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point"] || wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_BFEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point"].stub) abort("external symbol '_ZN27IVP_Mindist_Minimize_Solver13p_minimize_BFEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_BFEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point"](...args);
+}
 
-__ZN27IVP_Mindist_Minimize_Solver13p_minimize_BFEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point.stub = false;
-__ZN27IVP_Mindist_Minimize_Solver13p_minimize_BFEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point.sig = 'v';
+__ZN27IVP_Mindist_Minimize_Solver13p_minimize_BFEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point.stub = true;
 
-function __ZN27IVP_Mindist_Minimize_Solver13p_minimize_BKEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point(...args) { return 0; }
+function __ZN27IVP_Mindist_Minimize_Solver13p_minimize_BKEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point(...args) {
+  if (!wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_BKEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point"] || wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_BKEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point"].stub) abort("external symbol '_ZN27IVP_Mindist_Minimize_Solver13p_minimize_BKEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_BKEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point"](...args);
+}
 
-__ZN27IVP_Mindist_Minimize_Solver13p_minimize_BKEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point.stub = false;
-__ZN27IVP_Mindist_Minimize_Solver13p_minimize_BKEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point.sig = 'v';
+__ZN27IVP_Mindist_Minimize_Solver13p_minimize_BKEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point.stub = true;
 
-function __ZN27IVP_Mindist_Minimize_Solver13p_minimize_BPEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point(...args) { return 0; }
+function __ZN27IVP_Mindist_Minimize_Solver13p_minimize_BPEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point(...args) {
+  if (!wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_BPEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point"] || wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_BPEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point"].stub) abort("external symbol '_ZN27IVP_Mindist_Minimize_Solver13p_minimize_BPEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_BPEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point"](...args);
+}
 
-__ZN27IVP_Mindist_Minimize_Solver13p_minimize_BPEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point.stub = false;
-__ZN27IVP_Mindist_Minimize_Solver13p_minimize_BPEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point.sig = 'v';
+__ZN27IVP_Mindist_Minimize_Solver13p_minimize_BPEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point.stub = true;
 
-function __ZN27IVP_Mindist_Minimize_Solver13p_minimize_KKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_(...args) { return 0; }
+function __ZN27IVP_Mindist_Minimize_Solver13p_minimize_KKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_(...args) {
+  if (!wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_KKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_"] || wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_KKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_"].stub) abort("external symbol '_ZN27IVP_Mindist_Minimize_Solver13p_minimize_KKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_KKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_"](...args);
+}
 
-__ZN27IVP_Mindist_Minimize_Solver13p_minimize_KKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_.stub = false;
-__ZN27IVP_Mindist_Minimize_Solver13p_minimize_KKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_.sig = 'v';
+__ZN27IVP_Mindist_Minimize_Solver13p_minimize_KKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_.stub = true;
 
-function __ZN27IVP_Mindist_Minimize_Solver13p_minimize_PFEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_(...args) { return 0; }
+function __ZN27IVP_Mindist_Minimize_Solver13p_minimize_PFEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_(...args) {
+  if (!wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_PFEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_"] || wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_PFEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_"].stub) abort("external symbol '_ZN27IVP_Mindist_Minimize_Solver13p_minimize_PFEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_PFEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_"](...args);
+}
 
-__ZN27IVP_Mindist_Minimize_Solver13p_minimize_PFEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_.stub = false;
-__ZN27IVP_Mindist_Minimize_Solver13p_minimize_PFEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_.sig = 'v';
+__ZN27IVP_Mindist_Minimize_Solver13p_minimize_PFEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_.stub = true;
 
-function __ZN27IVP_Mindist_Minimize_Solver13p_minimize_PKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_(...args) { return 0; }
+function __ZN27IVP_Mindist_Minimize_Solver13p_minimize_PKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_(...args) {
+  if (!wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_PKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_"] || wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_PKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_"].stub) abort("external symbol '_ZN27IVP_Mindist_Minimize_Solver13p_minimize_PKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_PKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_"](...args);
+}
 
-__ZN27IVP_Mindist_Minimize_Solver13p_minimize_PKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_.stub = false;
-__ZN27IVP_Mindist_Minimize_Solver13p_minimize_PKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_.sig = 'v';
+__ZN27IVP_Mindist_Minimize_Solver13p_minimize_PKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_.stub = true;
 
-function __ZN27IVP_Mindist_Minimize_Solver13p_minimize_PPEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_(...args) { return 0; }
+function __ZN27IVP_Mindist_Minimize_Solver13p_minimize_PPEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_(...args) {
+  if (!wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_PPEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_"] || wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_PPEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_"].stub) abort("external symbol '_ZN27IVP_Mindist_Minimize_Solver13p_minimize_PPEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN27IVP_Mindist_Minimize_Solver13p_minimize_PPEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_"](...args);
+}
 
-__ZN27IVP_Mindist_Minimize_Solver13p_minimize_PPEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_.stub = false;
-__ZN27IVP_Mindist_Minimize_Solver13p_minimize_PPEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_.sig = 'v';
+__ZN27IVP_Mindist_Minimize_Solver13p_minimize_PPEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_.stub = true;
 
 function __ZN7CThread10ThreadProcEPv(...args) {
   if (!wasmImports["_ZN7CThread10ThreadProcEPv"] || wasmImports["_ZN7CThread10ThreadProcEPv"].stub) abort("external symbol '_ZN7CThread10ThreadProcEPv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
@@ -5844,20 +5924,26 @@ function __ZN7CThreadD2Ev(...args) {
 
 __ZN7CThreadD2Ev.stub = true;
 
-function __ZN8IVP_Hash3addEPKcPv(...args) { return 0; }
+function __ZN8IVP_Hash3addEPKcPv(...args) {
+  if (!wasmImports["_ZN8IVP_Hash3addEPKcPv"] || wasmImports["_ZN8IVP_Hash3addEPKcPv"].stub) abort("external symbol '_ZN8IVP_Hash3addEPKcPv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN8IVP_Hash3addEPKcPv"](...args);
+}
 
-__ZN8IVP_Hash3addEPKcPv.stub = false;
-__ZN8IVP_Hash3addEPKcPv.sig = 'v';
+__ZN8IVP_Hash3addEPKcPv.stub = true;
 
-function __ZN8IVP_HashC1EiiPv(...args) { return 0; }
+function __ZN8IVP_HashC1EiiPv(...args) {
+  if (!wasmImports["_ZN8IVP_HashC1EiiPv"] || wasmImports["_ZN8IVP_HashC1EiiPv"].stub) abort("external symbol '_ZN8IVP_HashC1EiiPv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN8IVP_HashC1EiiPv"](...args);
+}
 
-__ZN8IVP_HashC1EiiPv.stub = false;
-__ZN8IVP_HashC1EiiPv.sig = 'v';
+__ZN8IVP_HashC1EiiPv.stub = true;
 
-function __ZN8IVP_HashD1Ev(...args) { return 0; }
+function __ZN8IVP_HashD1Ev(...args) {
+  if (!wasmImports["_ZN8IVP_HashD1Ev"] || wasmImports["_ZN8IVP_HashD1Ev"].stub) abort("external symbol '_ZN8IVP_HashD1Ev' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZN8IVP_HashD1Ev"](...args);
+}
 
-__ZN8IVP_HashD1Ev.stub = false;
-__ZN8IVP_HashD1Ev.sig = 'v';
+__ZN8IVP_HashD1Ev.stub = true;
 
 function __ZN9D3DXPLANEcvPfEv(...args) {
   if (!wasmImports["_ZN9D3DXPLANEcvPfEv"] || wasmImports["_ZN9D3DXPLANEcvPfEv"].stub) abort("external symbol '_ZN9D3DXPLANEcvPfEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
@@ -5908,10 +5994,12 @@ function __ZNK10D3DXMATRIXneERKS_(...args) {
 
 __ZNK10D3DXMATRIXneERKS_.stub = true;
 
-function __ZNK11IVP_U_Point11real_lengthEv(...args) { return 0; }
+function __ZNK11IVP_U_Point11real_lengthEv(...args) {
+  if (!wasmImports["_ZNK11IVP_U_Point11real_lengthEv"] || wasmImports["_ZNK11IVP_U_Point11real_lengthEv"].stub) abort("external symbol '_ZNK11IVP_U_Point11real_lengthEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZNK11IVP_U_Point11real_lengthEv"](...args);
+}
 
-__ZNK11IVP_U_Point11real_lengthEv.stub = false;
-__ZNK11IVP_U_Point11real_lengthEv.sig = 'v';
+__ZNK11IVP_U_Point11real_lengthEv.stub = true;
 
 function __ZNK11studiohdr_t8pSeqdescEi(...args) {
   if (!wasmImports["_ZNK11studiohdr_t8pSeqdescEi"] || wasmImports["_ZNK11studiohdr_t8pSeqdescEi"].stub) abort("external symbol '_ZNK11studiohdr_t8pSeqdescEi' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
@@ -5934,20 +6022,26 @@ function __ZNK12CDmAttribute17IsTypeConvertableI17DmElementHandle_tEEbv(...args)
 
 __ZNK12CDmAttribute17IsTypeConvertableI17DmElementHandle_tEEbv.stub = true;
 
-function __ZNK12IVP_U_Matrix6vmult4EPK11IVP_U_PointPS0_(...args) { return 0; }
+function __ZNK12IVP_U_Matrix6vmult4EPK11IVP_U_PointPS0_(...args) {
+  if (!wasmImports["_ZNK12IVP_U_Matrix6vmult4EPK11IVP_U_PointPS0_"] || wasmImports["_ZNK12IVP_U_Matrix6vmult4EPK11IVP_U_PointPS0_"].stub) abort("external symbol '_ZNK12IVP_U_Matrix6vmult4EPK11IVP_U_PointPS0_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZNK12IVP_U_Matrix6vmult4EPK11IVP_U_PointPS0_"](...args);
+}
 
-__ZNK12IVP_U_Matrix6vmult4EPK11IVP_U_PointPS0_.stub = false;
-__ZNK12IVP_U_Matrix6vmult4EPK11IVP_U_PointPS0_.sig = 'v';
+__ZNK12IVP_U_Matrix6vmult4EPK11IVP_U_PointPS0_.stub = true;
 
-function __ZNK12IVP_U_Matrix6vmult4EPK17IVP_U_Float_PointP11IVP_U_Point(...args) { return 0; }
+function __ZNK12IVP_U_Matrix6vmult4EPK17IVP_U_Float_PointP11IVP_U_Point(...args) {
+  if (!wasmImports["_ZNK12IVP_U_Matrix6vmult4EPK17IVP_U_Float_PointP11IVP_U_Point"] || wasmImports["_ZNK12IVP_U_Matrix6vmult4EPK17IVP_U_Float_PointP11IVP_U_Point"].stub) abort("external symbol '_ZNK12IVP_U_Matrix6vmult4EPK17IVP_U_Float_PointP11IVP_U_Point' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZNK12IVP_U_Matrix6vmult4EPK17IVP_U_Float_PointP11IVP_U_Point"](...args);
+}
 
-__ZNK12IVP_U_Matrix6vmult4EPK17IVP_U_Float_PointP11IVP_U_Point.stub = false;
-__ZNK12IVP_U_Matrix6vmult4EPK17IVP_U_Float_PointP11IVP_U_Point.sig = 'v';
+__ZNK12IVP_U_Matrix6vmult4EPK17IVP_U_Float_PointP11IVP_U_Point.stub = true;
 
-function __ZNK12IVP_U_Matrix7vimult4EPK11IVP_U_PointPS0_(...args) { return 0; }
+function __ZNK12IVP_U_Matrix7vimult4EPK11IVP_U_PointPS0_(...args) {
+  if (!wasmImports["_ZNK12IVP_U_Matrix7vimult4EPK11IVP_U_PointPS0_"] || wasmImports["_ZNK12IVP_U_Matrix7vimult4EPK11IVP_U_PointPS0_"].stub) abort("external symbol '_ZNK12IVP_U_Matrix7vimult4EPK11IVP_U_PointPS0_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZNK12IVP_U_Matrix7vimult4EPK11IVP_U_PointPS0_"](...args);
+}
 
-__ZNK12IVP_U_Matrix7vimult4EPK11IVP_U_PointPS0_.stub = false;
-__ZNK12IVP_U_Matrix7vimult4EPK11IVP_U_PointPS0_.sig = 'v';
+__ZNK12IVP_U_Matrix7vimult4EPK11IVP_U_PointPS0_.stub = true;
 
 function __ZNK13CWorkerThread12GetCallParamEv(...args) {
   if (!wasmImports["_ZNK13CWorkerThread12GetCallParamEv"] || wasmImports["_ZNK13CWorkerThread12GetCallParamEv"].stub) abort("external symbol '_ZNK13CWorkerThread12GetCallParamEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
@@ -5956,55 +6050,75 @@ function __ZNK13CWorkerThread12GetCallParamEv(...args) {
 
 __ZNK13CWorkerThread12GetCallParamEv.stub = true;
 
-function __ZNK13IVP_U_Matrix36vmult3EPK11IVP_U_PointPS0_(...args) { return 0; }
+function __ZNK13IVP_U_Matrix36vmult3EPK11IVP_U_PointPS0_(...args) {
+  if (!wasmImports["_ZNK13IVP_U_Matrix36vmult3EPK11IVP_U_PointPS0_"] || wasmImports["_ZNK13IVP_U_Matrix36vmult3EPK11IVP_U_PointPS0_"].stub) abort("external symbol '_ZNK13IVP_U_Matrix36vmult3EPK11IVP_U_PointPS0_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZNK13IVP_U_Matrix36vmult3EPK11IVP_U_PointPS0_"](...args);
+}
 
-__ZNK13IVP_U_Matrix36vmult3EPK11IVP_U_PointPS0_.stub = false;
-__ZNK13IVP_U_Matrix36vmult3EPK11IVP_U_PointPS0_.sig = 'v';
+__ZNK13IVP_U_Matrix36vmult3EPK11IVP_U_PointPS0_.stub = true;
 
-function __ZNK13IVP_U_Matrix37vimult3EPK11IVP_U_PointPS0_(...args) { return 0; }
+function __ZNK13IVP_U_Matrix37vimult3EPK11IVP_U_PointPS0_(...args) {
+  if (!wasmImports["_ZNK13IVP_U_Matrix37vimult3EPK11IVP_U_PointPS0_"] || wasmImports["_ZNK13IVP_U_Matrix37vimult3EPK11IVP_U_PointPS0_"].stub) abort("external symbol '_ZNK13IVP_U_Matrix37vimult3EPK11IVP_U_PointPS0_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZNK13IVP_U_Matrix37vimult3EPK11IVP_U_PointPS0_"](...args);
+}
 
-__ZNK13IVP_U_Matrix37vimult3EPK11IVP_U_PointPS0_.stub = false;
-__ZNK13IVP_U_Matrix37vimult3EPK11IVP_U_PointPS0_.sig = 'v';
+__ZNK13IVP_U_Matrix37vimult3EPK11IVP_U_PointPS0_.stub = true;
 
-function __ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK11IVP_U_PointPS0_(...args) { return 0; }
+function __ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK11IVP_U_PointPS0_(...args) {
+  if (!wasmImports["_ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK11IVP_U_PointPS0_"] || wasmImports["_ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK11IVP_U_PointPS0_"].stub) abort("external symbol '_ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK11IVP_U_PointPS0_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK11IVP_U_PointPS0_"](...args);
+}
 
-__ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK11IVP_U_PointPS0_.stub = false;
-__ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK11IVP_U_PointPS0_.sig = 'v';
+__ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK11IVP_U_PointPS0_.stub = true;
 
-function __ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK17IVP_U_Float_PointPS0_(...args) { return 0; }
+function __ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK17IVP_U_Float_PointPS0_(...args) {
+  if (!wasmImports["_ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK17IVP_U_Float_PointPS0_"] || wasmImports["_ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK17IVP_U_Float_PointPS0_"].stub) abort("external symbol '_ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK17IVP_U_Float_PointPS0_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK17IVP_U_Float_PointPS0_"](...args);
+}
 
-__ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK17IVP_U_Float_PointPS0_.stub = false;
-__ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK17IVP_U_Float_PointPS0_.sig = 'v';
+__ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK17IVP_U_Float_PointPS0_.stub = true;
 
-function __ZNK16IVP_Cache_Object33transform_vector_to_object_coordsEPK11IVP_U_PointPS0_(...args) { return 0; }
+function __ZNK16IVP_Cache_Object33transform_vector_to_object_coordsEPK11IVP_U_PointPS0_(...args) {
+  if (!wasmImports["_ZNK16IVP_Cache_Object33transform_vector_to_object_coordsEPK11IVP_U_PointPS0_"] || wasmImports["_ZNK16IVP_Cache_Object33transform_vector_to_object_coordsEPK11IVP_U_PointPS0_"].stub) abort("external symbol '_ZNK16IVP_Cache_Object33transform_vector_to_object_coordsEPK11IVP_U_PointPS0_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZNK16IVP_Cache_Object33transform_vector_to_object_coordsEPK11IVP_U_PointPS0_"](...args);
+}
 
-__ZNK16IVP_Cache_Object33transform_vector_to_object_coordsEPK11IVP_U_PointPS0_.stub = false;
-__ZNK16IVP_Cache_Object33transform_vector_to_object_coordsEPK11IVP_U_PointPS0_.sig = 'v';
+__ZNK16IVP_Cache_Object33transform_vector_to_object_coordsEPK11IVP_U_PointPS0_.stub = true;
 
-function __ZNK16IVP_Cache_Object34transform_position_to_world_coordsEPK17IVP_U_Float_PointP11IVP_U_Point(...args) { return 0; }
+function __ZNK16IVP_Cache_Object34transform_position_to_world_coordsEPK17IVP_U_Float_PointP11IVP_U_Point(...args) {
+  if (!wasmImports["_ZNK16IVP_Cache_Object34transform_position_to_world_coordsEPK17IVP_U_Float_PointP11IVP_U_Point"] || wasmImports["_ZNK16IVP_Cache_Object34transform_position_to_world_coordsEPK17IVP_U_Float_PointP11IVP_U_Point"].stub) abort("external symbol '_ZNK16IVP_Cache_Object34transform_position_to_world_coordsEPK17IVP_U_Float_PointP11IVP_U_Point' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZNK16IVP_Cache_Object34transform_position_to_world_coordsEPK17IVP_U_Float_PointP11IVP_U_Point"](...args);
+}
 
-__ZNK16IVP_Cache_Object34transform_position_to_world_coordsEPK17IVP_U_Float_PointP11IVP_U_Point.stub = false;
-__ZNK16IVP_Cache_Object34transform_position_to_world_coordsEPK17IVP_U_Float_PointP11IVP_U_Point.sig = 'v';
+__ZNK16IVP_Cache_Object34transform_position_to_world_coordsEPK17IVP_U_Float_PointP11IVP_U_Point.stub = true;
 
-function __ZNK16IVP_Cache_Object35transform_position_to_object_coordsEPK11IVP_U_PointPS0_(...args) { return 0; }
+function __ZNK16IVP_Cache_Object35transform_position_to_object_coordsEPK11IVP_U_PointPS0_(...args) {
+  if (!wasmImports["_ZNK16IVP_Cache_Object35transform_position_to_object_coordsEPK11IVP_U_PointPS0_"] || wasmImports["_ZNK16IVP_Cache_Object35transform_position_to_object_coordsEPK11IVP_U_PointPS0_"].stub) abort("external symbol '_ZNK16IVP_Cache_Object35transform_position_to_object_coordsEPK11IVP_U_PointPS0_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZNK16IVP_Cache_Object35transform_position_to_object_coordsEPK11IVP_U_PointPS0_"](...args);
+}
 
-__ZNK16IVP_Cache_Object35transform_position_to_object_coordsEPK11IVP_U_PointPS0_.stub = false;
-__ZNK16IVP_Cache_Object35transform_position_to_object_coordsEPK11IVP_U_PointPS0_.sig = 'v';
+__ZNK16IVP_Cache_Object35transform_position_to_object_coordsEPK11IVP_U_PointPS0_.stub = true;
 
-function __ZNK17IVP_Contact_Point10is_same_asEPK11IVP_Mindist(...args) { return 0; }
+function __ZNK17IVP_Contact_Point10is_same_asEPK11IVP_Mindist(...args) {
+  if (!wasmImports["_ZNK17IVP_Contact_Point10is_same_asEPK11IVP_Mindist"] || wasmImports["_ZNK17IVP_Contact_Point10is_same_asEPK11IVP_Mindist"].stub) abort("external symbol '_ZNK17IVP_Contact_Point10is_same_asEPK11IVP_Mindist' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZNK17IVP_Contact_Point10is_same_asEPK11IVP_Mindist"](...args);
+}
 
-__ZNK17IVP_Contact_Point10is_same_asEPK11IVP_Mindist.stub = false;
-__ZNK17IVP_Contact_Point10is_same_asEPK11IVP_Mindist.sig = 'v';
+__ZNK17IVP_Contact_Point10is_same_asEPK11IVP_Mindist.stub = true;
 
-function __ZNK17IVP_U_Float_Point11real_lengthEv(...args) { return 0; }
+function __ZNK17IVP_U_Float_Point11real_lengthEv(...args) {
+  if (!wasmImports["_ZNK17IVP_U_Float_Point11real_lengthEv"] || wasmImports["_ZNK17IVP_U_Float_Point11real_lengthEv"].stub) abort("external symbol '_ZNK17IVP_U_Float_Point11real_lengthEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZNK17IVP_U_Float_Point11real_lengthEv"](...args);
+}
 
-__ZNK17IVP_U_Float_Point11real_lengthEv.stub = false;
-__ZNK17IVP_U_Float_Point11real_lengthEv.sig = 'v';
+__ZNK17IVP_U_Float_Point11real_lengthEv.stub = true;
 
-function __ZNK17IVP_U_Float_Point16fast_real_lengthEv(...args) { return 0; }
+function __ZNK17IVP_U_Float_Point16fast_real_lengthEv(...args) {
+  if (!wasmImports["_ZNK17IVP_U_Float_Point16fast_real_lengthEv"] || wasmImports["_ZNK17IVP_U_Float_Point16fast_real_lengthEv"].stub) abort("external symbol '_ZNK17IVP_U_Float_Point16fast_real_lengthEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZNK17IVP_U_Float_Point16fast_real_lengthEv"](...args);
+}
 
-__ZNK17IVP_U_Float_Point16fast_real_lengthEv.stub = false;
-__ZNK17IVP_U_Float_Point16fast_real_lengthEv.sig = 'v';
+__ZNK17IVP_U_Float_Point16fast_real_lengthEv.stub = true;
 
 function __ZNK19GenericThreadLocals16CThreadLocalBase3GetEv(...args) {
   if (!wasmImports["_ZNK19GenericThreadLocals16CThreadLocalBase3GetEv"] || wasmImports["_ZNK19GenericThreadLocals16CThreadLocalBase3GetEv"].stub) abort("external symbol '_ZNK19GenericThreadLocals16CThreadLocalBase3GetEv' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
@@ -6013,15 +6127,19 @@ function __ZNK19GenericThreadLocals16CThreadLocalBase3GetEv(...args) {
 
 __ZNK19GenericThreadLocals16CThreadLocalBase3GetEv.stub = true;
 
-function __ZNK8IVP_Core25get_surface_speed_on_testEPK17IVP_U_Float_PointS2_S2_PS0_(...args) { return 0; }
+function __ZNK8IVP_Core25get_surface_speed_on_testEPK17IVP_U_Float_PointS2_S2_PS0_(...args) {
+  if (!wasmImports["_ZNK8IVP_Core25get_surface_speed_on_testEPK17IVP_U_Float_PointS2_S2_PS0_"] || wasmImports["_ZNK8IVP_Core25get_surface_speed_on_testEPK17IVP_U_Float_PointS2_S2_PS0_"].stub) abort("external symbol '_ZNK8IVP_Core25get_surface_speed_on_testEPK17IVP_U_Float_PointS2_S2_PS0_' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZNK8IVP_Core25get_surface_speed_on_testEPK17IVP_U_Float_PointS2_S2_PS0_"](...args);
+}
 
-__ZNK8IVP_Core25get_surface_speed_on_testEPK17IVP_U_Float_PointS2_S2_PS0_.stub = false;
-__ZNK8IVP_Core25get_surface_speed_on_testEPK17IVP_U_Float_PointS2_S2_PS0_.sig = 'v';
+__ZNK8IVP_Core25get_surface_speed_on_testEPK17IVP_U_Float_PointS2_S2_PS0_.stub = true;
 
-function __ZNK8IVP_Hash4findEPKc(...args) { return 0; }
+function __ZNK8IVP_Hash4findEPKc(...args) {
+  if (!wasmImports["_ZNK8IVP_Hash4findEPKc"] || wasmImports["_ZNK8IVP_Hash4findEPKc"].stub) abort("external symbol '_ZNK8IVP_Hash4findEPKc' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZNK8IVP_Hash4findEPKc"](...args);
+}
 
-__ZNK8IVP_Hash4findEPKc.stub = false;
-__ZNK8IVP_Hash4findEPKc.sig = 'v';
+__ZNK8IVP_Hash4findEPKc.stub = true;
 
 function __ZNV16CThreadFastMutex4LockEjj(...args) {
   if (!wasmImports["_ZNV16CThreadFastMutex4LockEjj"] || wasmImports["_ZNV16CThreadFastMutex4LockEjj"].stub) abort("external symbol '_ZNV16CThreadFastMutex4LockEjj' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
@@ -6072,10 +6190,12 @@ function __ZTI17IDirect3DTexture9(...args) {
 
 __ZTI17IDirect3DTexture9.stub = true;
 
-function __ZTI17IVP_Listener_Hull(...args) { return 0; }
+function __ZTI17IVP_Listener_Hull(...args) {
+  if (!wasmImports["_ZTI17IVP_Listener_Hull"] || wasmImports["_ZTI17IVP_Listener_Hull"].stub) abort("external symbol '_ZTI17IVP_Listener_Hull' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
+  return wasmImports["_ZTI17IVP_Listener_Hull"](...args);
+}
 
-__ZTI17IVP_Listener_Hull.stub = false;
-__ZTI17IVP_Listener_Hull.sig = 'v';
+__ZTI17IVP_Listener_Hull.stub = true;
 
 function __ZTI18IDirect3DResource9(...args) {
   if (!wasmImports["_ZTI18IDirect3DResource9"] || wasmImports["_ZTI18IDirect3DResource9"].stub) abort("external symbol '_ZTI18IDirect3DResource9' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");
@@ -6647,14 +6767,14 @@ function ___pthread_create_js(pthread_ptr, attr, startRoutine, arg) {
 
 ___pthread_create_js.sig = "ipppp";
 
-var ___stack_high = 67843200;
+var ___stack_high = 67843456;
 
-var ___stack_low = 734336;
+var ___stack_low = 734592;
 
 var ___stack_pointer = new WebAssembly.Global({
   "value": "i32",
   "mutable": true
-}, 67843200);
+}, 67843456);
 
 var PATH = {
   isAbs: path => path.charAt(0) === "/",
@@ -12587,22 +12707,23 @@ var maybeCStringToJsString = cString => cString > 2 ? UTF8ToString(cString) : cS
 
 var findCanvasEventTarget = target => {
   target = maybeCStringToJsString(target);
-  // First check out the list of OffscreenCanvases by CSS selector ID ('#myCanvasID')
-  var found = GL.offscreenCanvases[target.substr(1)]; // Remove '#' prefix
+  var found = GL.offscreenCanvases[target.substr(1)];
   if (found) return found;
-  // If not found, if one is querying by using DOM tag name selector 'canvas' or '#canvas',
-  // grab the first OffscreenCanvas that we can find.
   if ((target == "canvas" || target == "#canvas") && Object.keys(GL.offscreenCanvases)[0]) {
     return GL.offscreenCanvases[Object.keys(GL.offscreenCanvases)[0]];
   }
-  // If that is not found either, query via the regular DOM selector.
   if (typeof document != "undefined") return document.querySelector(target);
   return null;
 };
 
 var setCanvasElementSizeCallingThread = (target, width, height) => {
   var canvas = findCanvasEventTarget(target);
-  if (!canvas) return -4;
+  if (!canvas) {
+    if (typeof OffscreenCanvas !== 'undefined') {
+      canvas = new OffscreenCanvas(1280, 800);
+      console.log('[GL] Fallback OffscreenCanvas for setCanvasElementSize');
+    } else { return -4; }
+  }
   if (canvas.canvasSharedPtr) {
     // N.B. We hold the canvasSharedPtr info structure as the authoritative source for specifying the size of a canvas
     // since the actual canvas size changes are asynchronous if the canvas is owned by an OffscreenCanvas on another thread.
@@ -13089,7 +13210,7 @@ _emscripten_set_main_loop_timing.sig = "iii";
      * @param {number=} arg
      * @param {boolean=} noSetTiming
      */ var setMainLoop = (iterFunc, fps, simulateInfiniteLoop, arg, noSetTiming) => {
-  console.log("[SET-MAIN-LOOP] setMainLoop called! fps=" + fps + " simulateInfinite=" + simulateInfiniteLoop + " iterFunc=" + typeof iterFunc);
+  console.log("[SET-MAIN-LOOP] fps=" + fps + " iterFunc=" + typeof iterFunc);
   assert(!MainLoop.func, "emscripten_set_main_loop: there can only be one main loop function at once: call emscripten_cancel_main_loop to cancel the previous one before setting a new one with different parameters.");
   MainLoop.func = iterFunc;
   MainLoop.arg = arg;
@@ -13109,11 +13230,6 @@ _emscripten_set_main_loop_timing.sig = "iii";
   // gets it timing set for the first time.
   MainLoop.running = false;
   MainLoop.runner = function MainLoop_runner() {
-    if (!MainLoop.__runnerCount) MainLoop.__runnerCount = 0;
-    MainLoop.__runnerCount++;
-    if (MainLoop.__runnerCount <= 5) {
-      console.log('[RUNNER] call #' + MainLoop.__runnerCount + ' ABORT=' + ABORT + ' queue=' + MainLoop.queue.length + ' timing=' + MainLoop.timingMode + '/' + MainLoop.timingValue + ' frame=' + MainLoop.currentFrameNumber + ' mainloop=' + MainLoop.currentlyRunningMainloop + ' thisId=' + thisMainLoopId);
-    }
     if (ABORT) return;
     if (MainLoop.queue.length > 0) {
       var start = Date.now();
@@ -13153,7 +13269,6 @@ _emscripten_set_main_loop_timing.sig = "iii";
       MainLoop.method = "";
     }
     // just warn once per call to set main loop
-    if (MainLoop.__runnerCount <= 10) console.log('[RUNNER] calling runIter! func=' + typeof iterFunc);
     MainLoop.runIter(iterFunc);
     // catch pauses from the main loop itself
     if (!checkIsRunning()) return;
@@ -24529,29 +24644,35 @@ var webglPowerPreferences = [ "default", "low-power", "high-performance" ];
     renderViaOffscreenBackBuffer: GROWABLE_HEAP_I8()[attributes + 32 >>> 0]
   };
   var canvas = findCanvasEventTarget(target);
-  // Use the transferred OffscreenCanvas from GL.offscreenCanvases if available.
-  // This connects rendering to the visible HTML canvas via transferControlToOffscreen().
-  // Only fall back to a standalone OffscreenCanvas if no canvas was transferred.
   if (!canvas) {
     if (typeof OffscreenCanvas !== 'undefined') {
       canvas = new OffscreenCanvas(1280, 800);
-      console.log('[GL] Fallback standalone OffscreenCanvas(1280,800) — no transferred canvas found');
+      console.log('[GL] Fallback OffscreenCanvas -- no transferred canvas');
     } else {
-      console.error('[GL] No canvas and no OffscreenCanvas available');
+      console.error('[GL] No canvas available');
       return 0;
     }
   } else {
-    console.log('[GL] Using transferred canvas: ' + (canvas.id || 'unknown') + ' type=' + (canvas instanceof OffscreenCanvas ? 'OffscreenCanvas' : typeof canvas));
+    console.log('[GL] Using transferred canvas: ' + (canvas.id || 'unknown'));
   }
   if (canvas.offscreenCanvas) canvas = canvas.offscreenCanvas;
   if (contextAttributes.explicitSwapControl) {
     var supportsOffscreenCanvas = canvas.transferControlToOffscreen || (_emscripten_supports_offscreencanvas() && canvas instanceof OffscreenCanvas);
     if (!supportsOffscreenCanvas) {
-      // PATCH: Don't return 0 — use fallback OffscreenCanvas instead
-      console.log('[GL] explicitSwapControl but no transferControlToOffscreen — using fallback');
-    } else if (canvas.transferControlToOffscreen) {
-      // PATCH: Skip early transfer — let pthread_create handle it
-      console.log('[GL] Skipping early canvas transfer — deferred to pthread_create');
+      return 0;
+    }
+    if (canvas.transferControlToOffscreen) {
+      if (!canvas.controlTransferredOffscreen) {
+        GL.offscreenCanvases[canvas.id] = {
+          canvas: canvas.transferControlToOffscreen(),
+          canvasSharedPtr: _malloc(12),
+          id: canvas.id
+        };
+        canvas.controlTransferredOffscreen = true;
+      } else if (!GL.offscreenCanvases[canvas.id]) {
+        return 0;
+      }
+      canvas = GL.offscreenCanvases[canvas.id];
     }
   }
   var contextHandle = GL.createContext(canvas, contextAttributes);
@@ -31532,74 +31653,6 @@ Module.__glStubs = {
 
 function assignWasmImports() {
   wasmImports = {
-    /** @export */ ZN11IVP_Mindist32try_to_generate_managed_frictionEPP19IVP_Friction_SystemP8IVP_BOOLP19IVP_Simulation_UnitS3_: __ZN11IVP_Mindist32try_to_generate_managed_frictionEPP19IVP_Friction_SystemP8IVP_BOOLP19IVP_Simulation_UnitS3_,
-    /** @export */ ZN11IVP_Mindist9do_impactEv: __ZN11IVP_Mindist9do_impactEv,
-    /** @export */ ZN11IVP_U_Point12fast_normizeEv: __ZN11IVP_U_Point12fast_normizeEv,
-    /** @export */ ZN11IVP_U_Point15set_interpolateEPKS_S1_d: __ZN11IVP_U_Point15set_interpolateEPKS_S1_d,
-    /** @export */ ZN11IVP_U_Point18calc_cross_productEPKS_S1_: __ZN11IVP_U_Point18calc_cross_productEPKS_S1_,
-    /** @export */ ZN11IVP_U_Point24real_length_plus_normizeEv: __ZN11IVP_U_Point24real_length_plus_normizeEv,
-    /** @export */ ZN11IVP_U_Point7normizeEv: __ZN11IVP_U_Point7normizeEv,
-    /** @export */ ZN12IVP_KK_Input28calc_quad_distance_edge_edgeEv: __ZN12IVP_KK_Input28calc_quad_distance_edge_edgeEv,
-    /** @export */ ZN12IVP_KK_InputC1EPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_: __ZN12IVP_KK_InputC1EPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_,
-    /** @export */ ZN12IVP_U_Memory14neuer_sp_blockEj: __ZN12IVP_U_Memory14neuer_sp_blockEj,
-    /** @export */ ZN12IVP_U_Memory20free_mem_transactionEv: __ZN12IVP_U_Memory20free_mem_transactionEv,
-    /** @export */ ZN13IVP_3D_Solver27find_first_t_for_value_collEdd8IVP_TimeS0_P18IVP_U_Matrix_CacheS2_PdPS0_: __ZN13IVP_3D_Solver27find_first_t_for_value_collEdd8IVP_TimeS0_P18IVP_U_Matrix_CacheS2_PdPS0_,
-    /** @export */ ZN13IVP_3D_Solver30find_first_t_for_value_max_devEd8IVP_TimeS0_iP18IVP_U_Matrix_CacheS2_PdPS0_: __ZN13IVP_3D_Solver30find_first_t_for_value_max_devEd8IVP_TimeS0_iP18IVP_U_Matrix_CacheS2_PdPS0_,
-    /** @export */ ZN14IVP_OV_Element19add_to_hull_managerEP16IVP_Hull_Managerd: __ZN14IVP_OV_Element19add_to_hull_managerEP16IVP_Hull_Managerd,
-    /** @export */ ZN14IVP_OV_ElementC1EP15IVP_Real_Object: __ZN14IVP_OV_ElementC1EP15IVP_Real_Object,
-    /** @export */ ZN14IVP_U_Min_List19remove_minlist_elemEj: __ZN14IVP_U_Min_List19remove_minlist_elemEj,
-    /** @export */ ZN14IVP_U_Min_List3addEPvf: __ZN14IVP_U_Min_List3addEPvf,
-    /** @export */ ZN15IVP_Inline_Math11isqrt_floatEf: __ZN15IVP_Inline_Math11isqrt_floatEf,
-    /** @export */ ZN15IVP_Inline_Math12isqrt_doubleEd: __ZN15IVP_Inline_Math12isqrt_doubleEd,
-    /** @export */ ZN16IVP_Cache_Object19update_cache_objectEv: __ZN16IVP_Cache_Object19update_cache_objectEv,
-    /** @export */ ZN16IVP_Compact_Edge10next_tableE: __ZN16IVP_Compact_Edge10next_tableE,
-    /** @export */ ZN16IVP_Compact_Edge10prev_tableE: __ZN16IVP_Compact_Edge10prev_tableE,
-    /** @export */ ZN16IVP_Time_Manager12remove_eventEP14IVP_Time_Event: __ZN16IVP_Time_Manager12remove_eventEP14IVP_Time_Event,
-    /** @export */ ZN17IVP_Contact_PointC1EP11IVP_Mindist: __ZN17IVP_Contact_PointC1EP11IVP_Mindist,
-    /** @export */ ZN17IVP_Contact_PointD1Ev: __ZN17IVP_Contact_PointD1Ev,
-    /** @export */ ZN17IVP_U_Float_Point7normizeEv: __ZN17IVP_U_Float_Point7normizeEv,
-    /** @export */ ZN17IVP_U_Vector_Base13increment_memEv: __ZN17IVP_U_Vector_Base13increment_memEv,
-    /** @export */ ZN19IVP_OV_Tree_Manager17insert_ov_elementEP14IVP_OV_ElementddP12IVP_U_VectorIS0_E: __ZN19IVP_OV_Tree_Manager17insert_ov_elementEP14IVP_OV_ElementddP12IVP_U_VectorIS0_E,
-    /** @export */ ZN19IVP_OV_Tree_Manager17remove_ov_elementEP14IVP_OV_Element: __ZN19IVP_OV_Tree_Manager17remove_ov_elementEP14IVP_OV_Element,
-    /** @export */ ZN20IVP_U_BigVector_Base13increment_memEv: __ZN20IVP_U_BigVector_Base13increment_memEv,
-    /** @export */ ZN22IVP_Controller_Phantom19mindist_left_volumeEP11IVP_Mindist: __ZN22IVP_Controller_Phantom19mindist_left_volumeEP11IVP_Mindist,
-    /** @export */ ZN22IVP_Controller_Phantom22mindist_entered_volumeEP11IVP_Mindist: __ZN22IVP_Controller_Phantom22mindist_entered_volumeEP11IVP_Mindist,
-    /** @export */ ZN24IVP_Cache_Object_Manager16get_cache_objectEP15IVP_Real_Object: __ZN24IVP_Cache_Object_Manager16get_cache_objectEP15IVP_Real_Object,
-    /** @export */ ZN24IVP_Compact_Ledge_Solver17calc_hesse_objectEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Hesse: __ZN24IVP_Compact_Ledge_Solver17calc_hesse_objectEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Hesse,
-    /** @export */ ZN24IVP_Compact_Ledge_Solver20calc_pos_other_spaceEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointS4_P11IVP_U_Point: __ZN24IVP_Compact_Ledge_Solver20calc_pos_other_spaceEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointS4_P11IVP_U_Point,
-    /** @export */ ZN24IVP_Compact_Ledge_Solver20give_world_coords_ATEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointP11IVP_U_Point: __ZN24IVP_Compact_Ledge_Solver20give_world_coords_ATEPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_PointP11IVP_U_Point,
-    /** @export */ ZN24IVP_Compact_Ledge_Solver21calc_unscaled_KK_valsERK12IVP_KK_InputP22IVP_Unscaled_KK_Result: __ZN24IVP_Compact_Ledge_Solver21calc_unscaled_KK_valsERK12IVP_KK_InputP22IVP_Unscaled_KK_Result,
-    /** @export */ ZN24IVP_Compact_Ledge_Solver27calc_unscaled_s_val_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP21IVP_Unscaled_S_Result: __ZN24IVP_Compact_Ledge_Solver27calc_unscaled_s_val_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP21IVP_Unscaled_S_Result,
-    /** @export */ ZN24IVP_Compact_Ledge_Solver29calc_unscaled_qr_vals_F_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP22IVP_Unscaled_QR_Result: __ZN24IVP_Compact_Ledge_Solver29calc_unscaled_qr_vals_F_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_PointP22IVP_Unscaled_QR_Result,
-    /** @export */ ZN24IVP_Compact_Ledge_Solver31quad_dist_edge_to_point_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_Point: __ZN24IVP_Compact_Ledge_Solver31quad_dist_edge_to_point_K_spaceEPK17IVP_Compact_LedgePK16IVP_Compact_EdgePK11IVP_U_Point,
-    /** @export */ ZN24IVP_Compact_Ledge_Solver34calc_hesse_vec_object_not_normizedEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Point: __ZN24IVP_Compact_Ledge_Solver34calc_hesse_vec_object_not_normizedEPK16IVP_Compact_EdgePK17IVP_Compact_LedgeP11IVP_U_Point,
-    /** @export */ ZN27IVP_Mindist_Minimize_Solver13p_minimize_BFEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point: __ZN27IVP_Mindist_Minimize_Solver13p_minimize_BFEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point,
-    /** @export */ ZN27IVP_Mindist_Minimize_Solver13p_minimize_BKEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point: __ZN27IVP_Mindist_Minimize_Solver13p_minimize_BKEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point,
-    /** @export */ ZN27IVP_Mindist_Minimize_Solver13p_minimize_BPEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point: __ZN27IVP_Mindist_Minimize_Solver13p_minimize_BPEP14IVP_Cache_BallPK16IVP_Compact_EdgeP21IVP_Cache_Ledge_Point,
-    /** @export */ ZN27IVP_Mindist_Minimize_Solver13p_minimize_KKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_: __ZN27IVP_Mindist_Minimize_Solver13p_minimize_KKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_,
-    /** @export */ ZN27IVP_Mindist_Minimize_Solver13p_minimize_PFEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_: __ZN27IVP_Mindist_Minimize_Solver13p_minimize_PFEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_,
-    /** @export */ ZN27IVP_Mindist_Minimize_Solver13p_minimize_PKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_: __ZN27IVP_Mindist_Minimize_Solver13p_minimize_PKEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_,
-    /** @export */ ZN27IVP_Mindist_Minimize_Solver13p_minimize_PPEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_: __ZN27IVP_Mindist_Minimize_Solver13p_minimize_PPEPK16IVP_Compact_EdgeS2_P21IVP_Cache_Ledge_PointS4_,
-    /** @export */ ZN8IVP_Hash3addEPKcPv: __ZN8IVP_Hash3addEPKcPv,
-    /** @export */ ZN8IVP_HashC1EiiPv: __ZN8IVP_HashC1EiiPv,
-    /** @export */ ZN8IVP_HashD1Ev: __ZN8IVP_HashD1Ev,
-    /** @export */ ZNK11IVP_U_Point11real_lengthEv: __ZNK11IVP_U_Point11real_lengthEv,
-    /** @export */ ZNK12IVP_U_Matrix6vmult4EPK11IVP_U_PointPS0_: __ZNK12IVP_U_Matrix6vmult4EPK11IVP_U_PointPS0_,
-    /** @export */ ZNK12IVP_U_Matrix6vmult4EPK17IVP_U_Float_PointP11IVP_U_Point: __ZNK12IVP_U_Matrix6vmult4EPK17IVP_U_Float_PointP11IVP_U_Point,
-    /** @export */ ZNK12IVP_U_Matrix7vimult4EPK11IVP_U_PointPS0_: __ZNK12IVP_U_Matrix7vimult4EPK11IVP_U_PointPS0_,
-    /** @export */ ZNK13IVP_U_Matrix36vmult3EPK11IVP_U_PointPS0_: __ZNK13IVP_U_Matrix36vmult3EPK11IVP_U_PointPS0_,
-    /** @export */ ZNK13IVP_U_Matrix37vimult3EPK11IVP_U_PointPS0_: __ZNK13IVP_U_Matrix37vimult3EPK11IVP_U_PointPS0_,
-    /** @export */ ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK11IVP_U_PointPS0_: __ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK11IVP_U_PointPS0_,
-    /** @export */ ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK17IVP_U_Float_PointPS0_: __ZNK16IVP_Cache_Object32transform_vector_to_world_coordsEPK17IVP_U_Float_PointPS0_,
-    /** @export */ ZNK16IVP_Cache_Object33transform_vector_to_object_coordsEPK11IVP_U_PointPS0_: __ZNK16IVP_Cache_Object33transform_vector_to_object_coordsEPK11IVP_U_PointPS0_,
-    /** @export */ ZNK16IVP_Cache_Object34transform_position_to_world_coordsEPK17IVP_U_Float_PointP11IVP_U_Point: __ZNK16IVP_Cache_Object34transform_position_to_world_coordsEPK17IVP_U_Float_PointP11IVP_U_Point,
-    /** @export */ ZNK16IVP_Cache_Object35transform_position_to_object_coordsEPK11IVP_U_PointPS0_: __ZNK16IVP_Cache_Object35transform_position_to_object_coordsEPK11IVP_U_PointPS0_,
-    /** @export */ ZNK17IVP_Contact_Point10is_same_asEPK11IVP_Mindist: __ZNK17IVP_Contact_Point10is_same_asEPK11IVP_Mindist,
-    /** @export */ ZNK17IVP_U_Float_Point11real_lengthEv: __ZNK17IVP_U_Float_Point11real_lengthEv,
-    /** @export */ ZNK17IVP_U_Float_Point16fast_real_lengthEv: __ZNK17IVP_U_Float_Point16fast_real_lengthEv,
-    /** @export */ ZNK8IVP_Core25get_surface_speed_on_testEPK17IVP_U_Float_PointS2_S2_PS0_: __ZNK8IVP_Core25get_surface_speed_on_testEPK17IVP_U_Float_PointS2_S2_PS0_,
-    /** @export */ ZNK8IVP_Hash4findEPKc: __ZNK8IVP_Hash4findEPKc,
-    /** @export */ ZTI17IVP_Listener_Hull: __ZTI17IVP_Listener_Hull,
     /** @export */ ApproximateProcessMemoryUsage: _ApproximateProcessMemoryUsage,
     /** @export */ BuildCmdLine: _BuildCmdLine,
     /** @export */ COM_TimestampedLog: _COM_TimestampedLog,
@@ -31733,6 +31786,8 @@ function assignWasmImports() {
     /** @export */ _Z10DevWarningPKcz: __Z10DevWarningPKcz,
     /** @export */ _Z11ConColorMsgRK5ColorPKcz: __Z11ConColorMsgRK5ColorPKcz,
     /** @export */ _Z11ivp_messagePKcz: __Z11ivp_messagePKcz,
+    /** @export */ _Z12Cbuf_AddTextPKc: __Z12Cbuf_AddTextPKc,
+    /** @export */ _Z12Cbuf_Executev: __Z12Cbuf_Executev,
     /** @export */ _Z15Studio_MaxFramePK10CStudioHdriPKf: __Z15Studio_MaxFramePK10CStudioHdriPKf,
     /** @export */ _Z17em_loop_iterationv: __Z17em_loop_iterationv,
     /** @export */ _Z22Studio_BoneIndexByNamePK10CStudioHdrPKc: __Z22Studio_BoneIndexByNamePK10CStudioHdrPKc,
@@ -31742,6 +31797,7 @@ function assignWasmImports() {
     /** @export */ _Z6DevMsgPKcz: __Z6DevMsgPKcz,
     /** @export */ _Z6p_freePv: __Z6p_freePv,
     /** @export */ _Z8p_mallocj: __Z8p_mallocj,
+    /** @export */ _Z9Host_Initb: __Z9Host_Initb,
     /** @export */ _ZN10CStudioHdr12RunFlexRulesEPKfPf: __ZN10CStudioHdr12RunFlexRulesEPKfPf,
     /** @export */ _ZN10CStudioHdr14pPoseParameterEi: __ZN10CStudioHdr14pPoseParameterEi,
     /** @export */ _ZN10CStudioHdr4TermEv: __ZN10CStudioHdr4TermEv,
@@ -33295,7 +33351,23 @@ var _EnableAutoRenderLoop = Module["_EnableAutoRenderLoop"] = createExportWrappe
 
 var _Engine_ResetCameraMatrix = Module["_Engine_ResetCameraMatrix"] = createExportWrapper("Engine_ResetCameraMatrix", 0);
 
+var _Engine_Init = Module["_Engine_Init"] = createExportWrapper("Engine_Init", 0);
+
+var _Engine_LoadMap = Module["_Engine_LoadMap"] = createExportWrapper("Engine_LoadMap", 1);
+
+var _snprintf = createExportWrapper("snprintf", 4);
+
+var _Engine_RunFrame = Module["_Engine_RunFrame"] = createExportWrapper("Engine_RunFrame", 0);
+
+var _Engine_QueueCommand = Module["_Engine_QueueCommand"] = createExportWrapper("Engine_QueueCommand", 1);
+
 var __emscripten_tls_init = createExportWrapper("_emscripten_tls_init", 0);
+
+var _BZ2_bzopen = createExportWrapper("BZ2_bzopen", 2);
+
+var _BZ2_bzread = createExportWrapper("BZ2_bzread", 3);
+
+var _BZ2_bzclose = createExportWrapper("BZ2_bzclose", 1);
 
 var _SDL_InitSubSystem = createExportWrapper("SDL_InitSubSystem", 1);
 
@@ -33491,12 +33563,6 @@ var _FT_Init_FreeType = createExportWrapper("FT_Init_FreeType", 1);
 
 var _FT_Done_FreeType = createExportWrapper("FT_Done_FreeType", 1);
 
-var _BZ2_bzopen = createExportWrapper("BZ2_bzopen", 2);
-
-var _BZ2_bzread = createExportWrapper("BZ2_bzread", 3);
-
-var _BZ2_bzclose = createExportWrapper("BZ2_bzclose", 1);
-
 var _emscripten_builtin_free = Module["_emscripten_builtin_free"] = createExportWrapper("emscripten_builtin_free", 1);
 
 var _pthread_self = () => (_pthread_self = wasmExports["pthread_self"])();
@@ -33504,8 +33570,6 @@ var _pthread_self = () => (_pthread_self = wasmExports["pthread_self"])();
 var _emscripten_builtin_memalign = createExportWrapper("emscripten_builtin_memalign", 2);
 
 var _getenv = createExportWrapper("getenv", 1);
-
-var _snprintf = createExportWrapper("snprintf", 4);
 
 var _setenv = createExportWrapper("setenv", 3);
 
@@ -34085,9 +34149,9 @@ var __ZTVN10__cxxabiv117__class_type_infoE = Module["__ZTVN10__cxxabiv117__class
 
 var __ZTVN10__cxxabiv121__vmi_class_type_infoE = Module["__ZTVN10__cxxabiv121__vmi_class_type_infoE"] = 338068;
 
-var _g_WebXRViewMatrix = Module["_g_WebXRViewMatrix"] = 386368;
+var _g_WebXRViewMatrix = Module["_g_WebXRViewMatrix"] = 386688;
 
-var _g_bWebXRMatrixActive = Module["_g_bWebXRMatrixActive"] = 386496;
+var _g_bWebXRMatrixActive = Module["_g_bWebXRMatrixActive"] = 386816;
 
 var _stderr = Module["_stderr"] = 331488;
 
@@ -34114,39 +34178,6 @@ function invoke_iii(index, a1, a2) {
   var sp = stackSave();
   try {
     return getWasmTableEntry(index)(a1, a2);
-  } catch (e) {
-    stackRestore(sp);
-    if (e !== e + 0) throw e;
-    _setThrew(1, 0);
-  }
-}
-
-function invoke_iiiii(index, a1, a2, a3, a4) {
-  var sp = stackSave();
-  try {
-    return getWasmTableEntry(index)(a1, a2, a3, a4);
-  } catch (e) {
-    stackRestore(sp);
-    if (e !== e + 0) throw e;
-    _setThrew(1, 0);
-  }
-}
-
-function invoke_v(index) {
-  var sp = stackSave();
-  try {
-    getWasmTableEntry(index)();
-  } catch (e) {
-    stackRestore(sp);
-    if (e !== e + 0) throw e;
-    _setThrew(1, 0);
-  }
-}
-
-function invoke_iiii(index, a1, a2, a3) {
-  var sp = stackSave();
-  try {
-    return getWasmTableEntry(index)(a1, a2, a3);
   } catch (e) {
     stackRestore(sp);
     if (e !== e + 0) throw e;
@@ -34187,24 +34218,57 @@ function invoke_vi(index, a1) {
   }
 }
 
+function invoke_iiiii(index, a1, a2, a3, a4) {
+  var sp = stackSave();
+  try {
+    return getWasmTableEntry(index)(a1, a2, a3, a4);
+  } catch (e) {
+    stackRestore(sp);
+    if (e !== e + 0) throw e;
+    _setThrew(1, 0);
+  }
+}
+
+function invoke_v(index) {
+  var sp = stackSave();
+  try {
+    getWasmTableEntry(index)();
+  } catch (e) {
+    stackRestore(sp);
+    if (e !== e + 0) throw e;
+    _setThrew(1, 0);
+  }
+}
+
+function invoke_iiii(index, a1, a2, a3) {
+  var sp = stackSave();
+  try {
+    return getWasmTableEntry(index)(a1, a2, a3);
+  } catch (e) {
+    stackRestore(sp);
+    if (e !== e + 0) throw e;
+    _setThrew(1, 0);
+  }
+}
+
 // Argument name here must shadow the `wasmExports` global so
 // that it is recognised by metadce and minify-import-export-names
 // passes.
 function applySignatureConversions(wasmExports) {
   // First, make a copy of the incoming exports object
   wasmExports = Object.assign({}, wasmExports);
-  var makeWrapper_p = f => () => f() >>> 0;
   var makeWrapper_pp = f => a0 => f(a0) >>> 0;
-  var makeWrapper_ppp = f => (a0, a1) => f(a0, a1) >>> 0;
+  var makeWrapper_p = f => () => f() >>> 0;
   var makeWrapper_p_ = f => a0 => f(a0) >>> 0;
   var makeWrapper_pppp = f => (a0, a1, a2) => f(a0, a1, a2) >>> 0;
+  var makeWrapper_ppp = f => (a0, a1) => f(a0, a1) >>> 0;
   var makeWrapper_pP = f => a0 => f(a0) >>> 0;
-  wasmExports["__errno_location"] = makeWrapper_p(wasmExports["__errno_location"]);
   wasmExports["malloc"] = makeWrapper_pp(wasmExports["malloc"]);
-  wasmExports["calloc"] = makeWrapper_ppp(wasmExports["calloc"]);
+  wasmExports["__errno_location"] = makeWrapper_p(wasmExports["__errno_location"]);
   wasmExports["strerror"] = makeWrapper_p_(wasmExports["strerror"]);
-  wasmExports["pthread_self"] = makeWrapper_p(wasmExports["pthread_self"]);
   wasmExports["memcpy"] = makeWrapper_pppp(wasmExports["memcpy"]);
+  wasmExports["calloc"] = makeWrapper_ppp(wasmExports["calloc"]);
+  wasmExports["pthread_self"] = makeWrapper_p(wasmExports["pthread_self"]);
   wasmExports["emscripten_builtin_memalign"] = makeWrapper_ppp(wasmExports["emscripten_builtin_memalign"]);
   wasmExports["emscripten_stack_get_base"] = makeWrapper_p(wasmExports["emscripten_stack_get_base"]);
   wasmExports["emscripten_stack_get_end"] = makeWrapper_p(wasmExports["emscripten_stack_get_end"]);
@@ -34297,7 +34361,7 @@ function stackCheckInit() {
   // here.
   // See $establishStackSpace for the equivalent code that runs on a thread
   assert(!ENVIRONMENT_IS_PTHREAD);
-  _emscripten_stack_set_limits(67843200, 734336);
+  _emscripten_stack_set_limits(67843456, 734592);
   // TODO(sbc): Move writeStackCookie to native to to avoid this.
   writeStackCookie();
 }
