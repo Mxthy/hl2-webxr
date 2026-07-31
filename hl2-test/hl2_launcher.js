@@ -203,6 +203,72 @@ async function fetchChunk(mapName) {
 }
 
 
+// === DATA LOADER: Fetch and unpack game chunks into MEMFS ===
+// Chunk format (from ci-build.sh writeChunk/addFile):
+//   Sequential records: [uint32LE nameLen][uint32LE dataLen][name bytes][data bytes]
+//   NO leading file count — records continue until end of buffer
+var dataLoader = (function() {
+  var cache = {};
+
+  function unpackChunk(name, buffer) {
+    var dv = new DataView(buffer);
+    var off = 0;
+    var unpacked = 0;
+    var total = buffer.byteLength;
+
+    while (off + 8 <= total) {
+      var nlen = dv.getUint32(off,     true);
+      var dlen = dv.getUint32(off + 4, true);
+      off += 8;
+
+      // Sanity check
+      if (nlen <= 0 || nlen > 4096 || dlen < 0 || off + nlen + dlen > total) {
+        console.warn('[dataLoader] ' + name + ': parse stopped at off=' + (off-8) +
+                     ' nlen=' + nlen + ' dlen=' + dlen + ' total=' + total);
+        break;
+      }
+
+      var nameBuf  = new Uint8Array(buffer, off, nlen);
+      var filePath = (new TextDecoder()).decode(nameBuf);
+      off += nlen;
+      var fileData = new Uint8Array(buffer, off, dlen);
+      off += dlen;
+
+      // Ensure parent directory exists
+      var lastSlash = filePath.lastIndexOf('/');
+      if (lastSlash > 0) {
+        try { FS.mkdirTree(filePath.substring(0, lastSlash)); } catch(e2) {}
+      }
+      try {
+        FS.writeFile(filePath, fileData, { encoding: 'binary' });
+        unpacked++;
+      } catch(e) {
+        console.warn('[dataLoader] Failed to write ' + filePath + ': ' + e);
+      }
+    }
+
+    console.log('[dataLoader] ' + name + ': unpacked ' + unpacked + ' files (' +
+                Math.round(total/1024/1024) + ' MB)');
+    return unpacked;
+  }
+
+  return {
+    loadMap: function(name) {
+      if (cache[name]) return cache[name];
+      console.log('[dataLoader] Fetching chunk: ' + name + ' ...');
+      var p = fetchChunk(name).then(function(buf) {
+        return unpackChunk(name, buf);
+      });
+      cache[name] = p;
+      return p;
+    },
+    loadMapCached: function(name) {
+      return this.loadMap(name);
+    }
+  };
+})()
+})();
+
 // === LOCATEFILE: Redirect Emscripten runtime files to CDN ===
 var _orig_locateFile = Module.locateFile;
 Module.locateFile = function(path, prefix) {
@@ -3366,6 +3432,9 @@ var registerDynCallSymbols = exports => {
           console.error('[DYLIB-ERR] loadWebAssemblyModule FAILED for ' + libName + ': ' + e.message + ' (data length: ' + (libData ? libData.length : 'null') + ')');
           return {};
         }
+      }).catch(err => {
+        console.error('[DYLIB-ERR] loadLibData FAILED for ' + libName + ': ' + err);
+        return {};
       });
     }
     try {
@@ -3430,8 +3499,15 @@ var loadDylibs = () => {
     global: true,
     nodelete: true,
     allowUndefined: true
-  })), Promise.resolve()).then(() => {
+  })).catch(err => {
+    console.error('[DYLIB-LOAD-ERR] Failed to load ' + lib + ': ' + err);
+    return true; // continue to next library
+  }), Promise.resolve()).then(() => {
     // we got them all, wonderful
+    reportUndefinedSymbols();
+    removeRunDependency("loadDylibs");
+  }).catch(err => {
+    console.error('[DYLIB-FATAL] loadDylibs chain error: ' + err);
     reportUndefinedSymbols();
     removeRunDependency("loadDylibs");
   });
@@ -34649,6 +34725,57 @@ if (typeof window !== "undefined") {
       try { FS.mkdirTree(dirs[di]); } catch(e2) {}
     }
     console.log("[hl2] gameinfo.txt + steam.inf + dirs created in MEMFS (unconditional)");
+  // ---- Pre-create stub console textures to prevent Sys_Error dialog ----
+  // The engine aborts if materials/console/background01.vtf is missing
+  // We create minimal valid VTF stubs so the engine continues while materials.data loads
+  try {
+    var consoleTextures = [
+      "/hl2/materials/console/background01.vtf",
+      "/hl2/materials/console/background02.vtf",
+      "/hl2/materials/console/background03.vtf",
+      "/hl2/materials/console/background04.vtf",
+      "/hl2/materials/console/background05.vtf",
+      "/hl2/materials/console/background06.vtf",
+      "/hl2/materials/console/background07.vtf",
+    ];
+    // Minimal valid VTF file: VTF header (64 bytes) + 4x4 pixel RGBA data
+    // VTF7 format: magic=VTF\0, version=7.1, headerSize=64
+    var vtfStub = new Uint8Array(64 + 64);
+    // Magic: VTF\0
+    vtfStub[0]=86; vtfStub[1]=84; vtfStub[2]=70; vtfStub[3]=0;
+    // Version: 7.1
+    vtfStub[4]=7; vtfStub[5]=0; vtfStub[6]=0; vtfStub[7]=0;
+    vtfStub[8]=1; vtfStub[9]=0; vtfStub[10]=0; vtfStub[11]=0;
+    // Header size = 64
+    vtfStub[12]=64; vtfStub[13]=0; vtfStub[14]=0; vtfStub[15]=0;
+    // Width=4, Height=4
+    vtfStub[16]=4; vtfStub[17]=0; vtfStub[18]=4; vtfStub[19]=0;
+    // Flags=0, Frames=1
+    vtfStub[20]=0; vtfStub[21]=0; vtfStub[22]=0; vtfStub[23]=0;
+    vtfStub[24]=1; vtfStub[25]=0;
+    // HighResImageFormat = IMAGE_FORMAT_RGBA8888 = 0
+    vtfStub[52]=0; vtfStub[53]=0; vtfStub[54]=0; vtfStub[55]=0;
+    // MipCount=1
+    vtfStub[56]=1;
+    // LowResImageFormat=5 (IMAGE_FORMAT_DXT1), LowResWidth=4, LowResHeight=4
+    vtfStub[57]=5; vtfStub[58]=0; vtfStub[59]=0; vtfStub[60]=0;
+    vtfStub[61]=4; vtfStub[62]=4;
+    // Pixel data: grey pixels
+    for (var vi=64; vi<128; vi+=4) {
+      vtfStub[vi]=128; vtfStub[vi+1]=128; vtfStub[vi+2]=128; vtfStub[vi+3]=255;
+    }
+    try { FS.mkdirTree("/hl2/materials/console"); } catch(e) {}
+    var consoleTxCreated = 0;
+    for (var ci=0; ci < consoleTextures.length; ci++) {
+      try {
+        FS.writeFile(consoleTextures[ci], vtfStub, {encoding:'binary'});
+        consoleTxCreated++;
+      } catch(e2) {}
+    }
+    console.log("[hl2] Pre-created " + consoleTxCreated + " console VTF stubs");
+  } catch (e) {
+    console.warn("[hl2] Console VTF stub error:", e);
+  }
   } catch (e) {
     console.warn("[hl2] gameinfo.txt creation error:", e);
   }
