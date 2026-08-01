@@ -34885,7 +34885,41 @@ if (typeof window !== "undefined") {
 
     // MEMFS symlinks are not reliable for Source filesystem lookups.  The
     // Retail archive uses capitalized material directories, while Source
-    // requests lowercase paths.  Materialize the small bootstrap aliases.
+    // requests lowercase paths.  Mirror the relevant directories recursively
+    // so files such as startup_loading.vtf are covered as well.
+    var mirrorMaterialDir = function(src, dst) {
+      try {
+        if (!FS.analyzePath(src).exists) return 0;
+        try { FS.mkdirTree(dst); } catch (me) {}
+        var entries = FS.readdir(src);
+        var copied = 0;
+        for (var mi = 0; mi < entries.length; mi++) {
+          var en = entries[mi];
+          if (en === '.' || en === '..') continue;
+          var sp = src + '/' + en;
+          var dp = dst + '/' + en;
+          var st = FS.stat(sp);
+          if (FS.isDir(st.mode)) {
+            copied += mirrorMaterialDir(sp, dp);
+          } else {
+            FS.writeFile(dp, FS.readFile(sp), { encoding: 'binary' });
+            copied++;
+          }
+        }
+        console.log('[hl2] Material directory mirrored: ' + src + ' -> ' + dst +
+                    ' (' + copied + ' files)');
+        return copied;
+      } catch (me2) {
+        console.warn('[hl2] Material directory mirror failed: ' + src + ' -> ' + dst + ': ' + me2);
+        return 0;
+      }
+    };
+    mirrorMaterialDir('/hl2/materials/Console', '/hl2/materials/console');
+    mirrorMaterialDir('/hl2/materials/Debug', '/hl2/materials/debug');
+    mirrorMaterialDir('/hl2/materials/Dev', '/hl2/materials/dev');
+    mirrorMaterialDir('/hl2/materials/Engine', '/hl2/materials/engine');
+    mirrorMaterialDir('/hl2/materials/Effects', '/hl2/materials/effects');
+
     var ensureAlias = function(dst, candidates) {
       try {
         // Always prefer the real Retail asset over an earlier bootstrap stub.
