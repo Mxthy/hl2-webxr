@@ -453,6 +453,16 @@ if old_14 in js:
 else:
     print("  x TLS init guard pattern not found")
 
+# PATCH 15a: startRenderLoop must prefer the real C++ frame hook
+old_15a = 'var rFn = __Z17em_loop_iterationv;'
+new_15a = "var rFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : __Z17em_loop_iterationv;"
+if old_15a in js:
+    js = js.replace(old_15a, new_15a)
+    patches_applied += 1
+    print("  + startRenderLoop -> Engine_RenderSingleFrame")
+else:
+    print("  x direct startRenderLoop symbol not found (already patched or generated variant)")
+
 # PATCH 15: explicit engine lifecycle before real render loop
 helper = r"""
 function startEngineForWebXR() {
@@ -488,6 +498,7 @@ required_markers = [
     ("raise escape", 'ESCAPE_SIGTRAP'),
     ("canvas fallback", 'OffscreenCanvas'),
     ("engine lifecycle", 'function startEngineForWebXR'),
+    ("real startRenderLoop hook", 'Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame'),
 ]
 missing = [name for name, marker in required_markers if marker not in js]
 print(f"\n{patches_applied} textual patches applied; {len(required_markers)-len(missing)}/{len(required_markers)} behavior checks passed")
