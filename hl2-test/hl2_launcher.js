@@ -34888,16 +34888,22 @@ if (typeof window !== "undefined") {
     // requests lowercase paths.  Materialize the small bootstrap aliases.
     var ensureAlias = function(dst, candidates) {
       try {
-        if (FS.analyzePath(dst).exists) return true;
+        // Always prefer the real Retail asset over an earlier bootstrap stub.
+        // preRun may have created a placeholder before the async chunk arrived.
         for (var ai = 0; ai < candidates.length; ai++) {
           if (FS.analyzePath(candidates[ai]).exists) {
             var bytes = FS.readFile(candidates[ai]);
             var parent = dst.substring(0, dst.lastIndexOf('/'));
             try { FS.mkdirTree(parent); } catch (e0) {}
             FS.writeFile(dst, bytes, { encoding: 'binary' });
-            console.log('[hl2] Material alias: ' + candidates[ai] + ' -> ' + dst);
+            console.log('[hl2] Material alias (retail): ' + candidates[ai] + ' -> ' + dst +
+                        ' (' + bytes.length + ' bytes)');
             return true;
           }
+        }
+        if (FS.analyzePath(dst).exists) {
+          console.warn('[hl2] Keeping fallback material: ' + dst);
+          return true;
         }
       } catch (ae) {
         console.warn('[hl2] Material alias failed for ' + dst + ': ' + ae);
