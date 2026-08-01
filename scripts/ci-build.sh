@@ -298,7 +298,7 @@ EOF
     // The retail 2153 shaders are version 1 (2004 format).
     // The nillerusr engine (Source 2013) requires version 6 shaders.
     // Download v6 shaders from R2 and overwrite the v1 files in MEMFS.
-    fetchChunk('shaders_v6').then(function(v6Buffer) {
+    return fetchChunk('shaders_v6').then(function(v6Buffer) {
       var dv = new DataView(v6Buffer)
       var off = 0
       var replaced = 0
@@ -323,23 +323,23 @@ EOF
       console.log('[hl2] v6 shaders: ' + replaced + ' files overwritten in MEMFS')
     }).catch(function(e) {
       console.warn('[hl2] v6 shader download failed (using v1 fallback): ' + e)
-    })
+    }).then(function() {
     // Preflight: verify critical shader families exist
     var criticalShaders = [
       'vertexlit_and_unlit_generic_vs20',
-      'vertexlit_and_unlit_generic_ps20b',
+      'vertexlit_and_unlit_generic_ps20',
       'lightmappedgeneric_vs20',
-      'lightmappedgeneric_ps20b',
+      'lightmappedgeneric_ps20',
     ]
     var missing = []
     try {
       var fxcDir = '/hl2/shaders/fxc'
       if (FS.analyzePath(fxcDir).exists) {
-        var files = FS.readdir(fxcDir)
+        var files = FS.readdir(fxcDir).map(function(n) { return n.toLowerCase(); })
         for (var i = 0; i < criticalShaders.length; i++) {
           var found = false
           for (var j = 0; j < files.length; j++) {
-            if (files[j].indexOf(criticalShaders[i]) >= 0) { found = true; break }
+            if (files[j].indexOf(criticalShaders[i].toLowerCase()) >= 0) { found = true; break }
           }
           if (!found) missing.push(criticalShaders[i])
         }
@@ -359,6 +359,7 @@ EOF
       dataLoader.loadMap('background1'),
       dataLoader.loadMap('materials')
     ])
+    })
   }).then(function() {
     // MEMFS is case-sensitive and symlinks are unreliable for Source lookups.
     // Retail 2153 uses capitalized material directories; mirror the actual files

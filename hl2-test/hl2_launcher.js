@@ -34829,7 +34829,7 @@ if (typeof window !== "undefined") {
     // The retail 2153 shaders are version 1 (2004 format).
     // The nillerusr engine (Source 2013) requires version 6 shaders.
     // Download v6 shaders from R2 and overwrite the v1 files in MEMFS.
-    fetchChunk("shaders_v6").then(function(v6Buffer) {
+    return fetchChunk("shaders_v6").then(function(v6Buffer) {
       var dv = new DataView(v6Buffer);
       var off = 0;
       var replaced = 0;
@@ -34854,18 +34854,18 @@ if (typeof window !== "undefined") {
       console.log("[hl2] v6 shaders: " + replaced + " files overwritten in MEMFS");
     }).catch(function(e) {
       console.warn("[hl2] v6 shader download failed (using v1 fallback): " + e);
-    });
+    }).then(function() {
     // Preflight: verify critical shader families exist
-    var criticalShaders = [ "vertexlit_and_unlit_generic_vs20", "vertexlit_and_unlit_generic_ps20b", "lightmappedgeneric_vs20", "lightmappedgeneric_ps20b" ];
+    var criticalShaders = [ "vertexlit_and_unlit_generic_vs20", "vertexlit_and_unlit_generic_ps20", "lightmappedgeneric_vs20", "lightmappedgeneric_ps20" ];
     var missing = [];
     try {
       var fxcDir = "/hl2/shaders/fxc";
       if (FS.analyzePath(fxcDir).exists) {
-        var files = FS.readdir(fxcDir);
+        var files = FS.readdir(fxcDir).map(function(n) { return n.toLowerCase(); });
         for (var i = 0; i < criticalShaders.length; i++) {
           var found = false;
           for (var j = 0; j < files.length; j++) {
-            if (files[j].indexOf(criticalShaders[i]) >= 0) {
+            if (files[j].indexOf(criticalShaders[i].toLowerCase()) >= 0) {
               found = true;
               break;
             }
@@ -34886,6 +34886,7 @@ if (typeof window !== "undefined") {
     }
     // Now load background1 + materials in parallel
     return Promise.all([ dataLoader.loadMap("background1"), dataLoader.loadMap("materials") ]);
+    });
   }).then(function() {
     // Fix case-sensitive directory names (MEMFS is case-sensitive)
     var fixCase = function(dir, correctName) {
