@@ -95,6 +95,7 @@ new_3a = """var handleException = e => {
     ABORT = false;
     EXITSTATUS = 0;
     try {
+      startEngineForWebXR();
       var renderFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : (typeof __Z17em_loop_iterationv !== 'undefined' ? __Z17em_loop_iterationv : null);
       if (renderFn) {
         setMainLoop(renderFn, 0, true);
@@ -160,6 +161,7 @@ new_4 = """    } catch (ex) {
         console.warn("[WORKER] ESCAPE_SIGTRAP caught -- starting main loop");
         ABORT = false; EXITSTATUS = 0;
         try {
+          startEngineForWebXR();
           var rFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : __Z17em_loop_iterationv;
           setMainLoop(rFn, 0, true);
           console.log("[POST-UNWIND] Main loop started with Engine_RenderSingleFrame");
@@ -171,6 +173,7 @@ new_4 = """    } catch (ex) {
         console.warn("[WORKER] ESCAPE_EXIT caught -- starting main loop");
         ABORT = false; EXITSTATUS = 0;
         try {
+          startEngineForWebXR();
           var rFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : __Z17em_loop_iterationv;
           setMainLoop(rFn, 0, true);
           console.log("[POST-EXIT] Main loop started with Engine_RenderSingleFrame");
@@ -449,6 +452,28 @@ if old_14 in js:
     print("  + TLS init guard (skip if not a function)")
 else:
     print("  x TLS init guard pattern not found")
+
+# PATCH 15: explicit engine lifecycle before real render loop
+helper = r"""
+function startEngineForWebXR() {
+  if (Module._webxrEngineInitDone) return;
+  Module._webxrEngineInitDone = true;
+  var ex = Module.wasmExports || {};
+  try {
+    if (typeof ex.Engine_Init === 'function') ex.Engine_Init();
+    if (typeof ex.Engine_LoadMap === 'function' && typeof ex.malloc === 'function') {
+      var ptr = ex.malloc(64);
+      stringToUTF8('background01', ptr, 64);
+      ex.Engine_LoadMap(ptr);
+      if (typeof ex.free === 'function') ex.free(ptr);
+    }
+  } catch (e) {
+    Module._webxrEngineInitDone = false;
+    console.error('[WEBXR] Engine lifecycle failed: ' + e);
+  }
+}
+"""
+js += '\n' + helper
 
 with open(js_path, 'w') as f:
     f.write(js)

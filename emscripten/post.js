@@ -1,8 +1,8 @@
 // post.js - Wird nach dem generierten Emscripten-Code ausgeführt
 // Konfigurationen und Anpassungen für die HL2-Engine
 
-// 1. dynamicLibraries explizit leer setzen (slqnt.dev-Ansatz)
-Module.dynamicLibraries = [];
+// Keep Module.dynamicLibraries from the shell/index.
+// Clearing it here breaks the required tier0 -> vstdlib -> engine order.
 
 // 2. Canvas-Element Zuweisung
 if (window.canvasElement) {

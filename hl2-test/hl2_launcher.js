@@ -268,6 +268,37 @@ var dataLoader = (function() {
   };
 })();
 
+// === WEBXR ENGINE LIFECYCLE ===
+// Main() may exit after dynamic-library bootstrap before the game command queue
+// is processed. Explicitly initialize the engine and queue the test map once,
+// then let Engine_RenderSingleFrame drive the real C++ frame path.
+function startEngineForWebXR() {
+  if (Module._webxrEngineInitDone) return;
+  Module._webxrEngineInitDone = true;
+  var ex = Module.wasmExports || {};
+  try {
+    if (typeof ex.Engine_Init === 'function') {
+      console.warn('[WEBXR] Engine_Init -> Host_Init');
+      ex.Engine_Init();
+    } else {
+      console.warn('[WEBXR] Engine_Init export unavailable');
+    }
+    if (typeof ex.Engine_LoadMap === 'function' && typeof ex.malloc === 'function') {
+      var map = 'background01';
+      var ptr = ex.malloc(64);
+      stringToUTF8(map, ptr, 64);
+      console.warn('[WEBXR] Engine_LoadMap(' + map + ')');
+      ex.Engine_LoadMap(ptr);
+      if (typeof ex.free === 'function') ex.free(ptr);
+    } else {
+      console.warn('[WEBXR] Engine_LoadMap/malloc unavailable');
+    }
+  } catch (ee) {
+    Module._webxrEngineInitDone = false;
+    console.error('[WEBXR] Engine lifecycle failed: ' + ee);
+  }
+}
+
 // === LOCATEFILE: Redirect Emscripten runtime files to CDN ===
 var _orig_locateFile = Module.locateFile;
 Module.locateFile = function(path, prefix) {
@@ -729,12 +760,13 @@ if (ENVIRONMENT_IS_PTHREAD) {
             var engineExports = Object.keys(Module.wasmExports).filter(k => k.startsWith('Engine_'));
             err("[WORKER] Engine exports: " + engineExports.join(', '));
           }
-          // Start render loop with JS no-op stub (Engine_RenderSingleFrame calls real em_loop_iteration → blocks)
+          startEngineForWebXR();
+          // Start the real C++ render loop.
           try {
             var rFn = __Z17em_loop_iterationv;
             if (rFn) {
               setMainLoop(rFn, 0, true);
-              err("[WORKER] Render loop started with JS no-op stub");
+              err("[WORKER] Render loop started");
             } else {
               err("[WORKER] No render function available");
             }
@@ -754,14 +786,14 @@ if (ENVIRONMENT_IS_PTHREAD) {
       }
     } catch (ex) {
       if (ex === "ESCAPE_SIGTRAP") {
-        console.warn("[WORKER] ESCAPE_SIGTRAP caught -- starting render loop with JS no-op stub");
+        console.warn("[WORKER] ESCAPE_SIGTRAP caught -- starting render loop");
         ABORT = false; EXITSTATUS = 0;
         if (!Module._renderLoopStarted) {
           Module._renderLoopStarted = true;
-          // Use JS no-op stub (not Engine_RenderSingleFrame which calls real em_loop_iteration → recursion)
+          // Prefer the exported Engine_RenderSingleFrame hook; fallback only if unavailable.
           try {
-            setMainLoop(__Z17em_loop_iterationv, 0, true);
-            console.log("[POST-SIGTRAP] Render loop started with JS no-op stub");
+            setMainLoop((Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : __Z17em_loop_iterationv, 0, true);
+            console.log("[POST-SIGTRAP] Render loop started");
           } catch(mlEx) {
             if (mlEx === "unwind") { console.log("[POST-SIGTRAP] Main loop started"); }
             else { console.error("[POST-SIGTRAP] Main loop failed: " + mlEx); }
@@ -774,8 +806,8 @@ if (ENVIRONMENT_IS_PTHREAD) {
         ABORT = false; EXITSTATUS = 0;
         if (!Module._renderLoopStarted) {
           Module._renderLoopStarted = true;
-          // Skip Engine_Init and Engine_LoadMap — they call em_loop_iteration which blocks
-          err("[POST-EXIT] Skipping Engine_Init/Engine_LoadMap (em_loop_iteration blocks browser)");
+          startEngineForWebXR();
+          err("[POST-EXIT] Engine lifecycle completed; starting real render loop");
           // Log available exports
           if (Module.wasmExports) {
             var exports = Object.keys(Module.wasmExports).filter(k => k.startsWith('Engine_'));
@@ -786,14 +818,14 @@ if (ENVIRONMENT_IS_PTHREAD) {
             // Check ABORT state
             err("[POST-EXIT] ABORT=" + ABORT + " EXITSTATUS=" + EXITSTATUS);
           }
-          // Use ONLY the JS no-op stub for the render loop
-          // Engine_RenderSingleFrame calls the REAL em_loop_iteration (not the JS stub) and blocks
-          var safeRenderFn = __Z17em_loop_iterationv;
-          err("[POST-EXIT] Using JS no-op stub for render loop");
+          // Use the real Engine_RenderSingleFrame hook for the render loop
+          // Engine_RenderSingleFrame is the C++ single-frame hook; fallback is the JS stub
+          var safeRenderFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : __Z17em_loop_iterationv;
+          err("[POST-EXIT] Using Engine_RenderSingleFrame for render loop");
           // Start render loop
           try {
             setMainLoop(safeRenderFn, 0, true);
-            err("[POST-EXIT] Render loop started with JS no-op stub");
+            err("[POST-EXIT] Render loop started with Engine_RenderSingleFrame");
           } catch(mlEx) {
             if (mlEx === "unwind") { err("[POST-EXIT] Main loop started"); }
             else { console.error("[POST-EXIT] Main loop failed: " + mlEx); }
@@ -805,14 +837,14 @@ if (ENVIRONMENT_IS_PTHREAD) {
         // Try to complete engine init then start render loop
         if (!Module._renderLoopStarted) {
           Module._renderLoopStarted = true;
-          // Skip Engine_Init/LoadMap — they call em_loop_iteration which blocks browser
-          err("[POST-NULLFN] Skipping Engine_Init/LoadMap (em_loop_iteration blocks)");
+          startEngineForWebXR();
+          err("[POST-NULLFN] Engine lifecycle completed; starting real render loop");
           if (Module.wasmExports) {
             var engineExports = Object.keys(Module.wasmExports).filter(k => k.startsWith('Engine_'));
             err("[POST-NULLFN] Engine exports: " + engineExports.join(', '));
           }
           // Use JS no-op stub for render loop
-          var safeRenderFn = __Z17em_loop_iterationv;
+          var safeRenderFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : __Z17em_loop_iterationv;
           // No crash protection needed for no-op stub
 
           // Start render loop
@@ -1260,6 +1292,11 @@ function createWasm() {
       dynamicLibraries = metadata.neededDynlibs.concat(dynamicLibraries);
     }
     mergeLibSymbols(wasmExports, "main");
+  wasmImports["raise"] = function(sig) {
+    console.error('[RAISE-SIDE] raise(' + sig + ') -- ESCAPE_SIGTRAP');
+    throw "ESCAPE_SIGTRAP";
+  };
+  console.log("[OVERRIDE] wasmImports['raise'] replaced");
   wasmImports["raise"] = function(sig) {
     if (sig === 5) {
       console.warn('[RAISE-SIDE] raise(' + sig + ') — throwing ESCAPE_SIGTRAP to break main() while loop');
@@ -3222,7 +3259,9 @@ var resolveGlobalSymbol = (symName, direct = false) => {
       // Only one thread should call __wasm_call_ctors, but all threads need
       // to call _emscripten_tls_init
       if (typeof moduleExports["_emscripten_tls_init"] === "function") {
+        if (typeof moduleExports["_emscripten_tls_init"] === "function") {
         registerTLSInit(moduleExports["_emscripten_tls_init"], instance.exports, metadata);
+      }
       }
       if (firstLoad) {
         var applyRelocs = moduleExports["__wasm_apply_data_relocs"];

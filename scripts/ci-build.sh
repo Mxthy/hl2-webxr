@@ -360,36 +360,36 @@ EOF
       dataLoader.loadMap('materials')
     ])
   }).then(function() {
-    // Fix case-sensitive directory names (MEMFS is case-sensitive)
-    var fixCase = function(dir, correctName) {
+    // MEMFS is case-sensitive and symlinks are unreliable for Source lookups.
+    // Retail 2153 uses capitalized material directories; mirror the actual files
+    // into the lowercase paths requested by the engine.
+    var mirrorMaterialDir = function(src, dst) {
       try {
-        var entries = FS.readdir(dir)
-        for (var i = 0; i < entries.length; i++) {
-          var e = entries[i]
-          if (e.toLowerCase() === correctName && e !== correctName) {
-            var src = dir + '/' + e
-            var dst = dir + '/' + correctName
-            if (!FS.analyzePath(dst).exists) {
-              var stat = FS.stat(src)
-              if (FS.isDir(stat.mode)) {
-                FS.mkdir(dst)
-                var subEntries = FS.readdir(src)
-                for (var j = 0; j < subEntries.length; j++) {
-                  if (subEntries[j] === '.' || subEntries[j] === '..') continue
-                  FS.symlink(src + '/' + subEntries[j], dst + '/' + subEntries[j])
-                }
-              } else { FS.symlink(src, dst) }
-              console.log('[hl2] Fixed case: ' + src + ' -> ' + dst)
-            }
-          }
+        if (!FS.analyzePath(src).exists) return 0
+        try { FS.mkdirTree(dst) } catch (e0) {}
+        var entries = FS.readdir(src)
+        var copied = 0
+        for (var mi = 0; mi < entries.length; mi++) {
+          var en = entries[mi]
+          if (en === '.' || en === '..') continue
+          var sp = src + '/' + en
+          var dp = dst + '/' + en
+          var st = FS.stat(sp)
+          if (FS.isDir(st.mode)) copied += mirrorMaterialDir(sp, dp)
+          else { FS.writeFile(dp, FS.readFile(sp), {encoding:'binary'}); copied++ }
         }
-      } catch(e) { console.warn('[hl2] Case fix error: ' + e) }
+        console.log('[hl2] Material directory mirrored: ' + src + ' -> ' + dst + ' (' + copied + ' files)')
+        return copied
+      } catch (e1) {
+        console.warn('[hl2] Material mirror failed: ' + src + ' -> ' + dst + ': ' + e1)
+        return 0
+      }
     }
-    fixCase('/hl2/materials', 'console')
-    fixCase('/hl2/materials', 'debug')
-    fixCase('/hl2/materials', 'dev')
-    fixCase('/hl2/materials', 'engine')
-    fixCase('/hl2/materials', 'effects')
+    mirrorMaterialDir('/hl2/materials/Console', '/hl2/materials/console')
+    mirrorMaterialDir('/hl2/materials/Debug', '/hl2/materials/debug')
+    mirrorMaterialDir('/hl2/materials/Dev', '/hl2/materials/dev')
+    mirrorMaterialDir('/hl2/materials/Engine', '/hl2/materials/engine')
+    mirrorMaterialDir('/hl2/materials/Effects', '/hl2/materials/effects')
     // PATCH 3: gameinfo.txt (required by engine setup)
     var gameinfoContent = '"GameInfo"\n{\n  game  "HL2"\n  title  "Half-Life 2"\n  type  singleplayer_only\n  developer  "Valve"\n  icon  "hl2"\n  FileSystem\n  {\n    SteamAppId  2153\n    ToolsAppId  211\n    SearchPaths\n    {\n      Game  |gameinfo_path|.\n      Game  hl2\n      Platform  platform\n    }\n  }\n}'
     FS.writeFile('/hl2/gameinfo.txt', gameinfoContent)

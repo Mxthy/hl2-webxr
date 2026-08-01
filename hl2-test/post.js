@@ -1,8 +1,8 @@
 // post.js - Wird nach dem generierten Emscripten-Code ausgeführt
 // Konfigurationen und Anpassungen für die HL2-Engine
 
-// 1. dynamicLibraries explizit leer setzen — neededDynlibs werden aus WASM-Metadaten geladen
-Module.dynamicLibraries = [];
+// Keep Module.dynamicLibraries from the shell/index.
+// The explicit list preserves tier0 -> vstdlib -> engine load order.
 
 // 2. Korrekte Zuweisung des Canvas-Elements
 if (window.canvasElement) {
