@@ -11,7 +11,8 @@
 // Global state
 // ============================================================================
 
-bool g_bWebXRManualLoop = false;
+volatile bool g_bWebXRManualLoop = false;
+static bool g_bEngineInitialized = false;
 float g_WebXRViewMatrix[16] = {0};
 float g_WebXRProjectionMatrix[16] = {0};
 bool g_bWebXRMatrixActive = false;
@@ -40,8 +41,8 @@ extern void Cbuf_Execute();
 // ============================================================================
 
 extern "C" EMSCRIPTEN_KEEPALIVE void Engine_DisableAutoRender() {
-    emscripten_cancel_main_loop();
     g_bWebXRManualLoop = true;
+    emscripten_cancel_main_loop();
     EM_ASM_({ console.log('[WebXR] Engine_DisableAutoRender — main loop cancelled, manual mode active'); });
 }
 
@@ -70,8 +71,13 @@ extern "C" EMSCRIPTEN_KEEPALIVE void Engine_ResetCameraMatrix() {
 // Call this after main() exits and before the render loop starts
 // ============================================================================
 extern "C" EMSCRIPTEN_KEEPALIVE int Engine_Init() {
+    if (g_bEngineInitialized) {
+        EM_ASM_({ console.warn('[Engine_Init] already initialized — ignoring duplicate call'); });
+        return 1;
+    }
     EM_ASM_({ console.log('[Engine_Init] Calling Host_Init(false)...'); });
     Host_Init(false);
+    g_bEngineInitialized = true;
     EM_ASM_({ console.log('[Engine_Init] Host_Init returned'); });
     return 0;
 }
@@ -80,6 +86,7 @@ extern "C" EMSCRIPTEN_KEEPALIVE int Engine_Init() {
 // Engine_LoadMap — queues a map load command and runs a frame
 // ============================================================================
 extern "C" EMSCRIPTEN_KEEPALIVE int Engine_LoadMap(const char* mapName) {
+    if (!g_bEngineInitialized || !mapName || !*mapName) return 2;
     char cmd[256];
     snprintf(cmd, sizeof(cmd), "map_background %s\n", mapName);
     EM_ASM_({ console.log('[Engine_LoadMap] Queuing: ' + UTF8ToString($0)); }, cmd);
@@ -96,6 +103,7 @@ extern "C" EMSCRIPTEN_KEEPALIVE int Engine_LoadMap(const char* mapName) {
 // Engine_RunFrame — calls em_loop_iteration with C++ exception handling
 // ============================================================================
 extern "C" EMSCRIPTEN_KEEPALIVE int Engine_RunFrame() {
+    if (!g_bEngineInitialized) return 2;
     try {
         em_loop_iteration();
         return 0;
@@ -108,6 +116,7 @@ extern "C" EMSCRIPTEN_KEEPALIVE int Engine_RunFrame() {
 // Engine_QueueCommand — adds a command to the engine command buffer
 // ============================================================================
 extern "C" EMSCRIPTEN_KEEPALIVE int Engine_QueueCommand(const char* cmd) {
+    if (!g_bEngineInitialized || !cmd || !*cmd) return 2;
     Cbuf_AddText(cmd);
     Cbuf_Execute();
     EM_ASM_({ console.log('[Engine_QueueCommand] ' + UTF8ToString($0)); }, cmd);
