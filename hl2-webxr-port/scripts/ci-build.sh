@@ -250,7 +250,7 @@ EOF
 ;(() => {
   if(typeof window === 'undefined') return;
   window.addEventListener('beforeunload', function (event) { event.preventDefault() })
-  if (typeof canvasElement !== 'undefined') {
+  if (typeof canvasElement !== 'undefined' && canvasElement) {
     canvasElement.onkeypress = e => e.preventDefault()
   }
 
@@ -1141,6 +1141,7 @@ collect_outputs() {
   cp "$ENGINE_DIR/build/install/hl2_launcher.wasm" "$OUT_DIR/web/" 2>/dev/null || true
   find "$ENGINE_DIR/build/install/" -name '*.so' -exec cp {} "$OUT_DIR/web/" \; 2>/dev/null || true
   cp -r "$ENGINE_DIR/build/install/assets"          "$OUT_DIR/web/" 2>/dev/null || true
+  cp "$REPO_ROOT/emscripten/_headers"              "$OUT_DIR/" 2>/dev/null || true
 
   # Data-Chunks (only if present)
   find "$ENGINE_DIR/chunks/" -name '*.data' -exec cp {} "$OUT_DIR/chunks/" \; 2>/dev/null || true

@@ -155,10 +155,22 @@
            }
        });
 
+       window.addEventListener('error', (event) => {
+           const detail = event.error && event.error.stack ? event.error.stack : event.message;
+           log(`[GLOBAL_ERROR] ${event.filename || 'inline'}:${event.lineno || 0}:${event.colno || 0} ${detail}`);
+       });
+       window.addEventListener('unhandledrejection', (event) => {
+           const reason = event.reason && event.reason.stack ? event.reason.stack : String(event.reason);
+           log(`[UNHANDLED_REJECTION] ${reason}`);
+       });
+
        // Lade die von Build #88 kompilierte Engine
        log("Lade hl2_launcher.js...");
        const script = document.createElement('script');
-       script.src = 'hl2_launcher.js';
+       script.crossOrigin = 'anonymous';
+       script.onload = () => log('[LAUNCHER] hl2_launcher.js loaded');
+       script.onerror = (event) => log('[LAUNCHER] hl2_launcher.js load failed');
+       script.src = '/web/hl2_launcher.js';
        document.body.appendChild(script);
 
    </script>

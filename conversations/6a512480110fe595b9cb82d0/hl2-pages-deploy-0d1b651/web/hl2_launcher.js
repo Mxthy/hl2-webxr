@@ -34796,7 +34796,7 @@ run();
   window.addEventListener("beforeunload", function(event) {
     event.preventDefault();
   });
-  if (typeof canvasElement !== "undefined") {
+  if (typeof canvasElement !== "undefined" && canvasElement) {
     canvasElement.onkeypress = e => e.preventDefault();
   }
   // ---- /MOD/ writable directory (IDBFS-backed) ----
