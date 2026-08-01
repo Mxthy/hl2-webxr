@@ -857,7 +857,7 @@ PRE_JS_FALLBACK
   log "Running: emcc link → hl2_launcher.html ..."
   emcc \
     -sUSE_BZIP2=1 -sUSE_SDL=2 -sUSE_FREETYPE=1 -sUSE_LIBJPEG=1 \
-    -sUSE_LIBPNG -sMALLOC=mimalloc \
+    -sUSE_LIBPNG -lidbfs.js -sMALLOC=mimalloc \
     -sMAIN_MODULE \
     -sINITIAL_MEMORY=1024mb \
     -sALLOW_MEMORY_GROWTH=1 \
