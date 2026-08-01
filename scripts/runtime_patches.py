@@ -478,7 +478,20 @@ js += '\n' + helper
 with open(js_path, 'w') as f:
     f.write(js)
 
-print(f"\n{patches_applied}/10 patches applied successfully")
-if patches_applied < 6:
-    print("WARNING: Critical patches missing -- render loop may not work!")
+# Do not use the number of textual replacements as the success criterion:
+# generated Emscripten output changes between versions and an already-patched
+# file legitimately produces fewer replacements. Verify behavior markers instead.
+required_markers = [
+    ("worker escape handling", 'ESCAPE_EXIT'),
+    ("real frame hook", 'Engine_RenderSingleFrame'),
+    ("direct proc exit", 'throw "ESCAPE_EXIT"'),
+    ("raise escape", 'ESCAPE_SIGTRAP'),
+    ("canvas fallback", 'OffscreenCanvas'),
+    ("engine lifecycle", 'function startEngineForWebXR'),
+]
+missing = [name for name, marker in required_markers if marker not in js]
+print(f"\n{patches_applied} textual patches applied; {len(required_markers)-len(missing)}/{len(required_markers)} behavior checks passed")
+if missing:
+    print("ERROR: Required runtime behavior missing: " + ", ".join(missing))
     sys.exit(1)
+print("Runtime patch verification passed")
