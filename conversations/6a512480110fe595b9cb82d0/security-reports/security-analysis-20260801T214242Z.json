@@ -1,0 +1,8 @@
+{
+  "phase": "ANALYZE",
+  "target": "demo-target",
+  "scope": "authorized defensive scope",
+  "report": "security-reports/security-analysis-20260801T214242Z.md",
+  "status": "ANALYSIS_PENDING",
+  "files_changed": false
+}
