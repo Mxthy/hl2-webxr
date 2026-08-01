@@ -127,7 +127,20 @@
        }
 
        async function initWebXR() {
-           webxr = new HL2WebXR(canvas.getContext('webgl2', { xrCompatible: true }), canvas);
+           // The desktop build transfers #game-canvas to the pthread. Creating a
+           // main-thread WebGL context here would make transferControlToOffscreen()
+           // fail. XR context creation is handled by the dedicated XR profile.
+           if (Module.canvasTransferredToOffscreen || (Module.GL && Module.GL.offscreenCanvases)) {
+               log('WebXR deferred: canvas is owned by the engine worker');
+               return false;
+           }
+           const gl = canvas.getContext('webgl2', { xrCompatible: true });
+           if (!gl) {
+               log('WebXR unavailable: no XR-compatible WebGL2 context');
+               return false;
+           }
+           webxr = new HL2WebXR(gl, canvas);
+           window.xrWrapper = webxr;
            const isReady = await webxr.init();
            if (isReady) {
                btnEnterVR.disabled = false;

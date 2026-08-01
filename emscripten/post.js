@@ -28,7 +28,11 @@ Module.arguments = [
 console.log('[POST-INIT] Engine-Argumente gesetzt:', Module.arguments.join(' '));
 
 // 4. WebXR Bridge Integration
+const __previousRuntimeInitialized = Module.onRuntimeInitialized;
 Module.onRuntimeInitialized = function() {
+  if (typeof __previousRuntimeInitialized === 'function') {
+    __previousRuntimeInitialized();
+  }
   console.log('[POST-INIT] WASM Runtime initialisiert! Engine startet...');
   if (window.xrWrapper && typeof window.xrWrapper.onEngineInitialized === 'function') {
     window.xrWrapper.onEngineInitialized();

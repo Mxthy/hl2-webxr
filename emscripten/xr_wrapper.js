@@ -58,13 +58,12 @@ class HL2WebXR {
            }
 
            // Engine anweisen: Stoppe den automatischen 2D-Renderloop!
-           if (window.Module && Module._DisableAutoRenderLoop) {
+           if (window.Module && Module._Engine_DisableAutoRender) {
+               Module._Engine_DisableAutoRender();
+               console.log("Source Engine Auto-Renderloop deaktiviert.");
+           } else if (window.Module && Module._DisableAutoRenderLoop) {
                Module._DisableAutoRenderLoop();
                console.log("Source Engine Auto-Renderloop deaktiviert.");
-           } else if (window.Module && Module._Engine_DisableAutoRender) {
-               // Fallback: direct C function (MAIN_MODULE=1 auto-export)
-               Module._Engine_DisableAutoRender();
-               console.log("Source Engine Auto-Renderloop deaktiviert (direct hook).");
            } else {
                console.warn("Engine_DisableAutoRender nicht gefunden — VR rendering wird nicht korrekt funktionieren.");
            }
@@ -104,32 +103,20 @@ class HL2WebXR {
                // HEAPF32 nutzt Float-Indizes (Byte-Adresse / 4)
                Module.HEAPF32.set(viewMatrix, this.matrixPtr / 4);
                
-               // 3. Sag C++: Hier ist die neue Kamera-Matrix!
-               // Versuche zuerst die Bridge-Funktion (SetCameraMatrices(view, proj))
-               if (Module._SetCameraMatrices) {
-                   if (this.projPtr) {
-                       Module.HEAPF32.set(projMatrix, this.projPtr / 4);
-                       Module._SetCameraMatrices(this.matrixPtr, this.projPtr);
-                   } else {
-                       Module._SetCameraMatrices(this.matrixPtr, 0);
-                   }
-               } else if (Module._Engine_SetCameraMatrix) {
-                   // Fallback: direct C function
+               // 3. Exakter C++-Vertrag: View und Projection getrennt setzen.
+               if (Module._Engine_SetCameraMatrix) {
                    Module._Engine_SetCameraMatrix(this.matrixPtr);
-                   if (this.projPtr && Module._Engine_SetProjectionMatrix) {
-                       Module.HEAPF32.set(projMatrix, this.projPtr / 4);
-                       Module._Engine_SetProjectionMatrix(this.projPtr);
-                   }
+               }
+               if (this.projPtr && Module._Engine_SetProjectionMatrix) {
+                   Module.HEAPF32.set(projMatrix, this.projPtr / 4);
+                   Module._Engine_SetProjectionMatrix(this.projPtr);
                }
            }
+       }
 
-           // 4. Erzwinge das Rendern EINES Frames in der Source Engine
-           if (Module._RenderXRFrame) {
-               Module._RenderXRFrame();
-           } else if (Module._Engine_RenderSingleFrame) {
-               // Fallback: direct C function
-               Module._Engine_RenderSingleFrame();
-           }
+       // 4. Genau ein Engine-Frame pro XR-Frame, nicht pro Auge.
+       if (Module._Engine_RenderSingleFrame) {
+           Module._Engine_RenderSingleFrame();
        }
    }
 

@@ -394,6 +394,20 @@ EOF
     // PATCH 3: gameinfo.txt (required by engine setup)
     var gameinfoContent = '"GameInfo"\n{\n  game  "HL2"\n  title  "Half-Life 2"\n  type  singleplayer_only\n  developer  "Valve"\n  icon  "hl2"\n  FileSystem\n  {\n    SteamAppId  2153\n    ToolsAppId  211\n    SearchPaths\n    {\n      Game  |gameinfo_path|.\n      Game  hl2\n      Platform  platform\n    }\n  }\n}'
     FS.writeFile('/hl2/gameinfo.txt', gameinfoContent)
+    // /MOD is the engine's writable search path; populate it after chunks exist.
+    try {
+      FS.mkdirTree('/MOD')
+      FS.writeFile('/MOD/gameinfo.txt', gameinfoContent)
+      if (FS.analyzePath('/hl2/steam.inf').exists) {
+        FS.writeFile('/MOD/steam.inf', FS.readFile('/hl2/steam.inf'))
+      }
+      console.log('[hl2] /MOD bootstrap files ready')
+      if (typeof FS.syncfs === 'function') FS.syncfs(false, function(err) {
+        if (err) console.warn('[hl2] /MOD syncfs error:', err)
+      })
+    } catch (modErr) {
+      console.warn('[hl2] /MOD bootstrap error: ' + modErr)
+    }
     console.log('[hl2] gameinfo.txt created in MEMFS')
 
     // PATCH 4: VTF files — replace dummy VTFs with proper VTF format
@@ -1040,12 +1054,10 @@ writeChunk('shaders.data', [
 const criticalShaders = [
   'vertexlit_and_unlit_generic_vs20',
   'vertexlit_and_unlit_generic_ps20',
-  'vertexlit_and_unlit_generic_ps20b',
   'unlitgeneric_vs20',
   'unlitgeneric_ps20',
   'lightmappedgeneric_vs20',
   'lightmappedgeneric_ps20',
-  'lightmappedgeneric_ps20b',
 ]
 const shaderPaths = shaderManifest.map(f => f.path.toLowerCase())
 let missingShaders = []
