@@ -396,6 +396,14 @@ else:
     print("  x getDylinkMetadata Uint32Array pattern not found")
 
 # ============================================================
+# PATCH 11b: release loadDylibs dependency on rejection
+old_11b = "  });\n};"
+new_11b = "  }).catch(error => {\n    console.error('[DYLIB-CHAIN] Continuing after side-module failure:', error && (error.stack || error.message || error));\n    removeRunDependency(\"loadDylibs\");\n  });\n};"
+if old_11b in js and '[DYLIB-CHAIN]' not in js:
+    js = js.replace(old_11b, new_11b, 1)
+    patches_applied += 1
+    print("  + loadDylibs rejection recovery")
+
 # PATCH 12: loadDynamicLibrary logging
 # ============================================================
 old_12 = "  // allocate new DSO\n  dso = newDSO(libName, handle, \"loading\");"

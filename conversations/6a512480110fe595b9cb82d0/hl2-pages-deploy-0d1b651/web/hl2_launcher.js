@@ -356,12 +356,32 @@ if (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER) {
         });
       }
       return fetch(url, {
-        credentials: "same-origin"
+        mode: "cors",
+        credentials: "omit",
+        headers: { Range: "bytes=0-" }
       }).then(response => {
-        if (response.ok) {
+        console.log('[DYLIB-TRACE] response ' + url + ' status=' + response.status);
+        if (!response.ok && response.status !== 206) {
+          return Promise.reject(new Error(response.status + " : " + response.url));
+        }
+        if (!response.body || !response.body.getReader) {
           return response.arrayBuffer();
         }
-        return Promise.reject(new Error(response.status + " : " + response.url));
+        var reader = response.body.getReader();
+        var parts = [], total = 0;
+        function readPart() {
+          return reader.read().then(part => {
+            if (part.value && part.value.length) { parts.push(part.value); total += part.value.length; }
+            if (part.done) {
+              var out = new Uint8Array(total), off = 0;
+              for (var i = 0; i < parts.length; i++) { out.set(parts[i], off); off += parts[i].length; }
+              console.log('[DYLIB-TRACE] streamBuffer ' + url + ' bytes=' + total);
+              return out.buffer;
+            }
+            return readPart();
+          });
+        }
+        return readPart();
       });
     };
   }
@@ -2857,6 +2877,7 @@ var resolveGlobalSymbol = (symName, direct = false) => {
   // loadModule loads the wasm module after all its dependencies have been loaded.
   // can be called both sync/async.
   function loadModule() {
+    console.log('[DYLIB-TRACE] loadModule enter ' + (libName || 'unknown') + ' needed=' + metadata.neededDynlibs.join(','));
     // The first thread to load a given module needs to allocate the static
     // table and memory regions.  Later threads re-use the same table region
     // and can ignore the memory region (since memory is shared between
@@ -3044,7 +3065,10 @@ var resolveGlobalSymbol = (symName, direct = false) => {
         var instance = new WebAssembly.Instance(binary, info);
         return Promise.resolve(postInstantiation(binary, instance));
       }
-      return WebAssembly.instantiate(binary, info).then(result => postInstantiation(result.module, result.instance));
+      return WebAssembly.instantiate(binary, info).then(result => {
+        console.log('[DYLIB-TRACE] instantiated ' + (libName || 'unknown'));
+        return postInstantiation(result.module, result.instance);
+      });
     }
     var module = binary instanceof WebAssembly.Module ? binary : new WebAssembly.Module(binary);
     var instance = new WebAssembly.Instance(module, info);
@@ -3283,6 +3307,9 @@ var loadDylibs = () => {
   })), Promise.resolve()).then(() => {
     // we got them all, wonderful
     reportUndefinedSymbols();
+    removeRunDependency("loadDylibs");
+  }).catch(error => {
+    console.error('[DYLIB-CHAIN] Continuing after side-module failure:', error && (error.stack || error.message || error));
     removeRunDependency("loadDylibs");
   });
 };
