@@ -266,7 +266,6 @@ var dataLoader = (function() {
       return this.loadMap(name);
     }
   };
-})()
 })();
 
 // === LOCATEFILE: Redirect Emscripten runtime files to CDN ===
@@ -34883,6 +34882,44 @@ if (typeof window !== "undefined") {
     fixCase("/hl2/materials", "dev");
     fixCase("/hl2/materials", "engine");
     fixCase("/hl2/materials", "effects");
+
+    // MEMFS symlinks are not reliable for Source filesystem lookups.  The
+    // Retail archive uses capitalized material directories, while Source
+    // requests lowercase paths.  Materialize the small bootstrap aliases.
+    var ensureAlias = function(dst, candidates) {
+      try {
+        if (FS.analyzePath(dst).exists) return true;
+        for (var ai = 0; ai < candidates.length; ai++) {
+          if (FS.analyzePath(candidates[ai]).exists) {
+            var bytes = FS.readFile(candidates[ai]);
+            var parent = dst.substring(0, dst.lastIndexOf('/'));
+            try { FS.mkdirTree(parent); } catch (e0) {}
+            FS.writeFile(dst, bytes, { encoding: 'binary' });
+            console.log('[hl2] Material alias: ' + candidates[ai] + ' -> ' + dst);
+            return true;
+          }
+        }
+      } catch (ae) {
+        console.warn('[hl2] Material alias failed for ' + dst + ': ' + ae);
+      }
+      console.warn('[hl2] Material alias source missing for ' + dst);
+      return false;
+    };
+    ensureAlias('/hl2/materials/console/background01.vtf', [
+      '/hl2/materials/Console/background01.vtf'
+    ]);
+    ensureAlias('/hl2/materials/debug/debugluxelsnoalpha.vtf', [
+      '/hl2/materials/Debug/debugluxelsnoalpha.vtf'
+    ]);
+    ensureAlias('/hl2/materials/dev/identitylightwarp.vtf', [
+      '/hl2/materials/Dev/identitylightwarp.vtf'
+    ]);
+    ensureAlias('/hl2/materials/engine/normalizedrandomdirections2d.vtf', [
+      '/hl2/materials/Engine/normalizedrandomdirections2d.vtf'
+    ]);
+    ensureAlias('/hl2/materials/effects/flashlight_border.vtf', [
+      '/hl2/materials/Effects/flashlight_border.vtf'
+    ]);
     // PATCH 3: gameinfo.txt (required by engine setup)
     var gameinfoContent = '"GameInfo"\n{\n  game  "HL2"\n  title  "Half-Life 2"\n  type  singleplayer_only\n  developer  "Valve"\n  icon  "hl2"\n  FileSystem\n  {\n    SteamAppId  2153\n    ToolsAppId  211\n    SearchPaths\n    {\n      Game  |gameinfo_path|.\n      Game  hl2\n      Platform  platform\n    }\n  }\n}';
     FS.writeFile("/hl2/gameinfo.txt", gameinfoContent);
