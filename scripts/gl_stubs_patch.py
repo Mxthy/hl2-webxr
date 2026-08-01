@@ -61,11 +61,11 @@ async function fetchChunk(mapName) {
 
 # Also inject Module.locateFile for Emscripten-managed files (.wasm, .data)
 locate_file_block = """
-// === LOCATEFILE: Redirect Emscripten runtime files to CDN ===
+// === LOCATEFILE: Redirect Emscripten runtime files to deployed web bundle ===
 var _orig_locateFile = Module.locateFile;
 Module.locateFile = function(path, prefix) {
   if (path.endsWith('.wasm') || path.endsWith('.data')) {
-    return ASSET_ORIGIN + '/hl2-runtime/' + path;
+    return ASSET_ORIGIN + '/web/' + path;
   }
   if (_orig_locateFile) return _orig_locateFile(path, prefix);
   return prefix + path;
