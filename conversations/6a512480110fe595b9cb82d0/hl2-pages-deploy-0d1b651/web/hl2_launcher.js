@@ -369,14 +369,26 @@ if (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER) {
         }
         var reader = response.body.getReader();
         var parts = [], total = 0;
+        var range = response.headers.get('content-range') || '';
+        var match = /bytes\s+0-(\d+)/i.exec(range);
+        var expected = match ? (parseInt(match[1], 10) + 1) : 0;
+        // Cloudflare may omit Content-Range from CORS-exposed headers. libengine.so
+        // is a verified fixed side-module artifact; stop once its full body arrived.
+        if (!expected && /\/libengine\.so(?:[?#]|$)/.test(url)) expected = 6736815;
+        function finish() {
+          var out = new Uint8Array(total), off = 0;
+          for (var i = 0; i < parts.length; i++) { out.set(parts[i], off); off += parts[i].length; }
+          console.log('[DYLIB-TRACE] streamBuffer ' + url + ' bytes=' + total + ' expected=' + expected);
+          return out.buffer;
+        }
         function readPart() {
           return reader.read().then(part => {
             if (part.value && part.value.length) { parts.push(part.value); total += part.value.length; }
-            if (part.done) {
-              var out = new Uint8Array(total), off = 0;
-              for (var i = 0; i < parts.length; i++) { out.set(parts[i], off); off += parts[i].length; }
-              console.log('[DYLIB-TRACE] streamBuffer ' + url + ' bytes=' + total);
-              return out.buffer;
+            if ((expected && total >= expected) || part.done) {
+              if (expected && total > expected) throw new Error('Over-read ' + url + ': ' + total + ' > ' + expected);
+              if (expected && total < expected) return readPart();
+              try { reader.cancel(); } catch (_) {}
+              return finish();
             }
             return readPart();
           });
