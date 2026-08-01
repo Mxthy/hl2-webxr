@@ -34830,6 +34830,83 @@ run();
   // ---- Shader + Asset chunk loading ----
   // Load order: shaders → background1 + materials → engine start
   // Shaders MUST be in MEMFS before callMain() — without them the engine aborts
+// === DATA LOADER: streaming packed [pathLen][dataLen][path][blob] chunks ===
+var dataLoader = (function() {
+  var cache = Object.create(null);
+  var decoder = new TextDecoder();
+  function normalizePath(path) {
+    return ('/' + String(path).replace(/^\/+/, '').replace(/\\/g, '/')).replace(/\/+/g, '/');
+  }
+  function append(a, b) {
+    if (!a || !a.length) return b;
+    var out = new Uint8Array(a.length + b.length);
+    out.set(a); out.set(b, a.length); return out;
+  }
+  function writeFile(path, data) {
+    var slash = path.lastIndexOf('/');
+    if (slash > 0) FS.mkdirTree(path.slice(0, slash));
+    FS.writeFile(path, data);
+  }
+  async function streamUnpack(response, mapName) {
+    if (!response.body || !response.body.getReader) {
+      throw new Error(mapName + ' response has no readable body');
+    }
+    var reader = response.body.getReader();
+    var pending = new Uint8Array(0);
+    var pathLen = null, dataLen = null, path = null;
+    var files = 0, bytes = 0;
+    for (;;) {
+      var next = await reader.read();
+      pending = append(pending, next.value || new Uint8Array(0));
+      for (;;) {
+        if (pathLen === null) {
+          if (pending.length < 8) break;
+          var header = new DataView(pending.buffer, pending.byteOffset, 8);
+          pathLen = header.getUint32(0, true);
+          dataLen = header.getUint32(4, true);
+          pending = pending.slice(8);
+          if (!pathLen || pathLen > 4096 || dataLen > 1024 * 1024 * 1024) {
+            throw new Error('Invalid ' + mapName + ' record header');
+          }
+        }
+        if (path === null) {
+          if (pending.length < pathLen) break;
+          path = normalizePath(decoder.decode(pending.slice(0, pathLen)));
+          pending = pending.slice(pathLen);
+        }
+        if (pending.length < dataLen) break;
+        var data = pending.slice(0, dataLen);
+        pending = pending.slice(dataLen);
+        writeFile(path, data);
+        files++; bytes += dataLen;
+        pathLen = null; dataLen = null; path = null;
+      }
+      if (next.done) break;
+    }
+    if (pathLen !== null || path !== null || pending.length) {
+      throw new Error('Truncated ' + mapName + ' chunk at EOF');
+    }
+    console.info('[asset:unpack]', { mapName: mapName, files: files, bytes: bytes });
+    return { mapName: mapName, files: files, bytes: bytes };
+  }
+  function loadMap(mapName) {
+    if (!cache[mapName]) {
+      cache[mapName] = (async function() {
+        var url = chunkUrl(mapName);
+        var started = performance.now();
+        console.info('[asset:stream-start]', { mapName: mapName, url: url });
+        var response = await fetch(url, { mode: 'cors', credentials: 'omit', headers: { Range: 'bytes=0-' } });
+        if (!(response.ok || response.status === 206)) throw new Error('Chunk ' + mapName + ': HTTP ' + response.status);
+        var result = await streamUnpack(response, mapName);
+        console.info('[asset:stream-done]', { mapName: mapName, duration_ms: Math.round(performance.now() - started) });
+        return result;
+      })();
+    }
+    return cache[mapName];
+  }
+  return { loadMap: loadMap, loadMapCached: loadMap };
+})();
+
   addRunDependency("load_game_data");
   // Load shaders chunk first (critical, non-optional)
   var loadShaders = (typeof dataLoader !== "undefined" && dataLoader.loadMapCached) ? dataLoader.loadMapCached("shaders") : Promise.reject(new Error("dataLoader not available"));
