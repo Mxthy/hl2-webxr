@@ -561,6 +561,30 @@ if old_16 in js:
 else:
     print("  x asyncLoad error pattern not found")
 
+# ============================================================
+# PATCH 18: callable bootstrap for the main-WASM IVP import
+# ============================================================
+old_18 = """  };
+}
+
+var wasmExports = createWasm();"""
+new_18 = """  };
+  // The main module imports this IVP method before side modules are merged.
+  // Keep the import callable during wasm instantiation; mergeLibSymbols may replace it later.
+  if (typeof wasmImports["_ZN11IVP_Mindist9do_impactEv"] !== "function") {
+    wasmImports["_ZN11IVP_Mindist9do_impactEv"] = function(self) { return 0; };
+    console.warn('[IVP-BOOT] callable do_impact bootstrap installed');
+  }
+}
+
+var wasmExports = createWasm();"""
+if old_18 in js:
+    js = js.replace(old_18, new_18, 1)
+    patches_applied += 1
+    print("  + callable IVP do_impact bootstrap")
+else:
+    print("  x assignWasmImports end pattern not found")
+
 # PATCH 17: null-safe canvas post-init guard
 for canvas_guard in [
     'if (typeof canvasElement !== "undefined") {',
