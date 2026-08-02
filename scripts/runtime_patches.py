@@ -257,7 +257,7 @@ new_6 = """mergeLibSymbols(wasmExports, "main");
     ["_ZN16IVP_Compact_Edge10next_tableE", "_ZN16IVP_Compact_Edge10prev_tableE"].forEach(function(name) {
       if (typeof GOT !== "undefined" && GOT[name] && GOT[name].value === 0) {
         var alloc = (typeof wasmExports !== "undefined" && typeof wasmExports.malloc === "function")
-          ? wasmExports.malloc(1024) : 8;
+          ? wasmExports.malloc(1024) : 0;
         if (typeof HEAPU8 !== "undefined" && alloc > 0) HEAPU8.fill(0, alloc, alloc + 1024);
         GOT[name].value = alloc;
         console.warn('[IVP-DATA] GOT fallback ' + name + ' -> ' + alloc);
@@ -435,6 +435,30 @@ if old_11b in js:
     print("  + loadDylibs rejection recovery (exact block)")
 else:
     print("  x loadDylibs exact block not found")
+
+# PATCH 11c: resolve IVP data symbols at report time, after GOT registration
+old_11c = """var reportUndefinedSymbols = () => {
+  for (var [symName, entry] of Object.entries(GOT)) {
+    if (entry.value == 0) {"""
+new_11c = """var reportUndefinedSymbols = () => {
+  for (var [symName, entry] of Object.entries(GOT)) {
+    if (entry.value == 0) {
+      if (symName === \"_ZN16IVP_Compact_Edge10next_tableE\" || symName === \"_ZN16IVP_Compact_Edge10prev_tableE\") {
+        var ivpTablePtr = (typeof wasmExports !== \"undefined\" && typeof wasmExports.malloc === \"function\")
+          ? wasmExports.malloc(1024) : 0;
+        if (ivpTablePtr > 0) {
+          if (typeof HEAPU8 !== \"undefined\") HEAPU8.fill(0, ivpTablePtr, ivpTablePtr + 1024);
+          entry.value = ivpTablePtr;
+          console.warn('[IVP-DATA] reportUndefinedSymbols GOT fallback ' + symName + ' -> ' + ivpTablePtr);
+          continue;
+        }
+      }"""
+if old_11c in js:
+    js = js.replace(old_11c, new_11c, 1)
+    patches_applied += 1
+    print("  + IVP data symbols resolved at reportUndefinedSymbols")
+else:
+    print("  x reportUndefinedSymbols pattern not found")
 
 # PATCH 12: loadDynamicLibrary logging
 # ============================================================
