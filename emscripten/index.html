@@ -95,12 +95,9 @@
                    Module._webxrEngineInitDone = true;
                    try {
                        const ex = Module.wasmExports || Module;
-                       const init = ex.Engine_Init || Module._Engine_Init;
                        const loadMap = ex.Engine_LoadMap || Module._Engine_LoadMap;
-                       if (typeof init === 'function') {
-                           console.log('[WEBXR] Engine_Init -> Host_Init');
-                           init();
-                       }
+                       // Host_Init is already reached by the launcher bootstrap;
+                       // do not call Engine_Init a second time.
                        if (typeof loadMap === 'function' && typeof Module._malloc === 'function') {
                            const mapName = 'background01';
                            const ptr = Module._malloc(64);
