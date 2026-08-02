@@ -562,6 +562,43 @@ else:
     print("  x asyncLoad error pattern not found")
 
 # ============================================================
+# PATCH 20: reject malformed optional side modules and empty DSO deps
+# ============================================================
+old_20a = """  if (flags.loadAsync) {
+    return metadata.neededDynlibs.reduce((chain, dynNeeded) => chain.then(() => loadDynamicLibrary(dynNeeded, flags, localScope)), Promise.resolve()).then(loadModule);
+  }
+  metadata.neededDynlibs.forEach(needed => loadDynamicLibrary(needed, flags, localScope));"""
+new_20a = """  var neededDynlibs = (metadata.neededDynlibs || []).filter(function(name) { return typeof name === "string" && name.length > 0; });
+  if (neededDynlibs.length !== (metadata.neededDynlibs || []).length) {
+    console.warn('[DYLIB] Ignoring empty dependency name in ' + libName);
+  }
+  if (flags.loadAsync) {
+    return neededDynlibs.reduce((chain, dynNeeded) => chain.then(() => loadDynamicLibrary(dynNeeded, flags, localScope)), Promise.resolve()).then(loadModule);
+  }
+  neededDynlibs.forEach(needed => loadDynamicLibrary(needed, flags, localScope));"""
+if old_20a in js:
+    js=js.replace(old_20a,new_20a,1)
+    patches_applied += 1
+    print('  + empty DSO dependency filtering')
+else:
+    print('  x DSO dependency pattern not found')
+
+old_20b = """      return loadWebAssemblyModule(libData, flags, libName, localScope, handle);
+    }).catch"""
+new_20b = """      if (!libData || libData.length < 8 || libData[0] !== 0 || libData[1] !== 97 || libData[2] !== 115 || libData[3] !== 109) {
+        console.warn('[DYLIB] Skipping malformed optional module ' + libName + ' (bytes=' + (libData ? libData.length : 0) + ')');
+        return {};
+      }
+      return loadWebAssemblyModule(libData, flags, libName, localScope, handle);
+    }).catch"""
+if old_20b in js:
+    js=js.replace(old_20b,new_20b,1)
+    patches_applied += 1
+    print('  + malformed side-module validation')
+else:
+    print('  x async side-module pattern not found')
+
+# ============================================================
 # PATCH 19: guard unresolved pthread proxy callbacks
 # ============================================================
 old_19 = """  var func = emAsmAddr ? ASM_CONSTS[emAsmAddr] : proxiedFunctionTable[funcIndex];
