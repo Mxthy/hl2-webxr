@@ -236,6 +236,12 @@ int _ZN11IVP_Mindist22recalc_invalid_mindistEv(void* self) {
     return 0;
 }
 
+// IVP_Compact_Edge::next_table — global data symbol required by side modules.
+// Keep a zero-initialized WASM32 table so dynamic linking resolves the address
+// without entering unsupported native IVP code.
+__attribute__((weak, used, visibility("default")))
+void* _ZN16IVP_Compact_Edge10next_tableE[256] = { 0 };
+
 } // extern "C"
 
 #endif // __EMSCRIPTEN__
