@@ -355,13 +355,19 @@ if (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER) {
           xhr.send(null);
         });
       }
+      // Do not consume dynamic libraries through a ReadableStream. Some
+      // range/CORS combinations never expose EOF even after the full body arrived.
       return fetch(url, {
-        credentials: "same-origin"
+        mode: "cors",
+        credentials: "omit"
       }).then(response => {
-        if (response.ok) {
-          return response.arrayBuffer();
+        if (!response.ok && response.status !== 206) {
+          return Promise.reject(new Error(response.status + " : " + response.url));
         }
-        return Promise.reject(new Error(response.status + " : " + response.url));
+        return response.arrayBuffer().then(buffer => {
+          console.log('[DYLIB-TRACE] arrayBuffer ' + url + ' bytes=' + buffer.byteLength);
+          return buffer;
+        });
       });
     };
   }
@@ -663,7 +669,6 @@ if (ENVIRONMENT_IS_PTHREAD) {
         console.warn("[WORKER] ESCAPE_SIGTRAP caught -- starting main loop");
         ABORT = false; EXITSTATUS = 0;
         try {
-          startEngineForWebXR();
           var rFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : __Z17em_loop_iterationv;
           setMainLoop(rFn, 0, true);
           console.log("[POST-UNWIND] Main loop started with Engine_RenderSingleFrame");
@@ -675,7 +680,6 @@ if (ENVIRONMENT_IS_PTHREAD) {
         console.warn("[WORKER] ESCAPE_EXIT caught -- starting main loop");
         ABORT = false; EXITSTATUS = 0;
         try {
-          startEngineForWebXR();
           var rFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : __Z17em_loop_iterationv;
           setMainLoop(rFn, 0, true);
           console.log("[POST-EXIT] Main loop started with Engine_RenderSingleFrame");
@@ -1102,6 +1106,23 @@ function createWasm() {
     throw "ESCAPE_SIGTRAP";
   };
   console.log("[OVERRIDE] wasmImports['raise'] replaced");
+
+  // IVP global tables are data symbols, but this Emscripten build emits
+  // function-shaped import wrappers for them. Reserve zeroed WASM memory and
+  // seed the GOT directly so reportUndefinedSymbols sees a valid data address.
+  try {
+    ["_ZN16IVP_Compact_Edge10next_tableE", "_ZN16IVP_Compact_Edge10prev_tableE"].forEach(function(name) {
+      if (typeof GOT !== "undefined" && GOT[name] && GOT[name].value === 0) {
+        var alloc = (typeof wasmExports !== "undefined" && typeof wasmExports.malloc === "function")
+          ? wasmExports.malloc(1024) : 8;
+        if (typeof HEAPU8 !== "undefined" && alloc > 0) HEAPU8.fill(0, alloc, alloc + 1024);
+        GOT[name].value = alloc;
+        console.warn('[IVP-DATA] GOT fallback ' + name + ' -> ' + alloc);
+      }
+    });
+  } catch (ivpDataError) {
+    console.warn('[IVP-DATA] GOT fallback unavailable:', ivpDataError);
+  }
     LDSO.init();
     loadDylibs();
     wasmExports = applySignatureConversions(wasmExports);
@@ -1871,7 +1892,6 @@ var handleException = e => {
     ABORT = false;
     EXITSTATUS = 0;
     try {
-      startEngineForWebXR();
       var renderFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : (typeof __Z17em_loop_iterationv !== 'undefined' ? __Z17em_loop_iterationv : null);
       if (renderFn) {
         setMainLoop(renderFn, 0, true);
@@ -3094,7 +3114,8 @@ var mergeLibSymbols = (exports, libName) => {
     if (dep) removeRunDependency(dep);
   }, err => {
     if (onerror) {
-      onerror();
+      console.error('[DYLIB-LOAD-ERROR] ' + url, err);
+      onerror(err);
     } else {
       throw `Loading data file "${url}" failed.`;
     }
@@ -3283,6 +3304,9 @@ var loadDylibs = () => {
   })), Promise.resolve()).then(() => {
     // we got them all, wonderful
     reportUndefinedSymbols();
+    removeRunDependency("loadDylibs");
+  }).catch(error => {
+    console.error('[DYLIB-CHAIN] Side-module chain failed:', error && (error.stack || error.message || error));
     removeRunDependency("loadDylibs");
   });
 };
@@ -13050,7 +13074,14 @@ var findCanvasEventTarget = target => {
 
 var setCanvasElementSizeCallingThread = (target, width, height) => {
   var canvas = findCanvasEventTarget(target);
-  if (!canvas) return -4;
+  if (!canvas) {
+    if (typeof OffscreenCanvas !== 'undefined') {
+      canvas = new OffscreenCanvas(1280, 800);
+      console.log('[GL] Fallback OffscreenCanvas for setCanvasElementSize');
+    } else {
+      return -4;
+    }
+  }
   if (canvas.canvasSharedPtr) {
     // N.B. We hold the canvasSharedPtr info structure as the authoritative source for specifying the size of a canvas
     // since the actual canvas size changes are asynchronous if the canvas is owned by an OffscreenCanvas on another thread.
@@ -34796,7 +34827,7 @@ run();
   window.addEventListener("beforeunload", function(event) {
     event.preventDefault();
   });
-  if (typeof canvasElement !== "undefined") {
+  if (typeof canvasElement !== "undefined" && canvasElement) {
     canvasElement.onkeypress = e => e.preventDefault();
   }
   // ---- /MOD/ writable directory (IDBFS-backed) ----
@@ -35048,22 +35079,3 @@ run();
     removeRunDependency("load_game_data");
   });
 })();
-
-
-function startEngineForWebXR() {
-  if (Module._webxrEngineInitDone) return;
-  Module._webxrEngineInitDone = true;
-  var ex = Module.wasmExports || {};
-  try {
-    if (typeof ex.Engine_Init === 'function') ex.Engine_Init();
-    if (typeof ex.Engine_LoadMap === 'function' && typeof ex.malloc === 'function') {
-      var ptr = ex.malloc(64);
-      stringToUTF8('background01', ptr, 64);
-      ex.Engine_LoadMap(ptr);
-      if (typeof ex.free === 'function') ex.free(ptr);
-    }
-  } catch (e) {
-    Module._webxrEngineInitDone = false;
-    console.error('[WEBXR] Engine lifecycle failed: ' + e);
-  }
-}
