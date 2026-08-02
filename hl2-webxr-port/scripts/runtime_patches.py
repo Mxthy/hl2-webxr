@@ -248,7 +248,24 @@ new_6 = """mergeLibSymbols(wasmExports, "main");
     console.error('[RAISE-SIDE] raise(' + sig + ') -- ESCAPE_SIGTRAP');
     throw "ESCAPE_SIGTRAP";
   };
-  console.log("[OVERRIDE] wasmImports['raise'] replaced");"""
+  console.log("[OVERRIDE] wasmImports['raise'] replaced");
+
+  // IVP global tables are data symbols, but this Emscripten build emits
+  // function-shaped import wrappers for them. Reserve zeroed WASM memory and
+  // seed the GOT directly so reportUndefinedSymbols sees a valid data address.
+  try {
+    ["_ZN16IVP_Compact_Edge10next_tableE", "_ZN16IVP_Compact_Edge10prev_tableE"].forEach(function(name) {
+      if (typeof GOT !== "undefined" && GOT[name] && GOT[name].value === 0) {
+        var alloc = (typeof wasmExports !== "undefined" && typeof wasmExports.malloc === "function")
+          ? wasmExports.malloc(1024) : 8;
+        if (typeof HEAPU8 !== "undefined" && alloc > 0) HEAPU8.fill(0, alloc, alloc + 1024);
+        GOT[name].value = alloc;
+        console.warn('[IVP-DATA] GOT fallback ' + name + ' -> ' + alloc);
+      }
+    });
+  } catch (ivpDataError) {
+    console.warn('[IVP-DATA] GOT fallback unavailable:', ivpDataError);
+  }"""
 if old_6 in js:
     js = js.replace(old_6, new_6, 1)
     patches_applied += 1
@@ -518,6 +535,17 @@ if old_16 in js:
     print("  + asyncLoad error propagation")
 else:
     print("  x asyncLoad error pattern not found")
+
+# PATCH 17: null-safe canvas post-init guard
+for canvas_guard in [
+    'if (typeof canvasElement !== "undefined") {',
+    "if (typeof canvasElement !== 'undefined') {"
+]:
+    if canvas_guard in js and 'canvasElement) {' not in js[js.index(canvas_guard):js.index(canvas_guard)+100]:
+        js = js.replace(canvas_guard, canvas_guard.replace(") {", " && canvasElement) {"), 1)
+        patches_applied += 1
+        print("  + null-safe canvasElement guard")
+        break
 
 with open(js_path, 'w') as f:
     f.write(js)
