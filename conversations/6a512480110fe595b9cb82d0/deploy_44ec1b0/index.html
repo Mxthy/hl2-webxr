@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>HL2 WebXR — Engine Test</title>
+<style>
+body { margin: 0; background: #0a0a0a; color: #fff; font-family: monospace; overflow: hidden; }
+#game-canvas { width: 1280px; height: 800px; display: block; margin: 0 auto; background: #000; }
+#spinner { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 16px; }
+#error-box {
+  position: fixed; top: 0; left: 0; right: 0; max-height: 50vh; overflow: auto;
+  background: #1a1a2e; color: #e94560; font-family: monospace; font-size: 11px;
+  padding: 10px; z-index: 9999; white-space: pre-wrap; display: none;
+}
+#status { position: fixed; top: 5px; right: 80px; font-size: 12px; color: #aaa; z-index: 100; }
+#fullscreen-btn { position: fixed; top: 5px; right: 5px; z-index: 100; cursor: pointer; }
+</style>
+</head>
+<body>
+<div id="error-box"></div>
+<div id="status">Loading...</div>
+<button id="fullscreen-btn" onclick="document.getElementById('game-canvas').requestFullscreen()">Fullscreen</button>
+<canvas id="game-canvas" width="1280" height="800"></canvas>
+<div id="spinner">Initializing HL2 WebXR Engine...</div>
+
+<script>
+window._errors = [];
+window._consoleErrors = [];
+window._consoleLogs = [];
+
+window.addEventListener('error', function(e) {
+  window._errors.push({ msg: e.message, file: (e.filename||'').split('/').pop(), line: e.lineno, stack: e.error ? e.error.stack : null });
+  showErrorBox();
+});
+window.addEventListener('unhandledrejection', function(e) {
+  window._errors.push({ msg: 'Rejection: ' + (e.reason && e.reason.message ? e.reason.message : String(e.reason)), stack: e.reason && e.reason.stack ? e.reason.stack : null });
+  showErrorBox();
+});
+var origError = console.error;
+console.error = function() {
+  var msg = Array.from(arguments).map(function(a) { if (a && a.message) return a.message; return String(a); }).join(' ');
+  window._consoleErrors.push(msg);
+  origError.apply(console, arguments);
+  showErrorBox();
+};
+var origLog = console.log;
+console.log = function() {
+  var msg = Array.from(arguments).map(function(a) { return String(a); }).join(' ');
+  window._consoleLogs.push(msg);
+  origLog.apply(console, arguments);
+};
+var origWarn = console.warn;
+console.warn = function() {
+  var msg = Array.from(arguments).map(function(a) { return String(a); }).join(' ');
+  window._consoleErrors.push('[WARN] ' + msg);
+  origWarn.apply(console, arguments);
+  showErrorBox();
+};
+
+function showErrorBox() {
+  var box = document.getElementById('error-box');
+  box.style.display = 'block';
+  var content = '';
+  if (window._errors.length) {
+    content += '=== ERRORS (' + window._errors.length + ') ===\n';
+    window._errors.forEach(function(e, i) {
+      content += '[' + i + '] ' + e.msg;
+      if (e.file) content += ' (' + e.file + ':' + e.line + ')';
+      content += '\n';
+      if (e.stack) content += '  ' + e.stack.split('\n').slice(0, 5).join('\n  ') + '\n';
+    });
+  }
+  if (window._consoleErrors.length) {
+    content += '\n=== CONSOLE.ERRORS/WARN (last 60) ===\n';
+    window._consoleErrors.slice(-60).forEach(function(e) { content += e.substring(0, 200) + '\n'; });
+  }
+  if (window._consoleLogs.length) {
+    content += '\n=== CONSOLE.LOGS (last 50) ===\n';
+    window._consoleLogs.slice(-50).forEach(function(e) { content += e.substring(0, 200) + '\n'; });
+  }
+  box.textContent = content;
+}
+</script>
+
+<script>
+var Module = {
+  canvas: document.getElementById('game-canvas'),
+  print: function(text) { console.log(text); },
+  printErr: function(text) { console.error(text); },
+  onAbort: function(what) {
+    window._errors.push({ msg: 'ABORT: ' + what });
+    showErrorBox();
+  },
+  onRuntimeInitialized: function() {
+    console.log('[INIT] Runtime initialized!');
+    document.getElementById('spinner').style.display = 'none';
+    document.getElementById('status').textContent = 'Runtime Ready';
+  },
+  arguments: [
+    '-game', 'hl2', '-windowed', '-w', '1280', '-h', '800',
+    '-novid', '-noip', '-nosteam', '-console',
+    '+map_background', 'background01',
+    '+mat_hdr_level', '0', '+mat_colorcorrection', '0', '+mat_picmip', '2'
+  ]
+};
+
+Module.locateFile = function(path, prefix) {
+  return 'https://hl2-assets-proxy.hl2-webxr.workers.dev/web/' + path;
+};
+
+Module.dynamicLibraries = [
+  'libtier0.so', 'libvstdlib.so', 'libsteam_api.so',
+  'libfilesystem_stdio.so', 'libengine.so',
+  'libinputsystem.so', 'libmaterialsystem.so',
+  'libsoundemittersystem.so', 'libscenefilecache.so',
+  'libvgui2.so', 'libvguimatsurface.so',
+  'libshaderapidx9.so', 'libstdshader_dx9.so',
+  'libstudiorender.so', 'libvtex_dll.so',
+  'libdatacache.so', 'libtogl.so',
+  'libvaudio_minimp3.so', 'libvphysics.so',
+  'libvideo_services.so',
+  'libclient.so', 'libserver.so',
+  'libGameUI.so', 'libServerBrowser.so',
+  'liblauncher.so'
+];
+</script>
+
+<script async type="text/javascript" src="/web/hl2_launcher.js"></script>
+
+<script>
+// Status checker every 3s
+setTimeout(function check() {
+  var statusEl = document.getElementById('status');
+  if (typeof Module !== 'undefined' && Module) {
+    if (Module.calledMain && statusEl) statusEl.textContent = 'Main called';
+    if (Module._renderLoopStarted && statusEl) statusEl.textContent = 'Render loop active';
+    if (Module.wasmExports) {
+      var exports = Object.keys(Module.wasmExports).filter(function(k) {
+        return k.indexOf('Engine') >= 0 || k.indexOf('Host') >= 0 || k.indexOf('Cbuf') >= 0;
+      });
+      if (exports.length) console.log('[CHECK] Engine exports: ' + exports.join(', '));
+    }
+  }
+  setTimeout(check, 3000);
+}, 3000);
+</script>
+</body>
+</html>
