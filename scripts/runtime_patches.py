@@ -562,6 +562,27 @@ else:
     print("  x asyncLoad error pattern not found")
 
 # ============================================================
+# PATCH 19: guard unresolved pthread proxy callbacks
+# ============================================================
+old_19 = """  var func = emAsmAddr ? ASM_CONSTS[emAsmAddr] : proxiedFunctionTable[funcIndex];
+  assert(!(funcIndex && emAsmAddr));
+  assert(func.length == numCallArgs, "Call args mismatch in _emscripten_receive_on_main_thread_js");"""
+new_19 = """  var func = emAsmAddr ? ASM_CONSTS[emAsmAddr] : proxiedFunctionTable[funcIndex];
+  assert(!(funcIndex && emAsmAddr));
+  if (typeof func !== "function") {
+    console.warn('[PTHREAD-PROXY] unresolved callback', { funcIndex: funcIndex, emAsmAddr: emAsmAddr, numCallArgs: numCallArgs });
+    PThread.currentProxiedOperationCallerThread = 0;
+    return 0;
+  }
+  assert(func.length == numCallArgs, "Call args mismatch in _emscripten_receive_on_main_thread_js");"""
+if old_19 in js:
+    js=js.replace(old_19,new_19,1)
+    patches_applied += 1
+    print('  + unresolved pthread proxy callback guard')
+else:
+    print('  x pthread proxy callback pattern not found')
+
+# ============================================================
 # PATCH 18: callable bootstrap for the main-WASM IVP import
 # ============================================================
 old_18 = """  };
