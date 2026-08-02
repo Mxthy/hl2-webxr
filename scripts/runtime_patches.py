@@ -443,7 +443,8 @@ old_11c = """var reportUndefinedSymbols = () => {
 new_11c = """var reportUndefinedSymbols = () => {
   for (var [symName, entry] of Object.entries(GOT)) {
     if (entry.value == 0) {
-      if (symName === \"_ZN16IVP_Compact_Edge10next_tableE\" || symName === \"_ZN16IVP_Compact_Edge10prev_tableE\") {
+      if (symName === \"_ZN16IVP_Compact_Edge10next_tableE\" || symName === \"_ZN16IVP_Compact_Edge10prev_tableE\" ||
+          (symName.indexOf(\"_ZTI\") === 0 && symName.indexOf(\"IVP_\") !== -1)) {
         var ivpTablePtr = (typeof getMemory === \"function\")
           ? getMemory(1024) : 0;
         if (ivpTablePtr > 0) {
