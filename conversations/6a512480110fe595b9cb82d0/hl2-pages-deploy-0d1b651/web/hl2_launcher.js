@@ -356,46 +356,12 @@ if (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER) {
         });
       }
       return fetch(url, {
-        mode: "cors",
-        credentials: "omit",
-        headers: { Range: "bytes=0-" }
+        credentials: "same-origin"
       }).then(response => {
-        console.log('[DYLIB-TRACE] response ' + url + ' status=' + response.status);
-        if (!response.ok && response.status !== 206) {
-          return Promise.reject(new Error(response.status + " : " + response.url));
-        }
-        if (!response.body || !response.body.getReader) {
+        if (response.ok) {
           return response.arrayBuffer();
         }
-        var reader = response.body.getReader();
-        var parts = [], total = 0;
-        var range = response.headers.get('content-range') || '';
-        var match = /bytes\s+0-(\d+)/i.exec(range);
-        var expected = match ? (parseInt(match[1], 10) + 1) : 0;
-        // Cloudflare may omit Content-Range from CORS-exposed headers. libengine.so
-        // is a verified fixed side-module artifact; stop once its full body arrived.
-        var knownSizes = { 'libclient.so': 8468938, 'libengine.so': 6736815, 'libserver.so': 11400000 };
-        var moduleBase = String(url).split('/').pop().split('?')[0];
-        if (!expected && knownSizes[moduleBase]) expected = knownSizes[moduleBase];
-        function finish() {
-          var out = new Uint8Array(total), off = 0;
-          for (var i = 0; i < parts.length; i++) { out.set(parts[i], off); off += parts[i].length; }
-          console.log('[DYLIB-TRACE] streamBuffer ' + url + ' bytes=' + total + ' expected=' + expected);
-          return out.buffer;
-        }
-        function readPart() {
-          return reader.read().then(part => {
-            if (part.value && part.value.length) { parts.push(part.value); total += part.value.length; }
-            if ((expected && total >= expected) || part.done) {
-              if (expected && total > expected) throw new Error('Over-read ' + url + ': ' + total + ' > ' + expected);
-              if (expected && total < expected) return readPart();
-              try { reader.cancel(); } catch (_) {}
-              return finish();
-            }
-            return readPart();
-          });
-        }
-        return readPart();
+        return Promise.reject(new Error(response.status + " : " + response.url));
       });
     };
   }
@@ -2891,7 +2857,6 @@ var resolveGlobalSymbol = (symName, direct = false) => {
   // loadModule loads the wasm module after all its dependencies have been loaded.
   // can be called both sync/async.
   function loadModule() {
-    console.log('[DYLIB-TRACE] loadModule enter ' + (libName || 'unknown') + ' needed=' + metadata.neededDynlibs.join(','));
     // The first thread to load a given module needs to allocate the static
     // table and memory regions.  Later threads re-use the same table region
     // and can ignore the memory region (since memory is shared between
@@ -3079,10 +3044,7 @@ var resolveGlobalSymbol = (symName, direct = false) => {
         var instance = new WebAssembly.Instance(binary, info);
         return Promise.resolve(postInstantiation(binary, instance));
       }
-      return WebAssembly.instantiate(binary, info).then(result => {
-        console.log('[DYLIB-TRACE] instantiated ' + (libName || 'unknown'));
-        return postInstantiation(result.module, result.instance);
-      });
+      return WebAssembly.instantiate(binary, info).then(result => postInstantiation(result.module, result.instance));
     }
     var module = binary instanceof WebAssembly.Module ? binary : new WebAssembly.Module(binary);
     var instance = new WebAssembly.Instance(module, info);
@@ -3132,8 +3094,7 @@ var mergeLibSymbols = (exports, libName) => {
     if (dep) removeRunDependency(dep);
   }, err => {
     if (onerror) {
-      console.error('[DYLIB-LOAD-ERROR] ' + url, err);
-      onerror(err);
+      onerror();
     } else {
       throw `Loading data file "${url}" failed.`;
     }
@@ -3322,9 +3283,6 @@ var loadDylibs = () => {
   })), Promise.resolve()).then(() => {
     // we got them all, wonderful
     reportUndefinedSymbols();
-    removeRunDependency("loadDylibs");
-  }).catch(error => {
-    console.error('[DYLIB-CHAIN] Continuing after side-module failure:', error && (error.stack || error.message || error));
     removeRunDependency("loadDylibs");
   });
 };
@@ -34838,7 +34796,7 @@ run();
   window.addEventListener("beforeunload", function(event) {
     event.preventDefault();
   });
-  if (typeof canvasElement !== "undefined" && canvasElement) {
+  if (typeof canvasElement !== "undefined") {
     canvasElement.onkeypress = e => e.preventDefault();
   }
   // ---- /MOD/ writable directory (IDBFS-backed) ----
@@ -34872,83 +34830,6 @@ run();
   // ---- Shader + Asset chunk loading ----
   // Load order: shaders → background1 + materials → engine start
   // Shaders MUST be in MEMFS before callMain() — without them the engine aborts
-// === DATA LOADER: streaming packed [pathLen][dataLen][path][blob] chunks ===
-var dataLoader = (function() {
-  var cache = Object.create(null);
-  var decoder = new TextDecoder();
-  function normalizePath(path) {
-    return ('/' + String(path).replace(/^\/+/, '').replace(/\\/g, '/')).replace(/\/+/g, '/');
-  }
-  function append(a, b) {
-    if (!a || !a.length) return b;
-    var out = new Uint8Array(a.length + b.length);
-    out.set(a); out.set(b, a.length); return out;
-  }
-  function writeFile(path, data) {
-    var slash = path.lastIndexOf('/');
-    if (slash > 0) FS.mkdirTree(path.slice(0, slash));
-    FS.writeFile(path, data);
-  }
-  async function streamUnpack(response, mapName) {
-    if (!response.body || !response.body.getReader) {
-      throw new Error(mapName + ' response has no readable body');
-    }
-    var reader = response.body.getReader();
-    var pending = new Uint8Array(0);
-    var pathLen = null, dataLen = null, path = null;
-    var files = 0, bytes = 0;
-    for (;;) {
-      var next = await reader.read();
-      pending = append(pending, next.value || new Uint8Array(0));
-      for (;;) {
-        if (pathLen === null) {
-          if (pending.length < 8) break;
-          var header = new DataView(pending.buffer, pending.byteOffset, 8);
-          pathLen = header.getUint32(0, true);
-          dataLen = header.getUint32(4, true);
-          pending = pending.slice(8);
-          if (!pathLen || pathLen > 4096 || dataLen > 1024 * 1024 * 1024) {
-            throw new Error('Invalid ' + mapName + ' record header');
-          }
-        }
-        if (path === null) {
-          if (pending.length < pathLen) break;
-          path = normalizePath(decoder.decode(pending.slice(0, pathLen)));
-          pending = pending.slice(pathLen);
-        }
-        if (pending.length < dataLen) break;
-        var data = pending.slice(0, dataLen);
-        pending = pending.slice(dataLen);
-        writeFile(path, data);
-        files++; bytes += dataLen;
-        pathLen = null; dataLen = null; path = null;
-      }
-      if (next.done) break;
-    }
-    if (pathLen !== null || path !== null || pending.length) {
-      throw new Error('Truncated ' + mapName + ' chunk at EOF');
-    }
-    console.info('[asset:unpack]', { mapName: mapName, files: files, bytes: bytes });
-    return { mapName: mapName, files: files, bytes: bytes };
-  }
-  function loadMap(mapName) {
-    if (!cache[mapName]) {
-      cache[mapName] = (async function() {
-        var url = chunkUrl(mapName);
-        var started = performance.now();
-        console.info('[asset:stream-start]', { mapName: mapName, url: url });
-        var response = await fetch(url, { mode: 'cors', credentials: 'omit', headers: { Range: 'bytes=0-' } });
-        if (!(response.ok || response.status === 206)) throw new Error('Chunk ' + mapName + ': HTTP ' + response.status);
-        var result = await streamUnpack(response, mapName);
-        console.info('[asset:stream-done]', { mapName: mapName, duration_ms: Math.round(performance.now() - started) });
-        return result;
-      })();
-    }
-    return cache[mapName];
-  }
-  return { loadMap: loadMap, loadMapCached: loadMap };
-})();
-
   addRunDependency("load_game_data");
   // Load shaders chunk first (critical, non-optional)
   var loadShaders = (typeof dataLoader !== "undefined" && dataLoader.loadMapCached) ? dataLoader.loadMapCached("shaders") : Promise.reject(new Error("dataLoader not available"));
