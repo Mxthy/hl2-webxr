@@ -473,7 +473,7 @@ else:
 
 
 # ============================================================
-# PATCH 15: deterministic streamed side-module reader
+# PATCH 15: deterministic whole-response side-module reader
 # ============================================================
 old_15 = """      return fetch(url, {
         credentials: \"same-origin\"
@@ -483,49 +483,24 @@ old_15 = """      return fetch(url, {
         }
         return Promise.reject(new Error(response.status + \" : \" + response.url));
       });"""
-new_15 = """      return fetch(url, {
+new_15 = """      // Do not consume dynamic libraries through a ReadableStream. Some
+      // range/CORS combinations never expose EOF even after the full body arrived.
+      return fetch(url, {
         mode: \"cors\",
-        credentials: \"omit\",
-        headers: { Range: \"bytes=0-\" }
+        credentials: \"omit\"
       }).then(response => {
         if (!response.ok && response.status !== 206) {
           return Promise.reject(new Error(response.status + \" : \" + response.url));
         }
-        if (!response.body || !response.body.getReader) return response.arrayBuffer();
-        var reader = response.body.getReader();
-        var parts = [], total = 0;
-        var range = response.headers.get('content-range') || '';
-        var match = /bytes\\s+0-(\\d+)/i.exec(range);
-        var expected = match ? (parseInt(match[1], 10) + 1) : 0;
-        var sizes = { 'libclient.so': 8468938, 'libengine.so': 6736815, 'libserver.so': 11400000 };
-        var basename = String(url).split('/').pop().split('?')[0];
-        if (!expected && sizes[basename]) expected = sizes[basename];
-        function finish() {
-          var out = new Uint8Array(total), off = 0;
-          for (var i = 0; i < parts.length; i++) { out.set(parts[i], off); off += parts[i].length; }
-          return out.buffer;
-        }
-        function readPart() {
-          return reader.read().then(part => {
-            if (part.value && part.value.length) { parts.push(part.value); total += part.value.length; }
-            if (expected && total >= expected) {
-              if (total !== expected) throw new Error('Side-module over-read ' + basename + ': ' + total + ' vs ' + expected);
-              try { reader.cancel(); } catch (_) {}
-              return finish();
-            }
-            if (part.done) {
-              if (expected && total !== expected) throw new Error('Side-module truncated ' + basename + ': ' + total + ' vs ' + expected);
-              return finish();
-            }
-            return readPart();
-          });
-        }
-        return readPart();
+        return response.arrayBuffer().then(buffer => {
+          console.log('[DYLIB-TRACE] arrayBuffer ' + url + ' bytes=' + buffer.byteLength);
+          return buffer;
+        });
       });"""
 if old_15 in js:
     js = js.replace(old_15, new_15, 1)
     patches_applied += 1
-    print("  + deterministic streamed side-module reader")
+    print("  + deterministic whole-response side-module reader")
 else:
     print("  x asyncLoad reader pattern not found")
 
