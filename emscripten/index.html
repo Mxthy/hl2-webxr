@@ -89,6 +89,31 @@
                loadingStatus.textContent = "Engine Runtime Ready!";
                loadingStatus.className = "text-green-400 font-bold mb-4";
                checkWasmExports();
+               // Start engine lifecycle only after the Emscripten runtime is ready.
+               setTimeout(() => {
+                   if (Module._webxrEngineInitDone) return;
+                   Module._webxrEngineInitDone = true;
+                   try {
+                       const ex = Module.wasmExports || Module;
+                       const init = ex.Engine_Init || Module._Engine_Init;
+                       const loadMap = ex.Engine_LoadMap || Module._Engine_LoadMap;
+                       if (typeof init === 'function') {
+                           console.log('[WEBXR] Engine_Init -> Host_Init');
+                           init();
+                       }
+                       if (typeof loadMap === 'function' && typeof Module._malloc === 'function') {
+                           const mapName = 'background01';
+                           const ptr = Module._malloc(64);
+                           stringToUTF8(mapName, ptr, 64);
+                           console.log('[WEBXR] Engine_LoadMap(' + mapName + ')');
+                           loadMap(ptr);
+                           if (typeof Module._free === 'function') Module._free(ptr);
+                       }
+                   } catch (e) {
+                       Module._webxrEngineInitDone = false;
+                       console.error('[WEBXR] Engine lifecycle failed: ' + e);
+                   }
+               }, 100);
            }
        };
 
