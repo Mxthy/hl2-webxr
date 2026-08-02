@@ -98,9 +98,10 @@
                        const loadMap = ex.Engine_LoadMap || Module._Engine_LoadMap;
                        // Host_Init is already reached by the launcher bootstrap;
                        // do not call Engine_Init a second time.
-                       if (typeof loadMap === 'function' && typeof Module._malloc === 'function') {
+                       var alloc = ex.malloc || Module._malloc;
+                       if (typeof loadMap === 'function' && typeof alloc === 'function') {
                            const mapName = 'background01';
-                           const ptr = Module._malloc(64);
+                           const ptr = alloc(64);
                            stringToUTF8(mapName, ptr, 64);
                            console.log('[WEBXR] Engine_LoadMap(' + mapName + ')');
                            loadMap(ptr);
