@@ -564,7 +564,11 @@ else:
 # ============================================================
 # PATCH 20: reject malformed optional side modules and empty DSO deps
 # ============================================================
-old_20a = """  if (flags.loadAsync) {
+old_20a = """  if (!libName) {
+    console.warn('[DYLIB] Ignoring empty library name');
+    return flags.loadAsync ? Promise.resolve(true) : true;
+  }
+  if (flags.loadAsync) {
     return metadata.neededDynlibs.reduce((chain, dynNeeded) => chain.then(() => loadDynamicLibrary(dynNeeded, flags, localScope)), Promise.resolve()).then(loadModule);
   }
   metadata.neededDynlibs.forEach(needed => loadDynamicLibrary(needed, flags, localScope));"""
@@ -583,14 +587,14 @@ if old_20a in js:
 else:
     print('  x DSO dependency pattern not found')
 
-old_20b = """      return loadWebAssemblyModule(libData, flags, libName, localScope, handle);
-    }).catch"""
-new_20b = """      if (!libData || libData.length < 8 || libData[0] !== 0 || libData[1] !== 97 || libData[2] !== 115 || libData[3] !== 109) {
-        console.warn('[DYLIB] Skipping malformed optional module ' + libName + ' (bytes=' + (libData ? libData.length : 0) + ')');
-        return {};
-      }
-      return loadWebAssemblyModule(libData, flags, libName, localScope, handle);
-    }).catch"""
+old_20b = """          return loadWebAssemblyModule(libData, flags, libName, localScope, handle);
+        } catch(e) {"""
+new_20b = """          if (!libData || libData.length < 8 || libData[0] !== 0 || libData[1] !== 97 || libData[2] !== 115 || libData[3] !== 109) {
+            console.warn('[DYLIB] Skipping malformed optional module ' + libName + ' (bytes=' + (libData ? libData.length : 0) + ')');
+            return {};
+          }
+          return loadWebAssemblyModule(libData, flags, libName, localScope, handle);
+        } catch(e) {"""
 if old_20b in js:
     js=js.replace(old_20b,new_20b,1)
     patches_applied += 1
