@@ -24,6 +24,45 @@ with open(js_path, 'r') as f:
 patches_applied = 0
 
 # ============================================================
+# PATCH 20: backward-compatible EM_ASM aliases for Engine hooks
+# Some cached/generated WASM builds retain the previous EM_ASM IDs while
+# the generated JS table contains the shifted IDs. Keep both mappings.
+# ============================================================
+old_20 = """  635775: $0 => {
+    console.log(\"[Engine_LoadMap] Queuing: \" + UTF8ToString($0));
+  },
+  635841: () => {
+    console.log(\"[Engine_LoadMap] Done\");
+  },
+  635883: $0 => {
+    console.log(\"[Engine_QueueCommand] \" + UTF8ToString($0));
+  },"""
+new_20 = """  635692: $0 => {
+    console.log(\"[Engine_LoadMap] Queuing: \" + UTF8ToString($0));
+  },
+  635758: () => {
+    console.log(\"[Engine_LoadMap] Done\");
+  },
+  635800: $0 => {
+    console.log(\"[Engine_QueueCommand] \" + UTF8ToString($0));
+  },
+  635775: $0 => {
+    console.log(\"[Engine_LoadMap] Queuing: \" + UTF8ToString($0));
+  },
+  635841: () => {
+    console.log(\"[Engine_LoadMap] Done\");
+  },
+  635883: $0 => {
+    console.log(\"[Engine_QueueCommand] \" + UTF8ToString($0));
+  },"""
+if old_20 in js:
+    js = js.replace(old_20, new_20, 1)
+    patches_applied += 1
+    print("  + backward-compatible EM_ASM aliases")
+else:
+    print("  x EM_ASM alias pattern not found")
+
+# ============================================================
 # PATCH 1: Fallback OffscreenCanvas in setCanvasElementSizeCallingThread
 # ============================================================
 old_1 = """  var canvas = findCanvasEventTarget(target);
