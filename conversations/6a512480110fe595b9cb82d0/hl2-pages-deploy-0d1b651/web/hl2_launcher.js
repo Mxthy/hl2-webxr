@@ -374,7 +374,9 @@ if (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER) {
         var expected = match ? (parseInt(match[1], 10) + 1) : 0;
         // Cloudflare may omit Content-Range from CORS-exposed headers. libengine.so
         // is a verified fixed side-module artifact; stop once its full body arrived.
-        if (!expected && /\/libengine\.so(?:[?#]|$)/.test(url)) expected = 6736815;
+        var knownSizes = { 'libclient.so': 8468938, 'libengine.so': 6736815, 'libserver.so': 11400000 };
+        var moduleBase = String(url).split('/').pop().split('?')[0];
+        if (!expected && knownSizes[moduleBase]) expected = knownSizes[moduleBase];
         function finish() {
           var out = new Uint8Array(total), off = 0;
           for (var i = 0; i < parts.length; i++) { out.set(parts[i], off); off += parts[i].length; }
@@ -3130,7 +3132,8 @@ var mergeLibSymbols = (exports, libName) => {
     if (dep) removeRunDependency(dep);
   }, err => {
     if (onerror) {
-      onerror();
+      console.error('[DYLIB-LOAD-ERROR] ' + url, err);
+      onerror(err);
     } else {
       throw `Loading data file "${url}" failed.`;
     }
