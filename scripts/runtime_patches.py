@@ -256,8 +256,8 @@ new_6 = """mergeLibSymbols(wasmExports, "main");
   try {
     ["_ZN16IVP_Compact_Edge10next_tableE", "_ZN16IVP_Compact_Edge10prev_tableE"].forEach(function(name) {
       if (typeof GOT !== "undefined" && GOT[name] && GOT[name].value === 0) {
-        var alloc = (typeof wasmExports !== "undefined" && typeof wasmExports.malloc === "function")
-          ? wasmExports.malloc(1024) : 0;
+        var alloc = (typeof getMemory === "function")
+          ? getMemory(1024) : 0;
         if (typeof HEAPU8 !== "undefined" && alloc > 0) HEAPU8.fill(0, alloc, alloc + 1024);
         GOT[name].value = alloc;
         console.warn('[IVP-DATA] GOT fallback ' + name + ' -> ' + alloc);
@@ -444,8 +444,8 @@ new_11c = """var reportUndefinedSymbols = () => {
   for (var [symName, entry] of Object.entries(GOT)) {
     if (entry.value == 0) {
       if (symName === \"_ZN16IVP_Compact_Edge10next_tableE\" || symName === \"_ZN16IVP_Compact_Edge10prev_tableE\") {
-        var ivpTablePtr = (typeof wasmExports !== \"undefined\" && typeof wasmExports.malloc === \"function\")
-          ? wasmExports.malloc(1024) : 0;
+        var ivpTablePtr = (typeof getMemory === \"function\")
+          ? getMemory(1024) : 0;
         if (ivpTablePtr > 0) {
           if (typeof HEAPU8 !== \"undefined\") HEAPU8.fill(0, ivpTablePtr, ivpTablePtr + 1024);
           entry.value = ivpTablePtr;
