@@ -572,8 +572,10 @@ new_18 = """  };
   // The main module imports this IVP method before side modules are merged.
   // Keep the import callable during wasm instantiation; mergeLibSymbols may replace it later.
   if (typeof wasmImports["_ZN11IVP_Mindist9do_impactEv"] !== "function") {
-    wasmImports["_ZN11IVP_Mindist9do_impactEv"] = function(self) { return 0; };
-    console.warn('[IVP-BOOT] callable do_impact bootstrap installed');
+    var ivpDoImpactBootstrap = function(self) { return 0; };
+    ivpDoImpactBootstrap.sig = "vp";
+    wasmImports["_ZN11IVP_Mindist9do_impactEv"] = ivpDoImpactBootstrap;
+    console.warn('[IVP-BOOT] callable do_impact bootstrap installed (sig=vp)');
   }
 }
 
