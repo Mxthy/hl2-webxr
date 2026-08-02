@@ -289,7 +289,7 @@ else:
 # PATCH 8: setMainLoop logging
 # ============================================================
 old_8 = '     */ var setMainLoop = (iterFunc, fps, simulateInfiniteLoop, arg, noSetTiming) => {\n  assert(!MainLoop.func'
-new_8 = '     */ var setMainLoop = (iterFunc, fps, simulateInfiniteLoop, arg, noSetTiming) => {\n  console.log("[SET-MAIN-LOOP] fps=" + fps + " iterFunc=" + typeof iterFunc);\n  assert(!MainLoop.func'
+new_8 = '     */ var setMainLoop = (iterFunc, fps, simulateInfiniteLoop, arg, noSetTiming) => {\n  console.log("[SET-MAIN-LOOP] fps=" + fps + " iterFunc=" + typeof iterFunc);\n  if (MainLoop.func) { console.warn("[SET-MAIN-LOOP] already active -- ignoring duplicate"); return; }\n  assert(!MainLoop.func'
 if old_8 in js:
     js = js.replace(old_8, new_8, 1)
     patches_applied += 1
