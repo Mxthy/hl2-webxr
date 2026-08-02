@@ -237,7 +237,7 @@ int _ZN11IVP_Mindist22recalc_invalid_mindistEv(void* self) {
 }
 
 // IVP_Mindist::do_impact weak stub — void(this) matches the side-module import.
-__attribute__((weak))
+__attribute__((weak, used, visibility("default")))
 void _ZN11IVP_Mindist9do_impactEv(void* self) {
     (void)self;
 }
