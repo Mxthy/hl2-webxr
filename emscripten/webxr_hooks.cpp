@@ -91,11 +91,10 @@ extern "C" EMSCRIPTEN_KEEPALIVE int Engine_LoadMap(const char* mapName) {
     snprintf(cmd, sizeof(cmd), "map_background %s\n", mapName);
     EM_ASM_({ console.log('[Engine_LoadMap] Queuing: ' + UTF8ToString($0)); }, cmd);
     
-    // Queue only. The already-running render loop executes the command on its
-    // next frame; executing here re-enters the engine during bootstrap and can
-    // access uninitialized frame state (WASM memory OOB).
-    Cbuf_AddText(cmd);
-    EM_ASM_({ console.log('[Engine_LoadMap] Queued; waiting for render loop'); });
+    // Diagnostic isolation: do not call the dynamically-linked Cbuf_AddText
+    // yet. The direct ABI call currently traps before the render loop can
+    // consume the command; keep the lifecycle entry non-destructive.
+    EM_ASM_({ console.log('[Engine_LoadMap] Hook reached; Cbuf deferred'); });
     return 0;
 }
 
