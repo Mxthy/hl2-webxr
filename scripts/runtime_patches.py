@@ -32,16 +32,16 @@ old_20 = """  635775: $0 => {
     console.log(\"[Engine_LoadMap] Queuing: \" + UTF8ToString($0));
   },
   635841: () => {
-    console.log(\"[Engine_LoadMap] Done\");
+    console.log(\"[Engine_LoadMap] Queued; waiting for render loop\");
   },
-  635883: $0 => {
+  635910: $0 => {
     console.log(\"[Engine_QueueCommand] \" + UTF8ToString($0));
   },"""
 new_20 = """  635692: $0 => {
     console.log(\"[Engine_LoadMap] Queuing: \" + UTF8ToString($0));
   },
   635758: () => {
-    console.log(\"[Engine_LoadMap] Done\");
+    console.log(\"[Engine_LoadMap] Queued; waiting for render loop\");
   },
   635800: $0 => {
     console.log(\"[Engine_QueueCommand] \" + UTF8ToString($0));
@@ -50,9 +50,9 @@ new_20 = """  635692: $0 => {
     console.log(\"[Engine_LoadMap] Queuing: \" + UTF8ToString($0));
   },
   635841: () => {
-    console.log(\"[Engine_LoadMap] Done\");
+    console.log(\"[Engine_LoadMap] Queued; waiting for render loop\");
   },
-  635883: $0 => {
+  635910: $0 => {
     console.log(\"[Engine_QueueCommand] \" + UTF8ToString($0));
   },"""
 if old_20 in js:
