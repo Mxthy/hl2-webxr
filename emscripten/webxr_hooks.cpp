@@ -87,13 +87,8 @@ extern "C" EMSCRIPTEN_KEEPALIVE int Engine_Init() {
 // ============================================================================
 extern "C" EMSCRIPTEN_KEEPALIVE int Engine_LoadMap(const char* mapName) {
     if (!g_bEngineInitialized || !mapName || !*mapName) return 2;
-    char cmd[256];
-    snprintf(cmd, sizeof(cmd), "map_background %s\n", mapName);
-    EM_ASM_({ console.log('[Engine_LoadMap] Queuing: ' + UTF8ToString($0)); }, cmd);
-    
-    // Diagnostic isolation: do not call the dynamically-linked Cbuf_AddText
-    // yet. The direct ABI call currently traps before the render loop can
-    // consume the command; keep the lifecycle entry non-destructive.
+    // Diagnostic isolation: avoid snprintf and EM_ASM pointer arguments.
+    // The exported hook is reached from JS, so keep this probe scalar-only.
     EM_ASM_({ console.log('[Engine_LoadMap] Hook reached; Cbuf deferred'); });
     return 0;
 }
