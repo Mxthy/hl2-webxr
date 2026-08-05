@@ -608,7 +608,8 @@ emcc_link() {
   local webxr_hooks_src="$REPO_ROOT/emscripten/webxr_hooks.cpp"
   local webxr_hooks_obj="$ENGINE_DIR/build/webxr_hooks.o"
   if [ -f "$webxr_hooks_src" ]; then
-    log "Compiling webxr_hooks.cpp..."
+    log "Compiling webxr_hooks.cpp (forced fresh object)..."
+    rm -f "$webxr_hooks_obj" 2>/dev/null || true
     emcc -O0 -fPIC -D__EMSCRIPTEN__ -c "$webxr_hooks_src" -o "$webxr_hooks_obj"
     log "  webxr_hooks compiled: $webxr_hooks_obj"
   else
