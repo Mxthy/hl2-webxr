@@ -521,6 +521,11 @@ compile_ivp_vtable_stub() {
 # 10. emcc link (Haupt-WASM-Bundle)
 # ---------------------------------------------------------------------------
 emcc_link() {
+  # Hook source is intentionally rebuilt for each CI run; invalidate any
+  # previous link checkpoint so the fresh object is included in the WASM.
+  if [ -f "$REPO_ROOT/emscripten/webxr_hooks.cpp" ]; then
+    sed -i '/emcc_link/d' "$checkpoint_file" 2>/dev/null || true
+  fi
   # Force re-link if webxr_bridge.cpp exists but was never compiled (e.g. checkpoint from older build)
   if [ -f "$REPO_ROOT/emscripten/webxr_bridge.cpp" ] && [ ! -f "$ENGINE_DIR/build/webxr_bridge.o" ]; then
     log "webxr_bridge.cpp present but not compiled — clearing emcc_link checkpoint"
