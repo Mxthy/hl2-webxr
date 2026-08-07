@@ -23,6 +23,30 @@ with open(js_path, 'r') as f:
 
 patches_applied = 0
 
+# Backward-compatible EM_ASM aliases. The current scalar-only Engine_LoadMap
+# uses id 635692; never decode an absent argument because UTF8ToString(undefined)
+# traps with a WASM out-of-bounds error.
+alias_20 = """  635692: () => {
+    console.log(\"[Engine_LoadMap] Hook reached; Cbuf deferred\");
+  },
+  635758: () => {
+    console.log(\"[Engine_LoadMap] Queued; waiting for render loop\");
+  },
+  635800: $0 => {
+    console.log(\"[Engine_QueueCommand] \" + UTF8ToString($0));
+  },
+"""
+if '  635692:' not in js:
+    marker_js='var ASM_CONSTS = {\n'
+    if marker_js in js:
+        js=js.replace(marker_js, marker_js+alias_20, 1)
+        patches_applied += 1
+        print("  + backward-compatible EM_ASM aliases")
+    else:
+        print("  x ASM_CONSTS table not found")
+else:
+    print("  = backward-compatible EM_ASM aliases already present")
+
 # ============================================================
 # PATCH 1: Fallback OffscreenCanvas in setCanvasElementSizeCallingThread
 # ============================================================

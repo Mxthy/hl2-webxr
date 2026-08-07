@@ -33,8 +33,10 @@ patches_applied = 0
 # Emscripten shifts EM_ASM addresses when hook strings change. Inject the
 # legacy entries independently of the generated current table layout.
 # ============================================================
-alias_20 = """  635692: $0 => {
-    console.log(\"[Engine_LoadMap] Queuing: \" + UTF8ToString($0));
+alias_20 = """  635692: () => {
+    // Current scalar-only Engine_LoadMap uses this EM_ASM id. Do not
+    // dereference an absent $0 argument: that caused the OOB trap.
+    console.log(\"[Engine_LoadMap] Hook reached; Cbuf deferred\");
   },
   635758: () => {
     console.log(\"[Engine_LoadMap] Queued; waiting for render loop\");
