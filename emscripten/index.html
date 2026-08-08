@@ -95,7 +95,7 @@
                    Module._webxrEngineInitDone = true;
                    try {
                        const ex = Module.wasmExports || Module;
-                       const loadMap = ex.Engine_LoadMap || Module._Engine_LoadMap;
+                       const loadMap = ex.WebXR_Engine_LoadMap || Module._WebXR_Engine_LoadMap;
                        // Host_Init is already reached by the launcher bootstrap;
                        // do not call Engine_Init a second time.
                        var alloc = ex.malloc || Module._malloc;
@@ -103,7 +103,7 @@
                            const mapName = 'background01';
                            const ptr = alloc(64);
                            stringToUTF8(mapName, ptr, 64);
-                           console.log('[WEBXR] Engine_LoadMap(' + mapName + ')');
+                           console.log('[WEBXR] WebXR_Engine_LoadMap(' + mapName + ')');
                            loadMap(ptr);
                            if (typeof Module._free === 'function') Module._free(ptr);
                        }

@@ -77,12 +77,12 @@ extern "C" EMSCRIPTEN_KEEPALIVE int Engine_Init() {
 }
 
 // ============================================================================
-// Engine_LoadMap — queues a map load command and runs a frame
+// WebXR_Engine_LoadMap — collision-free map hook
 // ============================================================================
-extern "C" EMSCRIPTEN_KEEPALIVE int Engine_LoadMap(const char* mapName) {
+extern "C" EMSCRIPTEN_KEEPALIVE int WebXR_Engine_LoadMap(const char* mapName) {
     // Diagnostic isolation: avoid snprintf and EM_ASM pointer arguments.
     // The exported hook is reached from JS, so keep this probe scalar-only.
-    EM_ASM_({ console.log('[Engine_LoadMap] Hook reached; Cbuf deferred'); });
+    EM_ASM_({ console.log('[WebXR_Engine_LoadMap] Hook reached; Cbuf deferred'); });
     return 0;
 }
 
