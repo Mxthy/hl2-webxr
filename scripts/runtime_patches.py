@@ -14,6 +14,7 @@
 12. loadDynamicLibrary: logging
 13. getExports: try/catch (skip modules that fail to load — e.g. libsourcevr.so 404)
 14. TLS init guard (skip if _emscripten_tls_init is not a function)
+15. Preserve MAIN_MODULE wasmExports after SIDE_MODULE loading
 """
 import sys, re
 
@@ -55,6 +56,46 @@ if '  635692:' not in js:
         print("  x ASM_CONSTS table not found")
 else:
     print("  = backward-compatible EM_ASM aliases already present")
+
+# ============================================================
+# PATCH 15: preserve MAIN_MODULE exports after SIDE_MODULE loading
+# Emscripten reuses the global wasmExports variable while loading each DSO.
+# Restore the main table after the async DSO chain so public wrappers do not
+# resolve against the last side-module export table.
+# ============================================================
+main_capture = '''    mergeLibSymbols(wasmExports, "main");'''
+main_capture_new = '''    mergeLibSymbols(wasmExports, "main");
+    Module["mainWasmExports"] = wasmExports;'''
+if 'Module["mainWasmExports"] = wasmExports;' not in js:
+    if main_capture in js:
+        js = js.replace(main_capture, main_capture_new, 1)
+        patches_applied += 1
+        print("  + preserved MAIN_MODULE export table")
+    else:
+        print("  x main export capture pattern not found")
+else:
+    print("  = MAIN_MODULE export capture already present")
+
+restore_old = '''  })), Promise.resolve()).then(() => {
+    // we got them all, wonderful
+    reportUndefinedSymbols();'''
+restore_new = '''  })), Promise.resolve()).then(() => {
+    if (Module["mainWasmExports"]) {
+      wasmExports = Module["mainWasmExports"];
+      Module["wasmExports"] = wasmExports;
+      console.warn('[DYLIB] Restored main-module export table');
+    }
+    // we got them all, wonderful
+    reportUndefinedSymbols();'''
+if "Restored main-module export table" not in js:
+    if restore_old in js:
+        js = js.replace(restore_old, restore_new, 1)
+        patches_applied += 1
+        print("  + restored MAIN_MODULE exports after loadDylibs")
+    else:
+        print("  x loadDylibs restore pattern not found")
+else:
+    print("  = MAIN_MODULE export restore already present")
 
 # ============================================================
 # PATCH 1: Fallback OffscreenCanvas in setCanvasElementSizeCallingThread
