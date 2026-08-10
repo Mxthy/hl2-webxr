@@ -356,7 +356,7 @@ EOF
           var url = chunkUrl(mapName);
           var started = performance.now();
           console.info('[asset:stream-start]', { mapName: mapName, url: url });
-          var response = await fetch(url, { mode: 'cors', credentials: 'omit', headers: { Range: 'bytes=0-' } });
+          var response = await fetch(url, { mode: 'cors', credentials: 'omit', headers: {} });
           if (!(response.ok || response.status === 206)) throw new Error('Chunk ' + mapName + ': HTTP ' + response.status);
           var result = await streamUnpack(response, mapName);
           console.info('[asset:stream-done]', { mapName: mapName, duration_ms: Math.round(performance.now() - started) });

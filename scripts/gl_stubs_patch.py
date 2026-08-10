@@ -37,7 +37,7 @@ async function fetchChunk(mapName) {
   const response = await fetch(url, {
     mode: 'cors',
     credentials: 'omit',
-    headers: { Range: 'bytes=0-' }
+    headers: {}
   });
   console.info('[asset:headers]', {
     mapName,
