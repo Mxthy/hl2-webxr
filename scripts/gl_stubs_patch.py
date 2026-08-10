@@ -21,6 +21,20 @@ asset_config_block = """
 const ASSET_ORIGIN = '""" + ASSET_ORIGIN + """';
 const CHUNK_PREFIX = ASSET_ORIGIN + '/chunks';
 
+function assetTelemetry(message, detail) {
+  var text = String(message);
+  if (detail !== undefined) {
+    try { text += ' ' + JSON.stringify(detail); } catch (e) {}
+  }
+  console.info('[asset]', text);
+  try {
+    if (typeof Module !== 'undefined' && typeof Module.print === 'function') Module.print('[asset] ' + text);
+  } catch (e) {}
+  try {
+    if (typeof Module !== 'undefined' && typeof Module.setStatus === 'function') Module.setStatus(text);
+  } catch (e) {}
+}
+
 function chunkUrl(mapName) {
   if (!/^[a-z0-9_]+$/i.test(mapName)) {
     console.error('[asset:error] Invalid map chunk name: ' + mapName);
@@ -33,13 +47,13 @@ function chunkUrl(mapName) {
 async function fetchChunk(mapName) {
   const url = chunkUrl(mapName);
   const started = performance.now();
-  console.info('[asset:start]', { mapName, url });
+  assetTelemetry('start ' + mapName, { url: url });
   const response = await fetch(url, {
     mode: 'cors',
     credentials: 'omit',
     headers: {}
   });
-  console.info('[asset:headers]', {
+  assetTelemetry('headers ' + mapName, {
     mapName,
     status: response.status,
     contentType: response.headers.get('content-type'),
@@ -50,7 +64,7 @@ async function fetchChunk(mapName) {
     throw new Error('Chunk ' + mapName + ': HTTP ' + response.status + ' (' + url + ')');
   }
   const buffer = await response.arrayBuffer();
-  console.info('[asset:done]', {
+  assetTelemetry('done ' + mapName, {
     mapName,
     bytes: buffer.byteLength,
     duration_ms: Math.round(performance.now() - started)

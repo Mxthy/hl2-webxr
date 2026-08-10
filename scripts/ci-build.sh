@@ -315,7 +315,7 @@ EOF
       var reader = response.body.getReader();
       var pending = new Uint8Array(0);
       var pathLen = null, dataLen = null, path = null;
-      var files = 0, bytes = 0;
+      var files = 0, bytes = 0, lastReport = 0;
       for (;;) {
         var next = await reader.read();
         pending = append(pending, next.value || new Uint8Array(0));
@@ -340,6 +340,10 @@ EOF
           pending = pending.slice(dataLen);
           writeFile(path, data);
           files++; bytes += dataLen;
+          if (bytes - lastReport >= 64 * 1024 * 1024) {
+            assetTelemetry(mapName + ' unpacked ' + bytes + ' bytes (' + files + ' files)');
+            lastReport = bytes;
+          }
           pathLen = null; dataLen = null; path = null;
         }
         if (next.done) break;
@@ -347,7 +351,7 @@ EOF
       if (pathLen !== null || path !== null || pending.length) {
         throw new Error('Truncated ' + mapName + ' chunk at EOF');
       }
-      console.info('[asset:unpack]', { mapName: mapName, files: files, bytes: bytes });
+      assetTelemetry('unpack ' + mapName, { files: files, bytes: bytes });
       return { mapName: mapName, files: files, bytes: bytes };
     }
     function loadMap(mapName) {
@@ -355,11 +359,12 @@ EOF
         cache[mapName] = (async function() {
           var url = chunkUrl(mapName);
           var started = performance.now();
-          console.info('[asset:stream-start]', { mapName: mapName, url: url });
+          assetTelemetry('stream-start ' + mapName, { url: url });
           var response = await fetch(url, { mode: 'cors', credentials: 'omit', headers: {} });
+          assetTelemetry('response ' + mapName, { status: response.status, contentLength: response.headers.get('content-length') });
           if (!(response.ok || response.status === 206)) throw new Error('Chunk ' + mapName + ': HTTP ' + response.status);
           var result = await streamUnpack(response, mapName);
-          console.info('[asset:stream-done]', { mapName: mapName, duration_ms: Math.round(performance.now() - started) });
+          assetTelemetry('stream-done ' + mapName, { duration_ms: Math.round(performance.now() - started) });
           return result;
         })();
       }
@@ -368,6 +373,7 @@ EOF
     return { loadMap: loadMap, loadMapCached: loadMap };
   })();
 
+      assetTelemetry('load_game_data registered')
       addRunDependency('load_game_data')
 
   // Load shaders chunk first (critical, non-optional)
@@ -551,8 +557,10 @@ EOF
     } catch(e) { console.warn('[hl2] Shader case fix error: ' + e) }
 
     console.log('[hl2] All chunks loaded, starting engine...')
+    assetTelemetry('all chunks loaded; releasing load_game_data')
     removeRunDependency('load_game_data')
   }).catch(function(err) {
+    assetTelemetry('chunk load error; releasing load_game_data with partial data', { error: String(err) })
     console.error('[hl2] Chunk load error: ' + err + ' — starting with partial data')
     removeRunDependency('load_game_data')
   })
