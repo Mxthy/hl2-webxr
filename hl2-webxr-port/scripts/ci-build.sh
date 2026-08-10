@@ -1278,12 +1278,12 @@ console.log(`  Manifest: ${shaderManifest.length} shader files`)
 
 console.log('\n=== Chunk 1: background1.data (Maps + Config + Bootstrap VTFs) ===')
 const bgChunks = []
-// Maps + config + resource
+// Startup config/resource only. Do not place the complete maps tree here:
+// the reference port creates map-specific chunks from OpenForRead traces.
 const bgDirs = [
   [baseGamePath + '/hl2/cfg',           '/hl2'],
   [baseGamePath + '/hl2/resource',      '/hl2'],
   [baseGamePath + '/platform/resource', '/platform'],
-  [baseGamePath + '/hl2/maps',          '/hl2'],
 ]
 for (const [srcDir, vBase] of bgDirs) {
   if (fs.existsSync(srcDir)) {
@@ -1293,6 +1293,34 @@ for (const [srcDir, vBase] of bgDirs) {
     console.log(`  SKIP: ${srcDir}`)
   }
 }
+
+// Only the first map is part of the bootstrap chunk. Later BSPs receive
+// zero-length stubs so Source can resolve their virtual paths without
+// transferring every campaign map before Engine_Init.
+const mapsDir = baseGamePath + '/hl2/maps'
+const startupMapNames = ['background01.bsp', 'background1.bsp']
+let startupMapAdded = false
+for (const name of startupMapNames) {
+  const src = path.join(mapsDir, name)
+  if (fs.existsSync(src)) {
+    const bytes = addFile(bgChunks, src, '/hl2/maps/' + name)
+    console.log(`  startup map: ${name}: ${Math.round(bytes/1024/1024)}MB`)
+    startupMapAdded = true
+    break
+  }
+}
+if (!startupMapAdded) console.log('  WARNING: startup BSP not found (background01/background1)')
+if (fs.existsSync(mapsDir)) {
+  for (const name of fs.readdirSync(mapsDir).filter(n => /\.bsp$/i.test(n))) {
+    if (startupMapNames.includes(name)) continue
+    const dst = Buffer.from('/hl2/maps/' + name)
+    const hdr = Buffer.alloc(8)
+    hdr.writeUint32LE(dst.length, 0)
+    hdr.writeUint32LE(0, 4)
+    bgChunks.push(hdr, dst)
+  }
+}
+
 // Bootstrap VTFs — critical for engine init, must be in background1 chunk
 console.log('  Adding bootstrap VTFs...')
 addFileFromTree(bgChunks, baseGamePath + '/hl2/materials', '/hl2/materials/dev/identitylightwarp.vtf', 'identitylightwarp.vtf')
