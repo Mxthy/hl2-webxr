@@ -33,7 +33,7 @@ jobs:
     env:
       BUILDTYPE: ${{ github.event.inputs.buildtype || 'release' }}
       ENGINE_REPO: https://github.com/weliveinhell/source-engine
-      EMSDK_COMMIT: 2d480a1b7c7a34a354188d93f3e89190a44a1d21
+      EMSDK_COMMIT: 75eb9522ae0d24a9057c29ff6c72336beddf9508
       EMSDK_DIR: ${{ github.workspace }}/tools/emsdk
       ENGINE_DIR: ${{ github.workspace }}/engine/portal-port
       ASSETS_ARCHIVE_URL: "https://archive.org/download/Half-Life-2-Retail-2153/Half-Life%202.7z"
