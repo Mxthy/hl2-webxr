@@ -35,7 +35,7 @@ if need_step "emsdk_clone"; then
   mkdir -p "$EMSDK_DIR"
   git clone https://github.com/emscripten-core/emsdk.git "$EMSDK_DIR" 2>&1 | tee -a "$LOG"
   cd "$EMSDK_DIR"
-  git checkout 2d480a1b7c7a34a354188d93f3e89190a44a1d21 2>&1 | tee -a "$LOG"
+  git checkout 75eb9522ae0d24a9057c29ff6c72336beddf9508 2>&1 | tee -a "$LOG"
   step_done "emsdk_clone"
 else step_skip "emsdk_clone"; fi
 
@@ -43,8 +43,8 @@ else step_skip "emsdk_clone"; fi
 if need_step "emsdk_install"; then
   echo "[STEP 3] emsdk install+activate" | tee -a "$LOG"
   cd "$EMSDK_DIR"
-  ./emsdk install latest 2>&1 | tee -a "$LOG"
-  ./emsdk activate latest 2>&1 | tee -a "$LOG"
+  ./emsdk install 3.1.72 2>&1 | tee -a "$LOG"
+  ./emsdk activate 3.1.72 2>&1 | tee -a "$LOG"
   step_done "emsdk_install"
 else step_skip "emsdk_install"; fi
 

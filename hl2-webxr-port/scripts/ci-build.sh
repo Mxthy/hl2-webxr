@@ -27,7 +27,7 @@ ENGINE_REPO="${ENGINE_REPO:-https://github.com/weliveinhell/source-engine}"
 ENGINE_DIR="${ENGINE_DIR:-$REPO_ROOT/engine/portal-port}"
 
 EMSDK_REPO="https://github.com/emscripten-core/emsdk.git"
-EMSDK_COMMIT="${EMSDK_COMMIT:-2d480a1b7c7a34a354188d93f3e89190a44a1d21}"
+EMSDK_COMMIT="${EMSDK_COMMIT:-75eb9522ae0d24a9057c29ff6c72336beddf9508}"
 EMSDK_DIR="${EMSDK_DIR:-$REPO_ROOT/tools/emsdk}"
 
 # Assets: HL2 Retail-Verzeichnis — muss hl2/ und platform/ enthalten
