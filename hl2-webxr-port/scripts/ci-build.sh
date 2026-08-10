@@ -189,6 +189,7 @@ apply_source_patches() {
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/time.h>
+#include <emscripten/emscripten.h>
 
 unsigned long GetRam() { return 4096UL; }
 int futimes(int fd, const struct timeval tv[2]) { return 0; }
@@ -216,9 +217,10 @@ __attribute__((constructor)) static void __ivp_mindist_init() {
     (void)__ivp_mindist_vtable_anchor;
 }
 
-// init_mms_function_table weak stub
-__attribute__((weak))
-void _ZN27IVP_Mindist_Minimize_Solver23init_mms_function_tableEv(void* self) {
+// IVP_Mindist::do_impact main-module fallback. This symbol is imported by
+// libvphysics.so and must be retained in the MAIN_MODULE symbol table.
+EMSCRIPTEN_KEEPALIVE
+void _ZN11IVP_Mindist9do_impactEv(void* self) {
     (void)self;
 }
 
@@ -246,7 +248,7 @@ void* _ZN16IVP_Compact_Edge10next_tableE[256] = { 0 };
 
 #endif // __EMSCRIPTEN__
 EOF
-  log "  patch: emscripten_stubs.cpp (with IVP_Mindist weak stubs)"
+  log "  patch: emscripten_stubs.cpp (with IVP_Mindist main-module fallback)"
 
 
   # Patch 6 (post): post.js — Shader + Asset Chunk Loading vor callMain()
@@ -849,7 +851,7 @@ emcc_link() {
   echo "$_erm_hash" > "$_erm_cache" 2>/dev/null || true
 
   # Also force re-link if source_patches changed (e.g. em_loop_iteration patch)
-  _sp_hash=$(grep "em_loop_iteration\|WebXR_Engine_LoadMap\|do_impact\|EXPORTED_FUNCTIONS\|EMSCRIPTEN_KEEPALIVE.*em_loop\|KEEPALIVE.*Host_Init\|KEEPALIVE.*Host_RunFrame\|KEEPALIVE.*Cbuf_AddText\|KEEPALIVE.*Cbuf_Execute" "$REPO_ROOT/scripts/ci-build.sh" | md5sum | cut -c1-8)
+  _sp_hash=$(grep "em_loop_iteration\|WebXR_Engine_LoadMap\|do_impact\|EMSCRIPTEN_KEEPALIVE.*do_impact\|EMSCRIPTEN_KEEPALIVE.*em_loop\|KEEPALIVE.*Host_Init\|KEEPALIVE.*Host_RunFrame\|KEEPALIVE.*Cbuf_AddText\|KEEPALIVE.*Cbuf_Execute" "$REPO_ROOT/scripts/ci-build.sh" | md5sum | cut -c1-8)
   _sp_cache="$ENGINE_DIR/build/.sp_hash"
   if [ -f "$_sp_cache" ] && [ "$(cat "$_sp_cache")" != "$_sp_hash" ]; then
     log "Source patches changed — forcing waf_build + emcc_link re-run"
@@ -958,7 +960,6 @@ PRE_JS_FALLBACK
     -sOFFSCREENCANVASES_TO_PTHREAD="#game-canvas" \
     -sOFFSCREENCANVAS_SUPPORT=1 \
     "-sEXPORTED_RUNTIME_METHODS=['wasmMemory','addRunDependency','removeRunDependency','FS','callMain','abort','HEAPU8','ccall','cwrap','wasmExports','getValue','setValue','HEAPF32','HEAPU32','lengthBytesUTF8','stringToUTF8','UTF8ToString']" \
-    "-sEXPORTED_FUNCTIONS=['_WebXR_Engine_LoadMap','_Engine_Init','_Engine_RunFrame','_Engine_QueueCommand','_Engine_RenderSingleFrame','_Engine_DisableAutoRender','_Engine_SetCameraMatrix','_Engine_SetProjectionMatrix','_Engine_ResetCameraMatrix','_ZN11IVP_Mindist9do_impactEv','_Z17em_loop_iterationv']" \
     --pre-js emscripten/pre.js \
     --post-js emscripten/post.js \
     -sERROR_ON_UNDEFINED_SYMBOLS=0 \
