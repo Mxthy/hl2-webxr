@@ -981,6 +981,48 @@ PRE_JS_FALLBACK
     -o build/launcher_main/hl2_launcher.html \
     2>&1 | tee "$LOG_DIR/emcc_link.log"
 
+  # PROXY_TO_PTHREAD: Module.setStatus can execute in a worker where DOM nodes are null.
+  # Keep status reporting alive without letting progress UI access abort runtime startup.
+  for html_file in build/launcher_main/hl2_launcher.html build/install/hl2_launcher.html; do
+    if [ -f "$html_file" ]; then
+      python3 - "$html_file" <<'PY_DOM_SAFE'
+import sys
+from pathlib import Path
+p = Path(sys.argv[1])
+s = p.read_text()
+old = """            progressElement.value = parseInt(m[2])*100;
+            progressElement.max = parseInt(m[4])*100;
+            progressElement.hidden = false;
+            spinnerElement.hidden = false;"""
+new = """            if (progressElement) {
+              progressElement.value = parseInt(m[2])*100;
+              progressElement.max = parseInt(m[4])*100;
+              progressElement.hidden = false;
+            }
+            if (spinnerElement) spinnerElement.hidden = false;"""
+old2 = """            progressElement.value = null;
+            progressElement.max = null;
+            progressElement.hidden = true;
+            if (!text) spinnerElement.style.display = 'none';
+          }
+          statusElement.innerHTML = text;"""
+new2 = """            if (progressElement) {
+              progressElement.value = null;
+              progressElement.max = null;
+              progressElement.hidden = true;
+            }
+            if (!text && spinnerElement) spinnerElement.style.display = 'none';
+          }
+          if (statusElement) statusElement.innerHTML = text;"""
+if old not in s or old2 not in s:
+    raise SystemExit(f'DOM status block not found or already changed: {p}')
+s = s.replace(old, new, 1).replace(old2, new2, 1)
+p.write_text(s)
+print(f'DOM-safe status patched: {p}')
+PY_DOM_SAFE
+    fi
+  done
+
   cp build/launcher_main/hl2_launcher.{html,js,wasm} build/install/
 
   # GL stubs + dlsym/dlopen intercept + GL version spoof
