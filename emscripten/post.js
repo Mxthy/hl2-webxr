@@ -106,11 +106,11 @@
       console.log('[hl2] Shader preflight OK ✓')
     }
 
-    // Now load background1 + materials in parallel
-    return Promise.all([
-      dataLoader.loadMap('background1'),
-      dataLoader.loadMap('materials')
-    ])
+    // Load large chunks sequentially to avoid parallel long-stream connection resets.
+    // Runtime/map initialization remains blocked until both chunks complete.
+    return dataLoader.loadMap('background1').then(function() {
+      return dataLoader.loadMap('materials')
+    })
     })
   }).then(function() {
     // MEMFS is case-sensitive and symlinks are unreliable for Source lookups.
