@@ -308,17 +308,11 @@ EOF
       if (slash > 0) FS.mkdirTree(path.slice(0, slash));
       FS.writeFile(path, data);
     }
-    async function streamUnpack(response, mapName) {
-      if (!response.body || !response.body.getReader) {
-        throw new Error(mapName + ' response has no readable body');
-      }
-      var reader = response.body.getReader();
+    function createUnpacker(mapName) {
       var pending = new Uint8Array(0);
       var pathLen = null, dataLen = null, path = null;
       var files = 0, bytes = 0, lastReport = 0;
-      for (;;) {
-        var next = await reader.read();
-        pending = append(pending, next.value || new Uint8Array(0));
+      function process() {
         for (;;) {
           if (pathLen === null) {
             if (pending.length < 8) break;
@@ -346,24 +340,92 @@ EOF
           }
           pathLen = null; dataLen = null; path = null;
         }
-        if (next.done) break;
       }
-      if (pathLen !== null || path !== null || pending.length) {
-        throw new Error('Truncated ' + mapName + ' chunk at EOF');
+      async function consume(reader) {
+        var received = 0;
+        try {
+          for (;;) {
+            var next = await reader.read();
+            if (next.value && next.value.length) {
+              received += next.value.length;
+              pending = append(pending, next.value);
+              process();
+            }
+            if (next.done) break;
+          }
+          return received;
+        } catch (e) {
+          e.__rangeReceived = received;
+          throw e;
+        }
       }
-      assetTelemetry('unpack ' + mapName, { files: files, bytes: bytes });
-      return { mapName: mapName, files: files, bytes: bytes };
+      function finish() {
+        process();
+        if (pathLen !== null || path !== null || pending.length) {
+          throw new Error('Truncated ' + mapName + ' chunk at EOF');
+        }
+        assetTelemetry('unpack ' + mapName, { files: files, bytes: bytes });
+        return { mapName: mapName, files: files, bytes: bytes };
+      }
+      return { consume: consume, finish: finish };
+    }
+    async function loadMapRanged(mapName) {
+      var url = chunkUrl(mapName);
+      var rangeSize = 16 * 1024 * 1024;
+      var offset = 0;
+      var unpacker = createUnpacker(mapName);
+      var complete = false;
+      var result = null;
+      while (!complete) {
+        var received = 0;
+        var succeeded = false;
+        for (var attempt = 1; attempt <= 3 && !succeeded; attempt++) {
+          try {
+            var end = offset + rangeSize - 1;
+            assetTelemetry('range-start ' + mapName, { start: offset, end: end, attempt: attempt });
+            var response = await fetch(url, {
+              mode: 'cors', credentials: 'omit',
+              headers: { 'Range': 'bytes=' + offset + '-' + end }
+            });
+            if (response.status === 416) {
+              result = unpacker.finish();
+              complete = true;
+              succeeded = true;
+              break;
+            }
+            if (response.status !== 206 && !(response.status === 200 && offset === 0)) {
+              throw new Error('Chunk ' + mapName + ': HTTP ' + response.status);
+            }
+            if (!response.body || !response.body.getReader) {
+              throw new Error(mapName + ' range response has no readable body');
+            }
+            var chunkBytes = await unpacker.consume(response.body.getReader());
+            offset += chunkBytes;
+            assetTelemetry('range-received ' + mapName, { bytes: chunkBytes, offset: offset });
+            received = 0;
+            if (chunkBytes < rangeSize) {
+              result = unpacker.finish();
+              complete = true;
+            }
+            succeeded = true;
+          } catch (e) {
+            received = e.__rangeReceived || received;
+            if (received) offset += received;
+            assetTelemetry('range-retry ' + mapName, { offset: offset, attempt: attempt, error: String(e) });
+            if (attempt === 3) throw e;
+            await new Promise(function(resolve) { setTimeout(resolve, 500 * attempt); });
+          }
+        }
+        if (!succeeded) throw new Error('Range loader stalled for ' + mapName);
+      }
+      return result || unpacker.finish();
     }
     function loadMap(mapName) {
       if (!cache[mapName]) {
         cache[mapName] = (async function() {
-          var url = chunkUrl(mapName);
           var started = performance.now();
-          assetTelemetry('stream-start ' + mapName, { url: url });
-          var response = await fetch(url, { mode: 'cors', credentials: 'omit', headers: {} });
-          assetTelemetry('response ' + mapName, { status: response.status, contentLength: response.headers.get('content-length') });
-          if (!(response.ok || response.status === 206)) throw new Error('Chunk ' + mapName + ': HTTP ' + response.status);
-          var result = await streamUnpack(response, mapName);
+          assetTelemetry('stream-start ' + mapName, { url: chunkUrl(mapName), mode: 'range-resume' });
+          var result = await loadMapRanged(mapName);
           assetTelemetry('stream-done ' + mapName, { duration_ms: Math.round(performance.now() - started) });
           return result;
         })();
