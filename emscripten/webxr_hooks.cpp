@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <ctype.h>
 
 // ============================================================================
 // Global state
@@ -87,9 +88,16 @@ extern "C" EMSCRIPTEN_KEEPALIVE int Engine_Init() {
 // ============================================================================
 extern "C" EMSCRIPTEN_KEEPALIVE int WebXR_Engine_LoadMap(const char* mapName) {
     if (!g_bEngineInitialized || !mapName || !*mapName) return 2;
-    // Diagnostic isolation: avoid snprintf and EM_ASM pointer arguments.
-    // The exported hook is reached from JS, so keep this probe scalar-only.
-    EM_ASM_({ console.log('[WebXR_Engine_LoadMap] Hook reached; Cbuf deferred'); });
+    // Only accept a simple Source map token; never pass arbitrary command text.
+    for (const unsigned char* p = reinterpret_cast<const unsigned char*>(mapName); *p; ++p) {
+        if (!(isalnum(*p) || *p == '_' || *p == '-' || *p == '/')) return 3;
+    }
+    char command[256];
+    int written = snprintf(command, sizeof(command), "map_background %s\n", mapName);
+    if (written < 0 || static_cast<size_t>(written) >= sizeof(command)) return 3;
+    Cbuf_AddText(command);
+    Cbuf_Execute();
+    EM_ASM_({ console.log('[WebXR_Engine_LoadMap] map command queued and executed'); });
     return 0;
 }
 
@@ -113,7 +121,7 @@ extern "C" EMSCRIPTEN_KEEPALIVE int Engine_QueueCommand(const char* cmd) {
     if (!g_bEngineInitialized || !cmd || !*cmd) return 2;
     Cbuf_AddText(cmd);
     Cbuf_Execute();
-    EM_ASM_({ console.log('[Engine_QueueCommand] ' + UTF8ToString($0)); }, cmd);
+    EM_ASM_({ console.log('[Engine_QueueCommand] command executed'); });
     return 0;
 }
 

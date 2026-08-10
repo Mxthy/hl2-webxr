@@ -849,7 +849,7 @@ emcc_link() {
   echo "$_erm_hash" > "$_erm_cache" 2>/dev/null || true
 
   # Also force re-link if source_patches changed (e.g. em_loop_iteration patch)
-  _sp_hash=$(grep "em_loop_iteration\|EMSCRIPTEN_KEEPALIVE.*em_loop\|KEEPALIVE.*Host_Init\|KEEPALIVE.*Host_RunFrame\|KEEPALIVE.*Cbuf_AddText\|KEEPALIVE.*Cbuf_Execute" "$REPO_ROOT/scripts/ci-build.sh" | md5sum | cut -c1-8)
+  _sp_hash=$(grep "em_loop_iteration\|WebXR_Engine_LoadMap\|do_impact\|EXPORTED_FUNCTIONS\|EMSCRIPTEN_KEEPALIVE.*em_loop\|KEEPALIVE.*Host_Init\|KEEPALIVE.*Host_RunFrame\|KEEPALIVE.*Cbuf_AddText\|KEEPALIVE.*Cbuf_Execute" "$REPO_ROOT/scripts/ci-build.sh" | md5sum | cut -c1-8)
   _sp_cache="$ENGINE_DIR/build/.sp_hash"
   if [ -f "$_sp_cache" ] && [ "$(cat "$_sp_cache")" != "$_sp_hash" ]; then
     log "Source patches changed — forcing waf_build + emcc_link re-run"
@@ -958,6 +958,7 @@ PRE_JS_FALLBACK
     -sOFFSCREENCANVASES_TO_PTHREAD="#game-canvas" \
     -sOFFSCREENCANVAS_SUPPORT=1 \
     "-sEXPORTED_RUNTIME_METHODS=['wasmMemory','addRunDependency','removeRunDependency','FS','callMain','abort','HEAPU8','ccall','cwrap','wasmExports','getValue','setValue','HEAPF32','HEAPU32','lengthBytesUTF8','stringToUTF8','UTF8ToString']" \
+    "-sEXPORTED_FUNCTIONS=['_WebXR_Engine_LoadMap','_Engine_Init','_Engine_RunFrame','_Engine_QueueCommand','_Engine_RenderSingleFrame','_Engine_DisableAutoRender','_Engine_SetCameraMatrix','_Engine_SetProjectionMatrix','_Engine_ResetCameraMatrix','_ZN11IVP_Mindist9do_impactEv','_Z17em_loop_iterationv']" \
     --pre-js emscripten/pre.js \
     --post-js emscripten/post.js \
     -sERROR_ON_UNDEFINED_SYMBOLS=0 \

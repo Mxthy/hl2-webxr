@@ -167,7 +167,7 @@ new_3a = """var handleException = e => {
     ABORT = false;
     EXITSTATUS = 0;
     try {
-      var renderFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : (typeof __Z17em_loop_iterationv !== 'undefined' ? __Z17em_loop_iterationv : null);
+      var renderFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : null;
       if (renderFn) {
         setMainLoop(renderFn, 0, true);
         console.log("[POST-EXIT] Main loop started with Engine_RenderSingleFrame (from handleException)");
@@ -232,9 +232,13 @@ new_4 = """    } catch (ex) {
         console.warn("[WORKER] ESCAPE_SIGTRAP caught -- starting main loop");
         ABORT = false; EXITSTATUS = 0;
         try {
-          var rFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : __Z17em_loop_iterationv;
-          setMainLoop(rFn, 0, true);
-          console.log("[POST-UNWIND] Main loop started with Engine_RenderSingleFrame");
+          var rFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : null;
+          if (rFn) {
+            setMainLoop(rFn, 0, true);
+            console.log("[POST-UNWIND] Main loop started with Engine_RenderSingleFrame");
+          } else {
+            console.error("[POST-UNWIND] Engine_RenderSingleFrame unavailable; render blocked");
+          }
         } catch(mlEx) {
           if (mlEx === "unwind") { console.log("[POST-UNWIND] Main loop started"); }
           else { console.error("[POST-UNWIND] Main loop failed: " + mlEx); }
@@ -243,9 +247,13 @@ new_4 = """    } catch (ex) {
         console.warn("[WORKER] ESCAPE_EXIT caught -- starting main loop");
         ABORT = false; EXITSTATUS = 0;
         try {
-          var rFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : __Z17em_loop_iterationv;
-          setMainLoop(rFn, 0, true);
-          console.log("[POST-EXIT] Main loop started with Engine_RenderSingleFrame");
+          var rFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : null;
+          if (rFn) {
+            setMainLoop(rFn, 0, true);
+            console.log("[POST-EXIT] Main loop started with Engine_RenderSingleFrame");
+          } else {
+            console.error("[POST-EXIT] Engine_RenderSingleFrame unavailable; render blocked");
+          }
         } catch(mlEx) {
           if (mlEx === "unwind") { console.log("[POST-EXIT] Main loop started"); }
           else { console.error("[POST-EXIT] Main loop failed: " + mlEx); }

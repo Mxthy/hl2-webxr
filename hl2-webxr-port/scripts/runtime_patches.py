@@ -14,6 +14,7 @@
 12. loadDynamicLibrary: logging
 13. getExports: try/catch (skip modules that fail to load — e.g. libsourcevr.so 404)
 14. TLS init guard (skip if _emscripten_tls_init is not a function)
+15. Preserve MAIN_MODULE wasmExports after SIDE_MODULE loading
 """
 import sys, re
 
@@ -23,10 +24,19 @@ with open(js_path, 'r') as f:
 
 patches_applied = 0
 
-# Backward-compatible EM_ASM aliases. The current scalar-only Engine_LoadMap
-# uses id 635692; never decode an absent argument because UTF8ToString(undefined)
-# traps with a WASM out-of-bounds error.
+# ============================================================
+# PATCH 20: backward-compatible EM_ASM aliases for Engine hooks
+# Some cached/generated WASM builds retain the previous EM_ASM IDs while
+# the generated JS table contains the shifted IDs. Keep both mappings.
+# ============================================================
+# ============================================================
+# PATCH 20: backward-compatible EM_ASM aliases for Engine hooks
+# Emscripten shifts EM_ASM addresses when hook strings change. Inject the
+# legacy entries independently of the generated current table layout.
+# ============================================================
 alias_20 = """  635692: () => {
+    // Current scalar-only Engine_LoadMap uses this EM_ASM id. Do not
+    // dereference an absent $0 argument: that caused the OOB trap.
     console.log(\"[Engine_LoadMap] Hook reached; Cbuf deferred\");
   },
   635758: () => {
@@ -37,15 +47,55 @@ alias_20 = """  635692: () => {
   },
 """
 if '  635692:' not in js:
-    marker_js='var ASM_CONSTS = {\n'
-    if marker_js in js:
-        js=js.replace(marker_js, marker_js+alias_20, 1)
+    marker = 'var ASM_CONSTS = {\n'
+    if marker in js:
+        js = js.replace(marker, marker + alias_20, 1)
         patches_applied += 1
         print("  + backward-compatible EM_ASM aliases")
     else:
         print("  x ASM_CONSTS table not found")
 else:
     print("  = backward-compatible EM_ASM aliases already present")
+
+# ============================================================
+# PATCH 15: preserve MAIN_MODULE exports after SIDE_MODULE loading
+# Emscripten reuses the global wasmExports variable while loading each DSO.
+# Restore the main table after the async DSO chain so public wrappers do not
+# resolve against the last side-module export table.
+# ============================================================
+main_capture = '''    mergeLibSymbols(wasmExports, "main");'''
+main_capture_new = '''    mergeLibSymbols(wasmExports, "main");
+    Module["mainWasmExports"] = wasmExports;'''
+if 'Module["mainWasmExports"] = wasmExports;' not in js:
+    if main_capture in js:
+        js = js.replace(main_capture, main_capture_new, 1)
+        patches_applied += 1
+        print("  + preserved MAIN_MODULE export table")
+    else:
+        print("  x main export capture pattern not found")
+else:
+    print("  = MAIN_MODULE export capture already present")
+
+restore_old = '''  })), Promise.resolve()).then(() => {
+    // we got them all, wonderful
+    reportUndefinedSymbols();'''
+restore_new = '''  })), Promise.resolve()).then(() => {
+    if (Module["mainWasmExports"]) {
+      wasmExports = Module["mainWasmExports"];
+      Module["wasmExports"] = wasmExports;
+      console.warn('[DYLIB] Restored main-module export table');
+    }
+    // we got them all, wonderful
+    reportUndefinedSymbols();'''
+if "Restored main-module export table" not in js:
+    if restore_old in js:
+        js = js.replace(restore_old, restore_new, 1)
+        patches_applied += 1
+        print("  + restored MAIN_MODULE exports after loadDylibs")
+    else:
+        print("  x loadDylibs restore pattern not found")
+else:
+    print("  = MAIN_MODULE export restore already present")
 
 # ============================================================
 # PATCH 1: Fallback OffscreenCanvas in setCanvasElementSizeCallingThread
@@ -117,7 +167,7 @@ new_3a = """var handleException = e => {
     ABORT = false;
     EXITSTATUS = 0;
     try {
-      var renderFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : (typeof __Z17em_loop_iterationv !== 'undefined' ? __Z17em_loop_iterationv : null);
+      var renderFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : null;
       if (renderFn) {
         setMainLoop(renderFn, 0, true);
         console.log("[POST-EXIT] Main loop started with Engine_RenderSingleFrame (from handleException)");
@@ -182,9 +232,13 @@ new_4 = """    } catch (ex) {
         console.warn("[WORKER] ESCAPE_SIGTRAP caught -- starting main loop");
         ABORT = false; EXITSTATUS = 0;
         try {
-          var rFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : __Z17em_loop_iterationv;
-          setMainLoop(rFn, 0, true);
-          console.log("[POST-UNWIND] Main loop started with Engine_RenderSingleFrame");
+          var rFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : null;
+          if (rFn) {
+            setMainLoop(rFn, 0, true);
+            console.log("[POST-UNWIND] Main loop started with Engine_RenderSingleFrame");
+          } else {
+            console.error("[POST-UNWIND] Engine_RenderSingleFrame unavailable; render blocked");
+          }
         } catch(mlEx) {
           if (mlEx === "unwind") { console.log("[POST-UNWIND] Main loop started"); }
           else { console.error("[POST-UNWIND] Main loop failed: " + mlEx); }
@@ -193,9 +247,13 @@ new_4 = """    } catch (ex) {
         console.warn("[WORKER] ESCAPE_EXIT caught -- starting main loop");
         ABORT = false; EXITSTATUS = 0;
         try {
-          var rFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : __Z17em_loop_iterationv;
-          setMainLoop(rFn, 0, true);
-          console.log("[POST-EXIT] Main loop started with Engine_RenderSingleFrame");
+          var rFn = (Module.wasmExports && Module.wasmExports.Engine_RenderSingleFrame) ? Module.wasmExports.Engine_RenderSingleFrame : null;
+          if (rFn) {
+            setMainLoop(rFn, 0, true);
+            console.log("[POST-EXIT] Main loop started with Engine_RenderSingleFrame");
+          } else {
+            console.error("[POST-EXIT] Engine_RenderSingleFrame unavailable; render blocked");
+          }
         } catch(mlEx) {
           if (mlEx === "unwind") { console.log("[POST-EXIT] Main loop started"); }
           else { console.error("[POST-EXIT] Main loop failed: " + mlEx); }
@@ -280,8 +338,8 @@ new_6 = """mergeLibSymbols(wasmExports, "main");
   try {
     ["_ZN16IVP_Compact_Edge10next_tableE", "_ZN16IVP_Compact_Edge10prev_tableE"].forEach(function(name) {
       if (typeof GOT !== "undefined" && GOT[name] && GOT[name].value === 0) {
-        var alloc = (typeof wasmExports !== "undefined" && typeof wasmExports.malloc === "function")
-          ? wasmExports.malloc(1024) : 8;
+        var alloc = (typeof getMemory === "function")
+          ? getMemory(1024) : 0;
         if (typeof HEAPU8 !== "undefined" && alloc > 0) HEAPU8.fill(0, alloc, alloc + 1024);
         GOT[name].value = alloc;
         console.warn('[IVP-DATA] GOT fallback ' + name + ' -> ' + alloc);
@@ -313,7 +371,7 @@ else:
 # PATCH 8: setMainLoop logging
 # ============================================================
 old_8 = '     */ var setMainLoop = (iterFunc, fps, simulateInfiniteLoop, arg, noSetTiming) => {\n  assert(!MainLoop.func'
-new_8 = '     */ var setMainLoop = (iterFunc, fps, simulateInfiniteLoop, arg, noSetTiming) => {\n  console.log("[SET-MAIN-LOOP] fps=" + fps + " iterFunc=" + typeof iterFunc);\n  assert(!MainLoop.func'
+new_8 = '     */ var setMainLoop = (iterFunc, fps, simulateInfiniteLoop, arg, noSetTiming) => {\n  console.log("[SET-MAIN-LOOP] fps=" + fps + " iterFunc=" + typeof iterFunc);\n  if (MainLoop.func) { console.warn("[SET-MAIN-LOOP] already active -- ignoring duplicate"); return; }\n  assert(!MainLoop.func'
 if old_8 in js:
     js = js.replace(old_8, new_8, 1)
     patches_applied += 1
@@ -460,6 +518,31 @@ if old_11b in js:
 else:
     print("  x loadDylibs exact block not found")
 
+# PATCH 11c: resolve IVP data symbols at report time, after GOT registration
+old_11c = """var reportUndefinedSymbols = () => {
+  for (var [symName, entry] of Object.entries(GOT)) {
+    if (entry.value == 0) {"""
+new_11c = """var reportUndefinedSymbols = () => {
+  for (var [symName, entry] of Object.entries(GOT)) {
+    if (entry.value == 0) {
+      if (symName === \"_ZN16IVP_Compact_Edge10next_tableE\" || symName === \"_ZN16IVP_Compact_Edge10prev_tableE\" ||
+          (symName.indexOf(\"_ZTI\") === 0 && symName.indexOf(\"IVP_\") !== -1)) {
+        var ivpTablePtr = (typeof getMemory === \"function\")
+          ? getMemory(1024) : 0;
+        if (ivpTablePtr > 0) {
+          if (typeof HEAPU8 !== \"undefined\") HEAPU8.fill(0, ivpTablePtr, ivpTablePtr + 1024);
+          entry.value = ivpTablePtr;
+          console.warn('[IVP-DATA] reportUndefinedSymbols GOT fallback ' + symName + ' -> ' + ivpTablePtr);
+          continue;
+        }
+      }"""
+if old_11c in js:
+    js = js.replace(old_11c, new_11c, 1)
+    patches_applied += 1
+    print("  + IVP data symbols resolved at reportUndefinedSymbols")
+else:
+    print("  x reportUndefinedSymbols pattern not found")
+
 # PATCH 12: loadDynamicLibrary logging
 # ============================================================
 old_12 = "  // allocate new DSO\n  dso = newDSO(libName, handle, \"loading\");"
@@ -559,6 +642,94 @@ if old_16 in js:
     print("  + asyncLoad error propagation")
 else:
     print("  x asyncLoad error pattern not found")
+
+# ============================================================
+# PATCH 20: reject malformed optional side modules and empty DSO deps
+# ============================================================
+old_20a = """  if (!libName) {
+    console.warn('[DYLIB] Ignoring empty library name');
+    return flags.loadAsync ? Promise.resolve(true) : true;
+  }
+  if (flags.loadAsync) {
+    return metadata.neededDynlibs.reduce((chain, dynNeeded) => chain.then(() => loadDynamicLibrary(dynNeeded, flags, localScope)), Promise.resolve()).then(loadModule);
+  }
+  metadata.neededDynlibs.forEach(needed => loadDynamicLibrary(needed, flags, localScope));"""
+new_20a = """  var neededDynlibs = (metadata.neededDynlibs || []).filter(function(name) { return typeof name === "string" && name.length > 0; });
+  if (neededDynlibs.length !== (metadata.neededDynlibs || []).length) {
+    console.warn('[DYLIB] Ignoring empty dependency name in ' + libName);
+  }
+  if (flags.loadAsync) {
+    return neededDynlibs.reduce((chain, dynNeeded) => chain.then(() => loadDynamicLibrary(dynNeeded, flags, localScope)), Promise.resolve()).then(loadModule);
+  }
+  neededDynlibs.forEach(needed => loadDynamicLibrary(needed, flags, localScope));"""
+if old_20a in js:
+    js=js.replace(old_20a,new_20a,1)
+    patches_applied += 1
+    print('  + empty DSO dependency filtering')
+else:
+    print('  x DSO dependency pattern not found')
+
+old_20b = """          return loadWebAssemblyModule(libData, flags, libName, localScope, handle);
+        } catch(e) {"""
+new_20b = """          if (!libData || libData.length < 8 || libData[0] !== 0 || libData[1] !== 97 || libData[2] !== 115 || libData[3] !== 109) {
+            console.warn('[DYLIB] Skipping malformed optional module ' + libName + ' (bytes=' + (libData ? libData.length : 0) + ')');
+            return {};
+          }
+          return loadWebAssemblyModule(libData, flags, libName, localScope, handle);
+        } catch(e) {"""
+if old_20b in js:
+    js=js.replace(old_20b,new_20b,1)
+    patches_applied += 1
+    print('  + malformed side-module validation')
+else:
+    print('  x async side-module pattern not found')
+
+# ============================================================
+# PATCH 19: guard unresolved pthread proxy callbacks
+# ============================================================
+old_19 = """  var func = emAsmAddr ? ASM_CONSTS[emAsmAddr] : proxiedFunctionTable[funcIndex];
+  assert(!(funcIndex && emAsmAddr));
+  assert(func.length == numCallArgs, "Call args mismatch in _emscripten_receive_on_main_thread_js");"""
+new_19 = """  var func = emAsmAddr ? ASM_CONSTS[emAsmAddr] : proxiedFunctionTable[funcIndex];
+  assert(!(funcIndex && emAsmAddr));
+  if (typeof func !== "function") {
+    console.warn('[PTHREAD-PROXY] unresolved callback', { funcIndex: funcIndex, emAsmAddr: emAsmAddr, numCallArgs: numCallArgs });
+    PThread.currentProxiedOperationCallerThread = 0;
+    return 0;
+  }
+  assert(func.length == numCallArgs, "Call args mismatch in _emscripten_receive_on_main_thread_js");"""
+if old_19 in js:
+    js=js.replace(old_19,new_19,1)
+    patches_applied += 1
+    print('  + unresolved pthread proxy callback guard')
+else:
+    print('  x pthread proxy callback pattern not found')
+
+# ============================================================
+# PATCH 18: callable bootstrap for the main-WASM IVP import
+# ============================================================
+old_18 = """  };
+}
+
+var wasmExports = createWasm();"""
+new_18 = """  };
+  // The main module imports this IVP method before side modules are merged.
+  // Keep the import callable during wasm instantiation; mergeLibSymbols may replace it later.
+  if (typeof wasmImports["_ZN11IVP_Mindist9do_impactEv"] !== "function") {
+    var ivpDoImpactBootstrap = function(self) { return 0; };
+    ivpDoImpactBootstrap.sig = "vp";
+    wasmImports["_ZN11IVP_Mindist9do_impactEv"] = ivpDoImpactBootstrap;
+    console.warn('[IVP-BOOT] callable do_impact bootstrap installed (sig=vp)');
+  }
+}
+
+var wasmExports = createWasm();"""
+if old_18 in js:
+    js = js.replace(old_18, new_18, 1)
+    patches_applied += 1
+    print("  + callable IVP do_impact bootstrap")
+else:
+    print("  x assignWasmImports end pattern not found")
 
 # PATCH 17: null-safe canvas post-init guard
 for canvas_guard in [
