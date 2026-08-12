@@ -510,7 +510,14 @@ EOF
     // Load large chunks sequentially to avoid parallel long-stream connection resets.
     // Runtime/map initialization remains blocked until both chunks complete.
     return dataLoader.loadMap('background1').then(function() {
-      return dataLoader.loadMap('materials')
+      return fetch(CHUNK_PREFIX + '/materials-manifest.json', { mode: 'cors', credentials: 'omit' })
+        .then(function(r) { if (!r.ok) throw new Error('materials manifest HTTP ' + r.status); return r.json() })
+        .then(function(manifest) {
+          if (!manifest.chunks || !manifest.chunks.length) throw new Error('materials manifest has no chunks')
+          return manifest.chunks.reduce(function(chain, chunk) {
+            return chain.then(function() { return dataLoader.loadMap(chunk.name.replace(/\.data$/, '')) })
+          }, Promise.resolve())
+        })
     })
   }).then(function() {
     // Fix case-sensitive directory names (MEMFS is case-sensitive)
@@ -1334,9 +1341,56 @@ fs.writeFileSync(path.join(outDir, 'background1.data'), bgBuf)
 console.log(`-> background1.data: ${Math.round(bgBuf.length/1024/1024)}MB`)
 
 console.log('\n=== Chunk 2: materials.data (Texturen) ===')
-writeChunk('materials.data', [
+writeSplitChunks('materials', [
   [baseGamePath + '/hl2/materials',     '/hl2'],
-])
+], 48 * 1024 * 1024)
+
+
+// Split a large asset tree into bounded record-stream chunks while preserving
+// the original virtual paths. Records are never split across chunk files.
+function writeSplitChunks(prefix, dirPairs, maxBytes = 48 * 1024 * 1024) {
+  let current = [], currentBytes = 0, index = 0, totalBytes = 0, totalFiles = 0
+  const manifest = []
+  function flush() {
+    if (!current.length) return
+    const name = prefix + '_' + String(index++).padStart(3, '0') + '.data'
+    const buf = Buffer.concat(current)
+    fs.writeFileSync(path.join(outDir, name), buf)
+    manifest.push({ name, bytes: buf.length, files: current.length })
+    current = []; currentBytes = 0
+  }
+  function addRecord(src, vpath) {
+    let blob
+    try { blob = fs.readFileSync(src) } catch { return 0 }
+    const dst = Buffer.from(vpath)
+    const hdr = Buffer.alloc(8)
+    hdr.writeUint32LE(dst.length, 0); hdr.writeUint32LE(blob.length, 4)
+    const record = Buffer.concat([hdr, dst, blob])
+    if (current.length && currentBytes + record.length > maxBytes) flush()
+    current.push(record); currentBytes += record.length
+    totalBytes += blob.length; totalFiles++
+    return blob.length
+  }
+  function walkSplit(dir, vBase, srcRel) {
+    let entries
+    try { entries = fs.readdirSync(dir, {withFileTypes: true}) } catch { return }
+    for (const e of entries) {
+      const full = path.join(dir, e.name)
+      const rel = srcRel ? srcRel + '/' + e.name : e.name
+      if (e.isDirectory()) walkSplit(full, vBase, rel)
+      else addRecord(full, vBase + '/' + rel)
+    }
+  }
+  for (const [srcDir, vBase] of dirPairs) {
+    if (fs.existsSync(srcDir)) walkSplit(srcDir, vBase, path.basename(srcDir))
+    else console.log(`  SKIP (not found): ${srcDir}`)
+  }
+  flush()
+  const manifestPath = path.join(outDir, prefix + '-manifest.json')
+  fs.writeFileSync(manifestPath, JSON.stringify({ format: 1, prefix, maxBytes, totalBytes, totalFiles, chunks: manifest }, null, 2))
+  console.log(`-> ${prefix}: ${manifest.length} chunks, ${Math.round(totalBytes/1024/1024)}MB, ${totalFiles} files`)
+  return manifest
+}
 
 console.log('\n=== Chunk 3: models.data (Models + Sound) ===')
 writeChunk('models.data', [
